@@ -91,6 +91,48 @@ Shared-file etiquette:
     tonnes, else kN; every material in `truss.materials` is written (members name theirs when
     not the first). Details in ARCHITECTURE § netlist. Shout if you need a field.
 
+- **materials (status, wave 1 done)**: `sp_engine::materials` (8917426, 3a90f0c) reproduces
+  the Materials mockup exactly — 253 snapshots from the mockup's own JS in Node replay
+  bit-for-bit (`tests/materials_goldens.{mjs,json,rs}`); `docs/DATA-SOURCES.md` (ccc6fd8,
+  PROV-2); the Materials screen (e29db6f, MT-1…MT-6, NAV-1/6, PROV-1) with GUI tests
+  (`tests/materials.rs`, `tests/materials_render.rs`: closeness per column vs
+  `Materials-1440.png` parts 1.9 / stage 5.6 / readouts 6.2). API in ARCHITECTURE §
+  materials. For everyone: `sp_engine::materials::jsnum::{to_fixed, to_string, round}` are
+  JavaScript-exact (`toFixed` rounds ties up, unlike `format!`); use them for mockup-exact
+  strings. **DATA-SOURCES owners**: when you add or change a constant, add its row (class +
+  source) to `docs/DATA-SOURCES.md` (or tell me).
+- **materials → shell** (open): (1) **Stacked lines at 390 should be content-height.** The
+  mockup's row is `flex: 1 1 auto; flex-wrap: wrap` in a `min-height: 900px` column, so
+  `align-content: stretch` only shares out free space when the page is shorter than the
+  window; at 390 the Materials parts aside is ~612 px tall in the reference but `layout::columns`
+  makes its line `panel_height()` (~794), leaving a ~180 px gap (Tower / Ground likely too).
+  (2) **`Slider` loses keyboard focus on the arrow keys**: after the first ArrowRight egui's
+  arrow-key focus navigation moves focus to the next widget (the value does step once), so
+  NAV-5 keyboard use of every slider breaks after one step (repro: focus "Temperature" on
+  Materials, press ArrowRight twice → focus is on "Stretch"). My tests use AccessKit
+  increments meanwhile. (3) nice-to-have: a `fill` option for `SegStyle::Header` (`.seg` 36 px
+  items with `flex: 1`); Materials' Strain axis draws its own for now.
+- **materials → advanced** (FYI): Materials' Share line is `.material steel E=200GPa
+  fy=275MPa rho=7850 curve=steel ; tensile test at 20 °C, ε = 0.00 %, Ready` (Series'
+  `.material name E fy rho [curve=…]`); pasted into Advanced it should parse (accept or warn
+  on `curve=`, don't error).
+- **materials → lead** (decide; implemented as the mockup until told otherwise): (a)
+  **Toughness ignores temperature**: the tile shows the room-temperature area while the
+  plotted curve, peak and yield are heat-scaled (timber at 300 °C: peak 0 MPa, toughness
+  0.27 MJ/m³). `Curve::toughness_at(T)` is ready if you want it (MB candidate). (b)
+  **Concrete copy is the metals'**: past 0.1 % it says "Plastic: permanently stretched" and
+  "Past the yield point the atoms start slipping… lets steel bend", and at the end "It tore
+  after stretching 0.35%"; concrete in compression crushes. (c) The explain sentence says
+  "Press Play to keep pulling." but the button is "Pull". (d) SPEC MT-1 says Temperature
+  20–600 °C; the mockup's slider is −40…600 (implemented −40…600). (e) The card's "5 / 12"
+  doesn't match a rung of the Series challenge ladder (no "Break all five" there). (f) LOOK-4:
+  the mockup's unlit challenge-chip text `#6A6A6A` is 3.4:1 on `#141414`; I used `#8A8A8A`
+  (5.3:1) for the text and kept `#6A6A6A` for the dot. (g) Steel / aluminium / timber
+  strengths differ between Bridge·Advanced (A36-like 250 MPa, 6061-T6 characteristic 240,
+  C24/GL24h-class 30/24) and Materials (S275 275, 6061-T6 typical 276, clear wood 80):
+  different grades, all representative, documented in DATA-SOURCES "Known inconsistencies".
+
 ## Candidates for labkit
 
-(none yet)
+- **materials**: `sp_engine::materials::jsnum` (JavaScript-exact `toFixed` / `String(n)` /
+  `Math.round`) — every lab-series app that reproduces mockup numbers needs it.
