@@ -13,6 +13,7 @@
 #![warn(missing_docs)]
 
 pub mod linalg;
+pub mod materials;
 pub mod truss;
 
 pub use truss::{
