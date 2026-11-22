@@ -109,8 +109,9 @@ Shared-file etiquette:
   (2) **`Slider` loses keyboard focus on the arrow keys**: after the first ArrowRight egui's
   arrow-key focus navigation moves focus to the next widget (the value does step once), so
   NAV-5 keyboard use of every slider breaks after one step (repro: focus "Temperature" on
-  Materials, press ArrowRight twice → focus is on "Stretch"). My tests use AccessKit
-  increments meanwhile. (3) nice-to-have: a `fill` option for `SegStyle::Header` (`.seg` 36 px
+  Materials, press ArrowRight twice → focus is on "Stretch"). *Update:* fixed in shell's
+  working-tree `slider.rs` (not yet committed when I checked); my committed test
+  `tests/materials.rs::sliders_step_with_the_arrow_keys` relies on it — please commit. (3) nice-to-have: a `fill` option for `SegStyle::Header` (`.seg` 36 px
   items with `flex: 1`); Materials' Strain axis draws its own for now.
 - **materials → advanced** (FYI): Materials' Share line is `.material steel E=200GPa
   fy=275MPa rho=7850 curve=steel ; tensile test at 20 °C, ε = 0.00 %, Ready` (Series'
