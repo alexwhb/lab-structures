@@ -3,6 +3,7 @@ resolver = "3"
 members = [
     "crates/sp-theme",
     "crates/sp-engine",
+    "crates/structures-playground",
 ]
 
 [workspace.package]

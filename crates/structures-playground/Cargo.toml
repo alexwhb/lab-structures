@@ -1,0 +1,49 @@
+[package]
+name = "structures-playground"
+description = "Structures Playground — a structural-engineering playground and truss netlist workbench (macOS app): app shell, navigation, widgets and screens."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+default-run = "structures-playground"
+
+[lib]
+name = "structures_playground"
+path = "src/lib.rs"
+
+[[bin]]
+name = "structures-playground"
+path = "src/main.rs"
+
+[dependencies]
+sp-theme = { workspace = true }
+sp-engine = { workspace = true }
+lab-theme = { workspace = true }
+lab-ui = { workspace = true }
+eframe = { workspace = true }
+serde = { workspace = true }
+anyhow = { workspace = true }
+log = { workspace = true }
+env_logger = "0.11"
+rfd = "0.18.0"
+
+[dev-dependencies]
+serde_json = { workspace = true }
+egui_kittest = { workspace = true }
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# open-documents Apple Event (Finder "Open With", drops on the Dock icon): src/platform.rs
+objc2 = "0.6.5"
+block2 = "0.6.2"
+objc2-foundation = { version = "0.3.2", default-features = false, features = [
+    "std",
+    "block2",
+    "NSAppleEventDescriptor",
+    "NSAppleEventManager",
+    "NSNotification",
+    "NSObject",
+    "NSOperation",
+    "NSString",
+    "NSURL",
+] }

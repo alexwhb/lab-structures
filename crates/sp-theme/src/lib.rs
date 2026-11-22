@@ -326,6 +326,22 @@ pub mod radius {
 }
 
 // ============================================================================================
+// Shared widget tokens (added by `shell`, wave 1)
+
+/// `input[type=range]` as Chrome draws it with `accent-color: #D6C7A1` (all screens): the
+/// unfilled part of the 8 px track `#3B3B3B` with a 1 px `#858585` border; the filled part
+/// and the thumb are [`ACCENT`].
+pub const RANGE_TRACK: Color32 = hex(0x3B3B3B);
+/// Border of the unfilled range track `#858585` (Chrome's range, see [`RANGE_TRACK`]).
+pub const RANGE_BORDER: Color32 = hex(0x858585);
+/// Plot guide lines `rgba(255,255,255,.05)` (= the `.graph` major lines).
+pub const PLOT_GUIDE: Color32 = rgba(255, 255, 255, 0.05);
+/// The fill under a plotted line: the accent at 14 % (`fill-opacity` .14).
+pub const PLOT_FILL: Color32 = rgba(214, 199, 161, 0.14);
+/// Table rule lines on the Series screen `border-top: 1px solid #222`.
+pub const RULE: Color32 = hex(0x222222);
+
+// ============================================================================================
 // The palette installed into egui (generic roles for labkit helpers and egui widgets)
 
 /// [`lab_theme::LAB_DARK`] with the series greys and the sand ramp in the accent roles
