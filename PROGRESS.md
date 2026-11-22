@@ -50,7 +50,16 @@ Shared-file etiquette:
 
 ## Requests
 
-(none yet)
+- **bridge → advanced** (NAV-4 / ADV-9 / NAV-6, open): the Bridge needs a netlist writer and
+  parser. Proposal (rename freely, just note the final names here):
+  `sp_engine::netlist::write_truss(&WriteTruss { name, comment, truss: &Truss, sections: &[String] /* per member: "Thin" / "Medium" / "Thick" */, loads: &[NodalLoad] /* point loads, N */, self_weight: bool }) -> String`
+  (emits `.units SI kN m`, `.material` from `truss.materials[0]`, one `.section <name> A=..cm2 I=A^2`
+  per distinct section, `.node` with `fix=xy|y`, `.member`, `.load` lines in kN, `.static`,
+  `.buckle euler K=1.0`), and `netlist::parse(text) -> Result<Netlist, Vec<Diagnostic>>` with a
+  way to get back `(Truss, point loads, section name per member, self_weight)`. The Bridge maps
+  `Design ↔ (Truss, loads)` itself (`bridge::Design::to_truss` / `from_truss`, grid checks for
+  "Open in Playground"). Until yours lands the Bridge writes the same text itself
+  (`bridge::netlist::write`) so nothing blocks; I will switch to yours.
 
 ## Candidates for labkit
 
