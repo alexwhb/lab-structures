@@ -183,8 +183,7 @@ fn space_pulls_and_pauses() {
 #[test]
 fn scrubbing_the_stretch_and_fresh_sample() {
     let mut h = materials();
-    // (AccessKit increments: the shared Slider loses focus to egui's arrow-key navigation,
-    // reported to the shell in PROGRESS.)
+    // By AccessKit increments (the screen-reader path; the keys: `sliders_step_with_the_arrow_keys`).
     reveal(&mut h, "Stretch", Some(Role::Slider));
     for _ in 0..5 {
         get(&h, "Stretch", Role::Slider).increment_accesskit();
@@ -334,4 +333,27 @@ fn pull_is_paced_and_idle_is_free() {
         "paused: {:?}",
         asked(&h)
     );
+}
+
+/// NAV-5: the sliders step with the arrow keys and keep the focus.
+#[test]
+fn sliders_step_with_the_arrow_keys() {
+    let mut h = materials();
+    get(&h, "Temperature", Role::Slider).focus();
+    h.step();
+    for _ in 0..3 {
+        press(&mut h, Key::ArrowRight);
+    }
+    assert_eq!(bench(&h).temp(), 50.0);
+    assert_eq!(focused_label(&h).as_deref(), Some("Temperature"));
+    press(&mut h, Key::ArrowLeft);
+    assert_eq!(bench(&h).temp(), 40.0);
+    reveal(&mut h, "Stretch", Some(Role::Slider));
+    get(&h, "Stretch", Role::Slider).focus();
+    h.step();
+    for _ in 0..4 {
+        press(&mut h, Key::ArrowRight);
+    }
+    assert_eq!(bench(&h).strain(), 0.2);
+    assert_eq!(focused_label(&h).as_deref(), Some("Stretch"));
 }
