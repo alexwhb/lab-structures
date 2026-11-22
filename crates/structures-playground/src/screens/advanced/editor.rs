@@ -33,6 +33,9 @@ pub const LINE_H: f32 = 21.0;
 pub const MAX_H: f32 = 820.0;
 /// From the panel's left edge to the text: `padding-left 14 + number 20 + gap 12`.
 const TEXT_X: f32 = 46.0;
+/// The line list's `padding-top: 10px`, less the pixel Chrome's baseline in a 21 px mono line
+/// box sits above egui's (measured against the reference).
+const PAD_TOP: f32 = 9.0;
 
 /// What the editor did this frame.
 #[derive(Debug, Default)]
@@ -78,17 +81,27 @@ fn byte_at(line: &str, col: usize) -> usize {
         .unwrap_or(line.len())
 }
 
-/// The coloured layout of one line (with its newline, if any).
-fn append_line(job: &mut LayoutJob, line: &str, marks: &[&Diagnostic]) {
+/// The coloured layout of one line (with its newline, if any). `title`: the file's first line.
+///
+/// As the mockup renders its lines (`dir` in `l.dc`, then `args` in `#D9D9D9`): the title
+/// line `* river-crossing.str` is all comment colour; another `*` line has its `*` in the
+/// comment colour and its text as arguments (the "48 m Pratt …" description).
+fn append_line(job: &mut LayoutJob, line: &str, marks: &[&Diagnostic], title: bool) {
     // colour spans: (start, end, colour)
     let body = line.trim_end_matches(['\n', '\r']);
     let mut spans: Vec<(usize, usize, eframe::egui::Color32)> = Vec::new();
-    if body.trim_start().starts_with('*') {
-        spans.push((0, body.len(), a::COMMENT));
+    let lead = body.len() - body.trim_start().len();
+    if body[lead..].starts_with('*') {
+        let star_end = if title || !body[lead..].starts_with("* ") {
+            body.len()
+        } else {
+            lead + 1
+        };
+        spans.push((0, star_end, a::COMMENT));
+        spans.push((star_end, body.len(), a::ARGS));
     } else {
         let code_end = body.find(';').unwrap_or(body.len());
         let code = &body[..code_end];
-        let lead = code.len() - code.trim_start().len();
         let dir_end = code[lead..]
             .find(char::is_whitespace)
             .map(|p| lead + p)
@@ -152,7 +165,7 @@ fn job(text: &str, diags: &[Diagnostic]) -> LayoutJob {
     let mut job = LayoutJob::default();
     for (i, line) in text.split_inclusive('\n').enumerate() {
         let marks: Vec<&Diagnostic> = diags.iter().filter(|d| d.line == i + 1).collect();
-        append_line(&mut job, line, &marks);
+        append_line(&mut job, line, &marks, i == 0);
     }
     if text.is_empty() {
         job.append("", 0.0, fmt(a::ARGS));
@@ -204,7 +217,7 @@ pub fn netlist_panel(ui: &mut Ui, doc: &Doc) -> EditorOutput {
         .auto_shrink([false, true])
         .show(ui, |ui| {
             let bands = ui.painter().add(Shape::Noop);
-            ui.add_space(10.0);
+            ui.add_space(PAD_TOP);
             let r = ui.horizontal_top(|ui| {
                 ui.add_space(TEXT_X);
                 TextEdit::multiline(&mut buf)
@@ -218,7 +231,7 @@ pub fn netlist_panel(ui: &mut Ui, doc: &Doc) -> EditorOutput {
                     .layouter(&mut layouter)
                     .show(ui)
             });
-            ui.add_space(10.0);
+            ui.add_space(20.0 - PAD_TOP);
             (bands, r.inner)
         });
     let (bands, edit) = scroll.inner;
@@ -230,7 +243,7 @@ pub fn netlist_panel(ui: &mut Ui, doc: &Doc) -> EditorOutput {
     // gutter numbers, error bands and message chips
     let painter = ui.painter().with_clip_rect(view);
     let mut under = Vec::new();
-    let gutter_right = view.left() + 14.0 + 20.0 - scroll.state.clamped_offset().x;
+    let gutter_right = view.left() + TEXT_X - 12.0 - scroll.state.clamped_offset().x;
     for (i, row) in edit.galley.rows.iter().enumerate() {
         let line = i + 1;
         if line > text_lines && row.row.glyphs.is_empty() && line > 1 {

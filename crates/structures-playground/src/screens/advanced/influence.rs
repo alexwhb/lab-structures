@@ -5,7 +5,7 @@
 //! 420px` + `flex: 1 1 200px`, gap 16), stacked otherwise.
 
 use super::controls::{SegWrap, panel_header};
-use crate::widgets::text::{galley, lbl_galley, text_top, wrapped};
+use crate::widgets::text::{css_line_height, galley, lbl_galley, text_top, wrapped};
 use eframe::egui::{
     Color32, CornerRadius, Mesh, Pos2, Rect, Sense, Shape, Stroke, StrokeKind, Ui, WidgetInfo,
     accesskit::Role, pos2, vec2,
@@ -54,9 +54,11 @@ pub fn influence_panel(
         }
     });
     let Some(il) = il else {
+        let msg =
+            "No moving load to sweep: add a line like .load truck 40t x=24 lane=B0..B6 share=0.5";
         let g = wrapped(
             ui,
-            "No moving load to sweep: add a line like .load truck 40t x=24 lane=B0..B6 share=0.5",
+            msg,
             font::body(13.0),
             t::TEXT_MUTED,
             ui.available_width() - 28.0,
@@ -68,6 +70,8 @@ pub fn influence_panel(
         );
         ui.painter()
             .galley(pos2(r.left() + 14.0, r.top() + 12.0), g, t::TEXT_MUTED);
+        ui.interact(r, ui.scope_id().with("il-none"), Sense::hover())
+            .widget_info(|| WidgetInfo::labeled(Role::Label, true, msg));
         return out;
     };
 
@@ -83,12 +87,11 @@ pub fn influence_panel(
     } else {
         (inner, inner)
     };
-    let plot_rect = Rect::from_min_size(origin, vec2(plot_w, plot_w * 220.0 / 640.0));
-    plot(ui, plot_rect, il, x, now_kn);
+    let aspect_h = plot_w * 220.0 / 640.0;
     let tiles_origin = if side {
-        pos2(plot_rect.right() + 16.0, origin.y)
+        pos2(origin.x + plot_w + 16.0, origin.y)
     } else {
-        pos2(origin.x, plot_rect.bottom() + 16.0)
+        pos2(origin.x, origin.y + aspect_h + 16.0)
     };
     let color = il_color(il);
     let now_s = now_text(now_kn);
@@ -124,6 +127,15 @@ pub fn influence_panel(
         t::TEXT,
         None,
     );
+    // side by side the plot box stretches to the tiles (`align-items: stretch` beats its
+    // aspect ratio) and the SVG inside keeps its own (`preserveAspectRatio` meet, centred)
+    let plot_h = if side {
+        aspect_h.max(y - origin.y)
+    } else {
+        aspect_h
+    };
+    let plot_rect = Rect::from_min_size(origin, vec2(plot_w, plot_h));
+    plot(ui, plot_rect, il, x, now_kn);
     let bottom = if side { plot_rect.bottom().max(y) } else { y } + 12.0;
     let used = Rect::from_min_max(ui.cursor().min, pos2(ui.cursor().min.x + width, bottom));
     ui.advance_cursor_after_rect(used);
@@ -141,7 +153,10 @@ fn tile(
     color: Color32,
     note: Option<&str>,
 ) -> f32 {
-    let lg = wrapped_lbl(ui, label, width - 24.0);
+    let lbl_line = css_line_height(ui, &font::semibold(11.0));
+    let value_line = css_line_height(ui, &font::mono(16.0));
+    let note_line = css_line_height(ui, &font::body(11.0));
+    let lg = wrapped_lbl(ui, label, width - 26.0, lbl_line);
     let vg = galley(ui, value, font::mono(16.0), color);
     let ng = note.map(|n| {
         wrapped(
@@ -149,16 +164,20 @@ fn tile(
             n,
             font::body(11.0),
             t::TEXT_MUTED,
-            width - 24.0,
-            Some(14.0),
+            width - 26.0,
+            Some(note_line),
         )
     });
-    let h = 10.0
-        + lg.size().y
+    let lbl_h = lg.rows.len().max(1) as f32 * lbl_line;
+    // 1 px border + padding 10 / 12, children `gap: 2px`
+    let h = 1.0
+        + 10.0
+        + lbl_h
         + 2.0
-        + 21.0
+        + value_line
         + ng.as_ref().map(|g| 2.0 + g.size().y).unwrap_or(0.0)
-        + 10.0;
+        + 10.0
+        + 1.0;
     let rect = Rect::from_min_size(origin, vec2(width, h));
     let p = ui.painter();
     p.rect(
@@ -168,13 +187,22 @@ fn tile(
         Stroke::new(1.0, t::BORDER),
         StrokeKind::Inside,
     );
-    let mut y = rect.top() + 10.0;
-    p.galley(pos2(rect.left() + 12.0, y), lg.clone(), t::TEXT_MUTED);
-    y += lg.size().y + 2.0;
-    p.galley(pos2(rect.left() + 12.0, text_top(y + 10.5, &vg)), vg, color);
-    y += 21.0;
+    let x = rect.left() + 13.0;
+    let mut y = rect.top() + 11.0;
+    if lg.rows.len() > 1 {
+        p.galley(pos2(x, y), lg.clone(), t::TEXT_MUTED);
+    } else {
+        p.galley(
+            pos2(x, text_top(y + lbl_line / 2.0, &lg)),
+            lg.clone(),
+            t::TEXT_MUTED,
+        );
+    }
+    y += lbl_h + 2.0;
+    p.galley(pos2(x, text_top(y + value_line / 2.0, &vg)), vg, color);
+    y += value_line;
     if let Some(g) = ng {
-        p.galley(pos2(rect.left() + 12.0, y + 2.0), g, t::TEXT_MUTED);
+        p.galley(pos2(x, y + 2.0), g, t::TEXT_MUTED);
     }
     let s = match note {
         Some(n) => format!("{label}: {value}, {n}"),
@@ -185,8 +213,8 @@ fn tile(
     rect.bottom()
 }
 
-/// The `.lbl` eyebrow (uppercase, 11 px 600, `.08em`), wrapped to `width`.
-fn wrapped_lbl(ui: &Ui, text: &str, width: f32) -> std::sync::Arc<eframe::egui::Galley> {
+/// The `.lbl` eyebrow (uppercase, 11 px 600, `.08em`), wrapped to `width` on `line` px rows.
+fn wrapped_lbl(ui: &Ui, text: &str, width: f32, line: f32) -> std::sync::Arc<eframe::egui::Galley> {
     let one = lbl_galley(ui, text, t::TEXT_MUTED);
     if one.size().x <= width {
         return one;
@@ -197,7 +225,7 @@ fn wrapped_lbl(ui: &Ui, text: &str, width: f32) -> std::sync::Arc<eframe::egui::
         font::semibold(11.0),
         t::TEXT_MUTED,
         width,
-        Some(14.0),
+        Some(line),
         crate::widgets::text::LBL_SPACING,
         false,
     )
@@ -207,22 +235,24 @@ fn wrapped_lbl(ui: &Ui, text: &str, width: f32) -> std::sync::Arc<eframe::egui::
 fn plot(ui: &mut Ui, rect: Rect, il: &InfluenceLine, x: f64, now_kn: f64) {
     let painter = ui.painter().with_clip_rect(rect);
     lab_ui::paint::paint_grid(&painter, rect, rect.min, &t::GRAPH);
-    let k = rect.width() / 640.0;
+    // the viewBox scaled to fit and centred (`preserveAspectRatio="xMidYMid meet"`)
+    let k = (rect.width() / 640.0).min(rect.height() / 220.0);
+    let vb = Rect::from_center_size(rect.center(), vec2(640.0 * k, 220.0 * k));
     let span = (il.to - il.from).max(1e-9);
-    let gx = |xm: f64| rect.left() + (40.0 + ((xm - il.from) / span) as f32 * 580.0) * k;
-    let gy = |v: f64| rect.top() + (110.0 - il.level(v) as f32 * 95.0) * k;
-    let axis_y = rect.top() + 110.0 * k;
+    let gx = |xm: f64| vb.left() + (40.0 + ((xm - il.from) / span) as f32 * 580.0) * k;
+    let gy = |v: f64| vb.top() + (110.0 - il.level(v) as f32 * 95.0) * k;
+    let axis_y = vb.top() + 110.0 * k;
     painter.line_segment(
         [
-            pos2(rect.left() + 40.0 * k, axis_y),
-            pos2(rect.left() + 620.0 * k, axis_y),
+            pos2(vb.left() + 40.0 * k, axis_y),
+            pos2(vb.left() + 620.0 * k, axis_y),
         ],
         Stroke::new(1.0, a::IL_AXIS),
     );
     // limit dashes
     let dash = |y: f32| {
         let mut shapes = Vec::new();
-        let (x0, x1) = (rect.left() + 40.0 * k, rect.left() + 620.0 * k);
+        let (x0, x1) = (vb.left() + 40.0 * k, vb.left() + 620.0 * k);
         let mut s = x0;
         while s < x1 {
             let e = (s + 5.0 * k).min(x1);
@@ -272,8 +302,8 @@ fn plot(ui: &mut Ui, rect: Rect, il: &InfluenceLine, x: f64, now_kn: f64) {
     let cx = gx(x);
     painter.line_segment(
         [
-            pos2(cx, rect.top() + 14.0 * k),
-            pos2(cx, rect.top() + 206.0 * k),
+            pos2(cx, vb.top() + 14.0 * k),
+            pos2(cx, vb.top() + 206.0 * k),
         ],
         Stroke::new(1.5 * k, a::IL_CURSOR),
     );

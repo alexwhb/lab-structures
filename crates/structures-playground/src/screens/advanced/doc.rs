@@ -395,6 +395,45 @@ impl Doc {
         }
     }
 
+    /// A pasted `.material` line (the Materials bench's Share) replaces the netlist's first
+    /// `.material` line (or goes after `.units`). Returns false when `pasted` has none.
+    pub fn paste_material(&mut self, pasted: &str, now: f64) -> bool {
+        let is_mat = |l: &str| l.trim_start().to_ascii_lowercase().starts_with(".material");
+        let Some(line) = pasted.lines().find(|l| is_mat(l)) else {
+            return false;
+        };
+        self.record("paste", now);
+        self.last_change = None;
+        let mut out = String::with_capacity(self.text.len() + line.len());
+        let has_mat = self.text.lines().any(is_mat);
+        let mut done = false;
+        for raw in self.text.split_inclusive('\n') {
+            let body = raw.trim_end_matches(['\n', '\r']);
+            if !done && is_mat(body) {
+                out.push_str(line.trim());
+                out.push_str(&raw[body.len()..]);
+                done = true;
+            } else {
+                out.push_str(raw);
+                if !done && !has_mat && body.trim_start().to_ascii_lowercase().starts_with(".units")
+                {
+                    out.push_str(line.trim());
+                    out.push('\n');
+                    done = true;
+                }
+            }
+        }
+        if !done {
+            out.push_str(line.trim());
+            out.push('\n');
+        }
+        self.text = out;
+        self.generated = None;
+        self.origin = Origin::Pasted;
+        self.reparse();
+        true
+    }
+
     /// Parses the text now (the debounce elapsed, or a tool changed it).
     pub fn reparse(&mut self) {
         self.dirty_at = None;
@@ -540,6 +579,19 @@ mod tests {
         assert_eq!(d.x(), 0.0);
         d.drive_step(1.2);
         assert_eq!(d.x(), 0.5);
+    }
+
+    #[test]
+    fn a_pasted_material_line_swaps_the_material() {
+        let mut d = Doc::new();
+        // the Materials bench's Share line
+        let line = ".material steel E=200GPa fy=275MPa rho=7850 curve=steel ; tensile test at 20 °C, ε = 0.00 %, Ready";
+        assert!(d.paste_material(line, 1.0));
+        assert_eq!(d.errors(), 0, "{:?}", d.diagnostics);
+        assert_eq!(d.warnings(), 1, "curve= is a warning");
+        assert_eq!(d.netlist().unwrap().materials[0].fy, 275e6);
+        assert_eq!(d.netlist().unwrap().members.len(), 21);
+        assert!(!d.paste_material("no material here", 2.0));
     }
 
     #[test]

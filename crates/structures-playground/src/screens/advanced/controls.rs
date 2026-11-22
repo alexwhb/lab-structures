@@ -27,7 +27,8 @@ pub fn h2_font() -> egui::FontId {
 pub fn panel<R>(ui: &mut Ui, label: &str, add: impl FnOnce(&mut Ui) -> R) -> (Rect, R) {
     let width = ui.available_width();
     let origin = ui.cursor().min;
-    let max = Rect::from_min_size(origin, vec2(width, f32::INFINITY));
+    // the content sits inside the 1 px border (CSS border-box)
+    let max = Rect::from_min_size(origin + vec2(1.0, 1.0), vec2(width - 2.0, f32::INFINITY));
     let mut child = ui.new_child(
         UiBuilder::new()
             .id_salt(("panel", label))
@@ -41,7 +42,10 @@ pub fn panel<R>(ui: &mut Ui, label: &str, add: impl FnOnce(&mut Ui) -> R) -> (Re
     let r = add(&mut child);
     let used = Rect::from_min_max(
         origin,
-        pos2(origin.x + width, child.min_rect().bottom().max(origin.y)),
+        pos2(
+            origin.x + width,
+            child.min_rect().bottom().max(origin.y + 1.0) + 1.0,
+        ),
     );
     child.painter().set(
         bg,
@@ -60,7 +64,8 @@ pub fn panel<R>(ui: &mut Ui, label: &str, add: impl FnOnce(&mut Ui) -> R) -> (Re
 
 /// A panel's header row: the `h2` on the left, `right` (of `right_size`) on the right
 /// (`justify-content: space-between`), wrapping under the title when they don't fit
-/// (`flex-wrap: wrap; gap: 8px`), then the `border-bottom`. `right` draws into the rect given.
+/// (`flex-wrap: wrap; gap: 8px`), then the 1 px `border-bottom` (part of its height). `right`
+/// draws into the rect given.
 pub fn panel_header(
     ui: &mut Ui,
     title: &str,
@@ -74,8 +79,8 @@ pub fn panel_header(
     let title_h = 19.0f32.max(g.size().y);
     let one_row = g.size().x + 8.0 + right_size.x <= inner_w;
     let (h, title_c, right_rect) = if one_row {
-        let h = title_h.max(right_size.y) + 2.0 * HEAD_PAD.y;
-        let cy = origin.y + h / 2.0;
+        let h = title_h.max(right_size.y) + 2.0 * HEAD_PAD.y + 1.0;
+        let cy = origin.y + (h - 1.0) / 2.0;
         let rr = Rect::from_min_size(
             pos2(
                 origin.x + width - HEAD_PAD.x - right_size.x,
@@ -85,7 +90,7 @@ pub fn panel_header(
         );
         (h, cy, rr)
     } else {
-        let h = title_h + 8.0 + right_size.y + 2.0 * HEAD_PAD.y;
+        let h = title_h + 8.0 + right_size.y + 2.0 * HEAD_PAD.y + 1.0;
         let cy = origin.y + HEAD_PAD.y + title_h / 2.0;
         let rr = Rect::from_min_size(
             pos2(origin.x + HEAD_PAD.x, origin.y + HEAD_PAD.y + title_h + 8.0),

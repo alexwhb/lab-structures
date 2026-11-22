@@ -173,7 +173,9 @@ pub fn checks_panel(ui: &mut Ui, report: &Report) {
         .widget_info(|| WidgetInfo::labeled(Role::Heading, true, "Checks"));
     for c in &report.checks {
         ui.add_space(10.0);
-        let text_w = inner - 8.0 - 10.0;
+        // dot 8 + gap 10; Chrome's JetBrains Mono advance is a hair narrower than egui's, so
+        // give the wrap the few px that keep its line breaks
+        let text_w = inner - 8.0 - 10.0 + 4.0;
         let mut job = LayoutJob::default();
         let f = |font, color| TextFormat {
             font_id: font,
@@ -194,7 +196,9 @@ pub fn checks_panel(ui: &mut Ui, report: &Report) {
             ..Default::default()
         };
         let g = ui.painter().layout_job(job);
-        let (r, _) = ui.allocate_exact_size(vec2(width, g.size().y), Sense::hover());
+        // the first line mixes Inter and JetBrains Mono, which makes Chrome's line box ~1.3 px
+        // taller than the 1.45 line height
+        let (r, _) = ui.allocate_exact_size(vec2(width, g.size().y + 1.3), Sense::hover());
         let x = r.left() + HEAD_PAD.x;
         ui.painter().circle_filled(
             pos2(x + 4.0, r.top() + 6.0 + 4.0),

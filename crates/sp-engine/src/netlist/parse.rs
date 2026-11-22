@@ -234,6 +234,8 @@ struct Parser<'a> {
     section_ix: HashMap<&'a str, (usize, usize)>,
     material_ix: HashMap<&'a str, (usize, usize)>,
     self_line: Option<usize>,
+    /// "unknown node B3" messages to drop: B3's own line has an error already.
+    broken: std::collections::HashSet<String>,
     truck_line: Option<usize>,
     once: HashMap<&'static str, usize>,
 }
@@ -257,6 +259,7 @@ pub fn parse(text: &str) -> Result<Netlist, Vec<Diagnostic>> {
         material_ix: HashMap::new(),
         self_line: None,
         truck_line: None,
+        broken: Default::default(),
         once: HashMap::new(),
     };
     // pass 0: units
@@ -266,13 +269,22 @@ pub fn parse(text: &str) -> Result<Netlist, Vec<Diagnostic>> {
     p.net.units = p.units;
     // pass 1: declarations
     for l in &lines {
-        let r = match l.dir().as_str() {
-            ".material" => p.material(l),
-            ".section" => p.section(l),
-            ".node" => p.node(l),
-            _ => Ok(()),
+        let (r, what) = match l.dir().as_str() {
+            ".material" => (p.material(l), "material"),
+            ".section" => (p.section(l), "section"),
+            ".node" => (p.node(l), "node"),
+            _ => (Ok(()), ""),
         };
         if let Err(d) = r {
+            // a declaration with a bad value still names something: references to it
+            // shouldn't pile more errors on (one mistake, one message)
+            if let Some(name) = l.args().first()
+                && check_id(name.s).is_ok()
+                && !d.message.starts_with("duplicate")
+                && !d.message.starts_with("too many")
+            {
+                p.broken.insert(format!("unknown {what} {}", name.s));
+            }
             p.errors.push(d);
         }
     }
@@ -321,6 +333,13 @@ pub fn parse(text: &str) -> Result<Netlist, Vec<Diagnostic>> {
 impl<'a> Parser<'a> {
     fn finish(mut self) -> Result<Netlist, Vec<Diagnostic>> {
         let key = |d: &Diagnostic| (d.line, d.column);
+        let broken = std::mem::take(&mut self.broken);
+        if !broken.is_empty() {
+            self.errors.retain(|d| {
+                let m = d.message.split(" in the range").next().unwrap_or("");
+                !broken.contains(m)
+            });
+        }
         self.warnings.sort_by_key(key);
         if self.errors.is_empty() {
             self.net.warnings = self.warnings;

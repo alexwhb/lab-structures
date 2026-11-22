@@ -212,9 +212,37 @@ fn every_error_is_reported_with_warnings_sorted() {
             (4, Severity::Warning),
             (5, Severity::Error),
             (6, Severity::Error),
-            (7, Severity::Error),
+            // line 7's "unknown node A" is dropped: A's own line (6) has the error
         ]
     );
+}
+
+#[test]
+fn one_mistake_one_message() {
+    // a node with a bad coordinate is still a name: its members don't pile on errors
+    let text = format!(
+        "{HEAD}.node A 0 0 fix=xy\n.node B oops 0\n.node C 8 0 fix=y\n.member M1 A B s\n.member M2 B C s\n.load d A B C Fy=-1\n"
+    );
+    let e = errors(&text);
+    assert_eq!(e.len(), 1, "{e:?}");
+    assert_eq!(e[0].line, 5);
+    // but a name that was never declared still errors
+    let e = errors(&format!(
+        "{HEAD}.node A 0 0\n.node B 1 0\n.member M1 A Z s\n"
+    ));
+    assert_eq!(e[0].message, "unknown node Z");
+}
+
+#[test]
+fn materials_bench_share_line_parses() {
+    // Materials' Share (SPEC NAV-6): accepted, curve= warned about
+    let n = netlist::parse(
+        ".material steel E=200GPa fy=275MPa rho=7850 curve=steel ; tensile test at 20 °C, ε = 0.00 %, Ready",
+    )
+    .unwrap();
+    assert_eq!(n.materials[0].fy, 275e6);
+    assert_eq!(n.warnings.len(), 1);
+    assert!(n.warnings[0].message.contains("curve="));
 }
 
 #[test]

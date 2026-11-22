@@ -291,6 +291,13 @@ impl Screen for AdvancedScreen {
                 ctx.toast("Pasted a netlist");
                 true
             }
+            Command::Paste(text) => {
+                let ok = self.doc.paste_material(&text, now);
+                if ok {
+                    ctx.toast("Pasted a material");
+                }
+                ok
+            }
             _ => false,
         }
     }
@@ -326,10 +333,11 @@ impl Screen for AdvancedScreen {
     }
 }
 
-/// A pasted text is taken as a netlist when it has a directive line.
+/// A pasted text is taken as a whole netlist when it has nodes or members (a lone
+/// `.material` line only swaps the material).
 fn looks_like_netlist(text: &str) -> bool {
     text.lines().any(|l| {
         let l = l.trim_start().to_ascii_lowercase();
-        l.starts_with(".node") || l.starts_with(".member") || l.starts_with(".material")
+        l.starts_with(".node") || l.starts_with(".member")
     })
 }
