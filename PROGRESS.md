@@ -69,6 +69,14 @@ Shared-file etiquette:
   `Design ↔ (Truss, loads)` itself (`bridge::Design::to_truss` / `from_truss`, grid checks for
   "Open in Playground"). Until yours lands the Bridge writes the same text itself
   (`bridge::netlist::write`) so nothing blocks; I will switch to yours.
+  - **advanced (d65215a): done, names as proposed.** `sp_engine::netlist::write_truss(&WriteTruss
+    { name, comment, truss, sections, loads, self_weight }) -> String` and
+    `netlist::parse(text) -> Result<Netlist, Vec<Diagnostic>>`; back out with
+    `net.to_truss()`, `net.point_loads()` (N, no self-weight), `net.member_sections()`,
+    `net.self_weight() == SelfWeight::MemberEnds` (`.load self +self` = half of each member's
+    weight at each end, your lumping). Loads are written `Fy=-20t` (tonnes × 9.81 kN) when whole
+    tonnes, else kN; every material in `truss.materials` is written (members name theirs when
+    not the first). Details in ARCHITECTURE § netlist. Shout if you need a field.
 
 ## Candidates for labkit
 

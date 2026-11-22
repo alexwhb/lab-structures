@@ -57,9 +57,64 @@ collapse simulation, explain sentences.
 
 ### `netlist`, `generate`, `influence` (agent `advanced`)
 
-TODO (owner fills in): `netlist::parse(text) -> Result<Netlist, Vec<Diagnostic>>` with line /
-column diagnostics, `netlist::write(...)`, `Netlist::to_truss()` + load cases, the moving truck,
-`generate::{pratt, howe, warren}(braced, material, size)`, `influence::line(...)`, checks.
+All UI-free; numbers in SI inside, text exactly as the Advanced mockup prints it.
+
+- **`netlist`** — the `.str` format (directive list and units in the module docs).
+  - `netlist::parse(text) -> Result<Netlist, Vec<Diagnostic>>`. Two passes (order doesn't
+    matter), never panics. `Diagnostic { line, column, len, severity: Severity::{Error,
+    Warning}, message }` (1-based, columns in chars). `Ok` keeps warnings in
+    `Netlist::warnings` (other worlds' `.story .wind .soil .foundation .dynamic`, filled-in
+    values); `Err` holds every error and warning sorted by line. Caps: `MAX_NODES` 120,
+    `MAX_MEMBERS` 600, `MAX_PLOT_POINTS` 400.
+  - `Netlist { title: Option<String> /* "river-crossing.str" from the first * line */, notes,
+    units, materials: Vec<truss::Material> /* name = netlist name */, sections: Vec<Section {
+    name, area, inertia }>, nodes: Vec<truss::Node>, members: Vec<NetMember { id, a, b,
+    section, material }>, loads: Vec<StaticLoad { case, nodes, fx, fy, self_weight }>, truck:
+    Option<MovingLoad { case, weight /* N */, tonnes, x, lane, share }>, k_factor, plot:
+    Option<Plot { member, range }>, warnings }`.
+  - Getting a model out: `to_truss()`, `point_loads()` (the static `.load` forces, N, no
+    self-weight), `member_sections()` (section name per member), `self_weight() ->
+    SelfWeight::{None, MemberEnds, Shared}`, `static_loads(&truss)` (with self-weight),
+    `truck_loads(x)`, `loads_at(&truss, x)`, `solve_options()` (K), `solve_at(x)`, `copies()`
+    (`1/share`: 2 trusses), `stem()`, `lane_nodes()`, `lane_extent()`.
+  - `+self` semantics: with nodes (`.load dead B1..B5 Fy=-80 +self`) the truss's whole
+    self-weight is shared equally among them (the mockup's deck); with no nodes
+    (`.load self +self`) half of each member's weight goes to each end (`Truss::self_weight`, the
+    Bridge's lumping). Forces accept `t` (tonnes of weight: `t × 9.81 × 1000` N).
+  - Writing: `netlist::write(&Netlist) -> String`; `netlist::write_truss(&WriteTruss { name,
+    comment, truss, sections: &[String] /* per member */, loads: &[NodalLoad], self_weight })
+    -> String` (= `write(&Netlist::from_truss(..))`): `.units SI kN m`, every material, one
+    `.section` per (name, A, I) (`I=A^2` when I = A²), `.node … fix=xy|y|x`, `.member` (material
+    named when not the first), `.load weights … Fy=-20t` (tonnes when whole to 3 decimals, else
+    kN), `.load self +self`, `.static linear`, `.buckle euler K=1.0`. Names are made parseable
+    and unique. `parse(write(n))` gives `n` back to ~12 significant digits.
+  - `netlist::set_truck(text, tonnes: Option<f64>, x: Option<f64>) -> Option<String>`: edits
+    the moving-load line in place (the Truck / x sliders).
+  - `netlist::text::{to_fixed, minus_fixed, js_round, js_number, tidy}`: JavaScript's
+    `toFixed` (ties up), the mockup's `fmt` (`−1004`), `Math.round`, `String(number)`.
+- **`generate`** — `generate::generate(&Params { style: Style::{Pratt, Howe, Warren}, braced,
+  material: MaterialKind::{Steel, Aluminum, Glulam, CarbonFiber}, size /* 1–20 */, truck_t /*
+  0–120 */, x /* 0–48 */ }) -> Generated { params, lines: Vec<Line { dir, args, comment }>,
+  text, netlist }`: the mockup's `build(style, braced)` and its netlist, line for line. The
+  `netlist` is built with the mockup's own arithmetic (A = 0.0025·size, one ulp off the printed
+  cm² for a few sizes), so the screen uses it while the text is unedited and results match the
+  mockup bit for bit; `parse(text)` agrees to that ulp. `SIZE_RANGE`, `TRUCK_RANGE`, `SPAN`,
+  `FILE_NAME`.
+- **`influence`** — `influence::analyse(&Netlist) -> Result<Report, SolveError>` (truck where it
+  stands; `analyse_at(net, x)`): `Report { truss, solution, x, copies, supports, span:
+  Option<Span { left, right, length, mid }>, tones: Vec<Tone::{Zero, Tension, Compression,
+  Failed}> /* elevation */, rows: Vec<Row { member, id, nodes, force, stress, limit,
+  utilisation /* strings */, tone, use_tone: UseTone, result }> /* sorted by use */, status:
+  Status::{Holding, Over, Mechanism} (.label(), .level()), checks: Vec<Check { label, value,
+  note, level: Level::{Good, Accent, Bad, Neutral} }>, mass }`. `picks(&net, &report) ->
+  Vec<Pick { key, name, member }>` (the mockup's four, or the four most-used members);
+  `influence_line(&net, member) -> Option<InfluenceLine { points: [x, kN], peak, peak_at,
+  limit_tension, limit_compression, scale, from, to }>` (full solve per position; `.level(kN)`
+  → ±1.3 plot units, `peak_text()`, `limit_text()`, `label()`, …); `now_text(kN)`,
+  `force_kn(&report, m)`, `sweep(&net)`.
+- Tests: `tests/advanced_goldens.rs` against `tests/golden/advanced.json`, written by
+  `node scripts/mockup-goldens.mjs` (the mockup's `Component` run in Node; 84 toolbar states);
+  `tests/netlist_*.rs` (parser errors, round trip, fuzz), `tests/advanced_perf.rs` (ENG-4).
 
 ### `tower`, `dynamics`, `ground` (agent `worlds`)
 
