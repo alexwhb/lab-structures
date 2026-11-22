@@ -250,6 +250,46 @@ Shared-file etiquette:
   (now `"0"`, as JavaScript); `bridge::fmt::to_fixed` had no ≥ 1e21 case (now `"1e+21"`). The
   Bridge's `stars()` is not a number format and stays with the Bridge.
 
+## Review findings
+
+- **advanced → bridge** [severity: med] `crates/structures-playground/src/app.rs:92` (`Persisted`)
+  + `crates/sp-engine/src/bridge/game.rs:471` (`Game::set_best`) — best stars per level are
+  lost on restart: `set_best` ("restoring saved progress") has no caller and `Persisted` holds
+  only `route` / `last_world`. — Win ★★★ on level 1, quit, relaunch: the level row shows no stars
+  (BR-6 "best stars remembered per level", NAV-7). — Persist `game.best()` (e.g. a `best: [u8; 4]`
+  in `Persisted` with `#[serde(default)]`, written by the app, restored with `set_best`); needs
+  **shell** for `Persisted`.
+- **advanced → bridge** [severity: low] `crates/sp-engine/src/bridge/game.rs:981` (`test_tick`) — on
+  the λ = 1 tick, if the break loop uses all `MAX_BREAKS_PER_TICK` (30) breaks, `finish_hold`
+  runs without re-solving: the structure is declared "It held!" (with stars) although it may
+  still be over its limit or a mechanism after the 30th break. (The mockup's `tick()` has the
+  same hole.) — A large Sandbox truss whose cascade starts on the last ramp step (λ 54/55 → 1)
+  and breaks > 30 members in that tick ends Held. — Before `finish_hold`, re-analyse at λ = 1
+  with `broken`: if `!ok` collapse, if worst > 1 keep `Testing` at λ = 1 for another tick.
+- **advanced → bridge** [severity: low] `crates/sp-engine/src/bridge/game.rs:529, 550, 557, 709` —
+  undo steps that change nothing (the class your decision (d) fixed for Select clicks):
+  `click_grid` with Joint / Member pushes before `add_node` refuses an underground spot;
+  `click_joint` with Member pushes before `add_member` refuses an already-joined pair;
+  `add_load` pushes when the joint is already at 200 t. Verified with a probe (`click_grid(2,
+  -4)` on level 1: toast "That spot is underground.", `undo_depth` 0 → 1, design unchanged; same
+  for 200 t and "Those two are already joined."). — ⌘Z then appears to do nothing. — Push only
+  after the change is accepted (compare the design before / after, or check first).
+- **advanced → bridge** [severity: low] `crates/structures-playground/src/screens/bridge.rs:509` —
+  `ctx.animate()` every frame while testing / collapsing repaints at display rate (60–240 fps)
+  although the simulation ticks at 30 /s; PLAT-3 asks for ~30 fps while something moves. —
+  A 5 s Test + collapse on a 120 Hz display draws ~600 frames instead of ~150. — `ctx.wake_in(
+  self.ticker.due_in(1.0 / TICK_SECONDS as f32))` (the Ctx docs' pattern), or cap the flow
+  animation at 30 fps.
+- **advanced → lead** [none] `crates/sp-engine/src/{truss,linalg}.rs` — reviewed (incl. bridge's
+  `hypot`, matches V8 for NaN / ∞ / 0); no defects found. Note only: a supported joint with no
+  members (e.g. a lone roller placed in the Sandbox) keeps a free x unknown and makes the whole
+  solve a mechanism — identical to the mockup's `solve()`, so left as is.
+- Also checked on the Bridge, no findings: hand-offs both ways (Advanced's 48 m truss →
+  "Open in Playground" loads 12 joints into the Sandbox and holds; ids / counters stay unique),
+  ⌘V, collapse sim (zero / NaN lengths guarded), snapping (NaN-safe), drag start / release
+  outside the stage, AccessKit (37 controls at 1440 and 390, no duplicate or empty labels; Tab
+  reaches every tool, chip, joint, level and material), test suites (all green, < 0.2 s).
+
 ## Candidates for labkit
 
 - **materials**: `sp_engine::materials::jsnum` (JavaScript-exact `toFixed` / `String(n)` /
