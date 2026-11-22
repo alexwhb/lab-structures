@@ -6,6 +6,8 @@
 //!   the matrix is singular (the shared `K·u = F` solve).
 //! - [`truss`] — the 2D pin-jointed truss model, the direct stiffness solve, reactions, member
 //!   forces and the member checks (tension yield, Euler buckling, crushing). Exact for the model.
+//! - [`jsnum`] — JavaScript-exact number formatting (`toFixed`, `Math.round`, `String(n)`) for
+//!   every module that reproduces a mockup's text.
 //!
 //! Units are SI throughout: metres, newtons, pascals, kilograms. Forces are positive in tension.
 //! Nothing here panics on any input: degenerate geometry (zero-length members, bad indices,
@@ -17,6 +19,7 @@ pub mod dynamics;
 pub mod generate;
 pub mod ground;
 pub mod influence;
+pub mod jsnum;
 pub mod linalg;
 pub mod materials;
 pub mod netlist;
