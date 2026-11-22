@@ -133,7 +133,38 @@ Shared-file etiquette:
   C24/GL24h-class 30/24) and Materials (S275 275, 6061-T6 typical 276, clear wood 80):
   different grades, all representative, documented in DATA-SOURCES "Known inconsistencies".
 
+- **worlds (status, wave 1 done)**: `sp_engine::{tower, dynamics, ground}` (a4e1932) reproduce
+  the Tower / Ground mockups exactly — `tests/tower_ground_goldens.mjs` runs the mockups' own
+  `Component` in Node; 110 tower + 130 ground states match every number and string
+  (`tower_goldens.rs`, `ground_goldens.rs`), plus property / no-panic / perf tests. `dynamics`:
+  RK4, Newmark (unconditionally stable), seeded gusts, `SwaySim` (SDOF / 2-DOF Den Hartog TMD),
+  tested against closed forms (`tests/dynamics.rs`). Screens SCR-3 / SCR-4 (f3f6b00, 26dc44c,
+  17b241e): every TW-* / GD-* control, stage, readout, Play gusts / Play years, clocks, Share,
+  badges, NAV-4 hand-offs; GUI tests `tests/{tower,ground}.rs` (16; closeness per region vs the
+  1440 references: stage 0.6–0.9, columns 2.2–6.4, bars 4.2–5.5; 390 heights within 16 px).
+  API in ARCHITECTURE § tower, dynamics, ground. For others: `src/widgets/world.rs` (picture
+  tiles with SVG icons / swatches, `.lbl` readout grid, band bars, comparison / goal rows,
+  challenge card, stepper, value rows, title + status pill) is reusable. For MCP (wave 2):
+  `TowerInput` / `GroundInput` are serde; drive the screens with `TowerScreen::set_input` /
+  `GroundScreen::set_input`; `tower::share_line` / `ground::share_line` are the one-line
+  summaries.
+- **worlds → lead** (decide; implemented as the mockup until told otherwise): (a) **"Challenge ·
+  100 floors" can't light all four goals at once**: in the mockup's own model no 100-floor
+  tower reaches H/500 at 30 m/s (best: braced tapered tube H/367; the drift goal needs ≤ 77
+  floors), so the card never completes (`tower_goldens.rs::the_100_floor_challenge_…`). A fix
+  would be a goal like "Drift better than H/350" or a stiffer top system; your call. (b) LOOK-4:
+  the stage's soil label `#E5E0D0` (mono 11) is ~2:1 on the lighter soils (dense sand, loose
+  wet sand), the mockup's colours; kept. (c) Play gusts runs faster than real time (the default
+  tower sways at the mockup's 0.55 Hz; `dynamics::playback_speed`); the header clock shows the
+  real period `T = 9.9 s` as the mockup does. (d) Lock-in in the sway animation forces at f1
+  in the stage's plane (real shedding pushes across the wind) — noted in the docs.
+- **worlds → materials** (DATA-SOURCES, small): please add the Tower → Ground note's edge
+  pressure, `ground::FromTower::edge_pressure` = M / (B³/6) over the 40 m footprint
+  (Simplified: rigid base, linear pressure), and, under "Known inconsistencies", the
+  100-floor challenge above. Thanks for the Tower / Ground rows — they match the code.
+
 ## Candidates for labkit
 
 - **materials**: `sp_engine::materials::jsnum` (JavaScript-exact `toFixed` / `String(n)` /
-  `Math.round`) — every lab-series app that reproduces mockup numbers needs it.
+  `Math.round`) — every lab-series app that reproduces mockup numbers needs it. (`worlds`:
+  `sp_engine::tower::fmt` is the same thing, written in parallel; fold both into one there.)
