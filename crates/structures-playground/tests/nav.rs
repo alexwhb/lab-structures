@@ -166,6 +166,35 @@ fn space_types_in_a_text_field() {
     );
 }
 
+/// ⌘Z, Delete / Backspace and ⌘V reach the screen as commands when no text field has focus
+/// (NAV-5 / NAV-6).
+#[test]
+fn keyboard_commands_reach_the_screen() {
+    use structures_playground::Command;
+    let mut h = harness(Route::Bridge);
+    press_cmd(&mut h, Key::Z);
+    press(&mut h, Key::Delete);
+    press(&mut h, Key::Backspace);
+    h.event(eframe::egui::Event::Paste(".node A 0 0 fix=xy".into()));
+    h.step();
+    let cmds: Vec<Command> = events(&h)
+        .into_iter()
+        .filter_map(|e| match e {
+            AppEvent::Command(Route::Bridge, c, _) => Some(c),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        cmds,
+        [
+            Command::Undo,
+            Command::Delete,
+            Command::Delete,
+            Command::Paste(".node A 0 0 fix=xy".into())
+        ]
+    );
+}
+
 /// A hand-off reaches its screen after `enter`, also when the screen was left before it
 /// arrived (NAV-4: Tower → Ground, Ground → Tower, Bridge → Advanced, Advanced → Bridge).
 #[test]

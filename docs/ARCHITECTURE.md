@@ -303,7 +303,20 @@ Rendering: `render(&mut h)`, `screenshot(&mut h, name)` (into the test's tmp dir
 region)`.
 
 `AppOptions::test()` is deterministic: seed 7, no autoplay, no persistence, no save dialog, a
-recording launcher with nothing installed, a fresh temp output folder.
+recording launcher with nothing installed, a fresh temp output folder. `app.events()` logs
+`AppEvent::{Drive, Reset, Shared, Carried, Command}` (the drive / Reset / Share presses, the
+hand-offs delivered and the keyboard commands with whether the screen handled them).
+
+Shell test files: `tests/nav.rs` (every route by click and key, Back / Esc, Space, Reset,
+Share, hand-offs, commands), `tests/a11y.rs` (chrome names, 44 px targets, Tab order),
+`tests/widgets.rs` (the gallery), `tests/series.rs`, `tests/pacing.rs` (PLAT-3: **every
+route at rest must ask for no frames** — a screen that animates while idle fails it),
+`tests/compare.rs` (chrome closeness; `scripts/compare-mockup.sh` renders `[app | mockup]`
+side by side into `target/compare/` for any screen: `scripts/compare-mockup.sh tower`).
+
+**Perf tests (ENG-4).** `scripts/test-all.sh` runs every test target named `perf` or `*_perf`
+in release with `--include-ignored --nocapture`; it must pass, and each printed line
+`PERF <label>: <value> ms (limit <limit> ms)` is listed as a gate in the summary.
 
 ### Persistence (NAV-7), platform, smoke
 

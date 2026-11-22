@@ -107,6 +107,8 @@ pub enum AppEvent {
     Shared(Route),
     /// A hand-off was delivered to a screen (NAV-4).
     Carried(Route, Carry),
+    /// A keyboard command was sent to a screen (NAV-5), and whether it handled it.
+    Command(Route, Command, bool),
 }
 
 /// The app.
@@ -382,7 +384,8 @@ impl StructuresApp {
                 ctx.back();
             }
             for cmd in keys.commands {
-                screen.command(cmd, &mut ctx);
+                let handled = screen.command(cmd.clone(), &mut ctx);
+                events.push(AppEvent::Command(route, cmd, handled));
             }
             if keys.drive && screen.drive_button().is_some_and(|d| d.enabled) {
                 events.push(AppEvent::Drive(route));
