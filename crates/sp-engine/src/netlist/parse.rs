@@ -11,10 +11,11 @@ use super::{
 use crate::truss::{Fix, G, Material, Node};
 use std::collections::HashMap;
 
-/// Most nodes a netlist may have (the dense solve and the 49-solve influence line stay fast).
-pub const MAX_NODES: usize = 120;
+/// Most nodes a netlist may have: a full Bridge sandbox (450 joints on the 2 m grid) fits,
+/// and one dense solve stays well under a frame's worth of work.
+pub const MAX_NODES: usize = 500;
 /// Most members a netlist may have.
-pub const MAX_MEMBERS: usize = 600;
+pub const MAX_MEMBERS: usize = 2000;
 /// Most points a `.plot` sweep may have.
 pub const MAX_PLOT_POINTS: usize = 400;
 /// Longest name.

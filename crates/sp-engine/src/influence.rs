@@ -21,6 +21,11 @@ pub use report::{Check, Level, Row, Status, UseTone};
 /// `Math.abs(N) >= 1000`).
 pub const NEAR_ZERO_N: f64 = 1000.0;
 
+/// Above this many nodes the influence line is swept in at most [`BIG_SWEEP`] steps.
+pub const BIG_TRUSS: usize = 120;
+/// Steps of a big truss's sweep.
+pub const BIG_SWEEP: usize = 24;
+
 /// How a member's force reads (elevation colour, table colour).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Tone {
@@ -285,6 +290,12 @@ pub fn influence_line(net: &Netlist, member: usize) -> Option<InfluenceLine> {
     truss.validate().ok()?;
     let base: Vec<NodalLoad> = net.static_loads(&truss);
     let opts = net.solve_options();
+    // a big truss (dense solves cost ~n³) is swept in at most BIG_SWEEP steps
+    let step = if truss.nodes.len() > BIG_TRUSS {
+        step.max((to - from) / BIG_SWEEP as f64)
+    } else {
+        step
+    };
     let n = (((to - from) / step) + 1e-9).floor().clamp(0.0, 10_000.0) as usize;
     let mut points = Vec::with_capacity(n + 1);
     let (mut peak, mut peak_at) = (0.0f64, 0.0f64);

@@ -144,8 +144,9 @@ All UI-free; numbers in SI inside, text exactly as the Advanced mockup prints it
     matter), never panics. `Diagnostic { line, column, len, severity: Severity::{Error,
     Warning}, message }` (1-based, columns in chars). `Ok` keeps warnings in
     `Netlist::warnings` (other worlds' `.story .wind .soil .foundation .dynamic`, filled-in
-    values); `Err` holds every error and warning sorted by line. Caps: `MAX_NODES` 120,
-    `MAX_MEMBERS` 600, `MAX_PLOT_POINTS` 400.
+    values); `Err` holds every error and warning sorted by line. Caps: `MAX_NODES` 500,
+    `MAX_MEMBERS` 2000, `MAX_PLOT_POINTS` 400 (a truss over 120 nodes sweeps its influence line
+    in at most 24 steps).
   - `Netlist { title: Option<String> /* "river-crossing.str" from the first * line */, notes,
     units, materials: Vec<truss::Material> /* name = netlist name */, sections: Vec<Section {
     name, area, inertia }>, nodes: Vec<truss::Node>, members: Vec<NetMember { id, a, b,

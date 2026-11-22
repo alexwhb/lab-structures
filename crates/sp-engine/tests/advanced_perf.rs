@@ -42,3 +42,46 @@ fn a_full_update_fits_in_a_frame() {
     });
     assert!(t < Duration::from_millis(8), "update took {t:?}");
 }
+
+/// A Bridge-sized netlist (450 nodes, the whole sandbox grid) with a truck: parse, solve and
+/// the (coarsened) influence line stay interactive.
+#[test]
+fn a_bridge_sized_netlist_stays_interactive() {
+    let panels = 224;
+    let mut s = String::from(".material steel\n.section s A=50cm2\n");
+    for i in 0..=panels {
+        let fix = match i {
+            0 => "  fix=xy",
+            p if p == panels => "  fix=y",
+            _ => "",
+        };
+        s.push_str(&format!(".node B{i}  {}  0{fix}\n", i * 2));
+        s.push_str(&format!(".node T{i}  {}  2\n", i * 2));
+    }
+    let mut m = 0;
+    let mut member = |a: String, b: String, s: &mut String| {
+        m += 1;
+        s.push_str(&format!(".member M{m}  {a}  {b}  s\n"));
+    };
+    for i in 0..panels {
+        member(format!("B{i}"), format!("B{}", i + 1), &mut s);
+        member(format!("T{i}"), format!("T{}", i + 1), &mut s);
+        member(format!("B{i}"), format!("T{i}"), &mut s);
+        member(format!("B{i}"), format!("T{}", i + 1), &mut s);
+    }
+    member(format!("B{panels}"), format!("T{panels}"), &mut s);
+    s.push_str(&format!(
+        ".load truck 40t x=100 lane=B0..B{panels}\n.load self +self\n"
+    ));
+    let t = Instant::now();
+    let net = netlist::parse(&s).unwrap();
+    assert_eq!(net.nodes.len(), 450);
+    let r = influence::analyse(&net).unwrap();
+    assert!(r.solution.stable);
+    let solve = t.elapsed();
+    let il = influence::influence_line(&net, 0).unwrap();
+    assert!(il.points.len() <= influence::BIG_SWEEP + 1);
+    let all = t.elapsed();
+    println!("PERF advanced 450-node: parse+solve {solve:?}, + influence line {all:?}");
+    assert!(all < Duration::from_secs(1), "{all:?}");
+}
