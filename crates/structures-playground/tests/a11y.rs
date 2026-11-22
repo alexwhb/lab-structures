@@ -116,6 +116,23 @@ fn enter_activates_the_focused_tab() {
     assert_eq!(route(&h), Route::Ground);
 }
 
+/// Every route is reachable from the keyboard alone: Tab to the brand + Enter opens Series,
+/// Tab to Back + Enter returns; ⌘1–⌘5 do the rest (`nav.rs`) (NAV-5).
+#[test]
+fn series_and_back_by_keyboard() {
+    let mut h = harness(Route::Materials);
+    press(&mut h, Key::Tab);
+    assert_eq!(focused_label(&h).as_deref(), Some("Structures Playground"));
+    press(&mut h, Key::Enter);
+    settle(&mut h);
+    assert_eq!(route(&h), Route::Series);
+    press(&mut h, Key::Tab);
+    assert_eq!(focused_label(&h).as_deref(), Some("Back"));
+    press(&mut h, Key::Enter);
+    settle(&mut h);
+    assert_eq!(route(&h), Route::Materials);
+}
+
 /// The Series screen: Back is a named button, each sibling card a button, the Structures card a
 /// label; the disclaimer is readable.
 #[test]

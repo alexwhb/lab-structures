@@ -229,3 +229,19 @@ fn hand_offs_are_delivered() {
     settle(&mut h);
     assert_eq!(carried(&h).last().unwrap().0, Route::Advanced);
 }
+
+/// Space still drives after a mouse click on a button (clicking doesn't leave keyboard focus
+/// on it) (NAV-5).
+#[test]
+fn space_drives_after_a_mouse_click() {
+    let mut h = harness(Route::Tower);
+    click_header(&mut h, "Reset");
+    press(&mut h, Key::Space);
+    settle(&mut h);
+    assert!(
+        events(&h).contains(&AppEvent::Drive(Route::Tower)),
+        "{:?}, focus {:?}",
+        events(&h),
+        focused_label(&h)
+    );
+}
