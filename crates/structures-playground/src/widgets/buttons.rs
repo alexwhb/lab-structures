@@ -138,8 +138,12 @@ impl<'a> Button<'a> {
         self
     }
 
+    /// `.ghost` is Inter 500, `.prim` 600.
     fn font(&self) -> eframe::egui::FontId {
-        lab_theme::font::medium(self.font_size)
+        match self.kind {
+            ButtonKind::Ghost => lab_theme::font::medium(self.font_size),
+            ButtonKind::Prim => lab_theme::font::semibold(self.font_size),
+        }
     }
 
     /// The drawn size.

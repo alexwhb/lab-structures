@@ -3,7 +3,7 @@
 //! #D9D9D9; background: #121212`, with an optional 8 px `.dot` (PROV-1 provenance colours).
 //! AccessKit: a `Label` named by its text.
 
-use super::text::{galley, text_top};
+use super::text::{css_line_height, galley, text_top};
 use crate::screens::Badge;
 use eframe::egui::{
     Color32, CornerRadius, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, WidgetInfo,
@@ -50,9 +50,11 @@ impl BadgeLook {
 pub fn badge_size(ui: &Ui, badge: &Badge) -> Vec2 {
     let g = galley(ui, &badge.text, font(), t::TEXT_DIM);
     let dot = if badge.dot.is_some() { DOT + GAP } else { 0.0 };
+    // the line box is CSS `line-height: normal` for the mono 11 px
+    let line = css_line_height(ui, &font());
     vec2(
         2.0 * (PAD_X + 1.0) + dot + g.size().x,
-        2.0 * (PAD_Y + 1.0) + g.size().y.max(DOT),
+        2.0 * (PAD_Y + 1.0) + line.max(DOT),
     )
 }
 
