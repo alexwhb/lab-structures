@@ -76,7 +76,11 @@ fn lex(text: &str) -> (Vec<Line<'_>>, Option<String>, Vec<String>) {
         }
         if let Some(c) = trimmed.strip_prefix('*') {
             let c = c.trim();
-            if !seen_content && c.len() > 4 && c.ends_with(".str") && !c.contains(char::is_whitespace) {
+            if !seen_content
+                && c.len() > 4
+                && c.ends_with(".str")
+                && !c.contains(char::is_whitespace)
+            {
                 title = Some(c.to_string());
             } else if lines.is_empty() && !c.is_empty() && notes.len() < 16 {
                 notes.push(c.to_string());
@@ -95,7 +99,7 @@ fn lex(text: &str) -> (Vec<Line<'_>>, Option<String>, Vec<String>) {
         let mut end = 1usize;
         for (b, ch) in code.char_indices() {
             col += 1;
-            let sep = ch.is_whitespace() || ch == ',';
+            let sep = ch.is_whitespace();
             match (sep, start) {
                 (false, None) => start = Some((b, col)),
                 (true, Some((sb, sc))) => {
@@ -397,7 +401,13 @@ impl<'a> Parser<'a> {
             "m" => 1.0,
             "cm" => 100.0,
             "mm" => 1000.0,
-            _ => return Err(Self::err(l, t, format!("unknown length unit {u} (m, cm, mm)"))),
+            _ => {
+                return Err(Self::err(
+                    l,
+                    t,
+                    format!("unknown length unit {u} (m, cm, mm)"),
+                ));
+            }
         };
         Ok(v / per_m)
     }
@@ -432,7 +442,13 @@ impl<'a> Parser<'a> {
                 let pm = self.units.length.per_metre();
                 v / (pm * pm)
             }
-            _ => return Err(Self::err(l, t, format!("unknown area unit {u} (m2, cm2, mm2)"))),
+            _ => {
+                return Err(Self::err(
+                    l,
+                    t,
+                    format!("unknown area unit {u} (m2, cm2, mm2)"),
+                ));
+            }
         };
         finite(l, t, r)
     }
@@ -533,7 +549,11 @@ impl<'a> Parser<'a> {
                         "" | "kg/m3" | "kg/m³" => v,
                         "t/m3" | "t/m³" => v * 1e3,
                         _ => {
-                            return Err(Self::err(l, t, format!("unknown density unit {u} (kg/m3)")));
+                            return Err(Self::err(
+                                l,
+                                t,
+                                format!("unknown density unit {u} (kg/m3)"),
+                            ));
                         }
                     };
                     rho = Some(v);
@@ -646,7 +666,9 @@ impl<'a> Parser<'a> {
 
     fn node(&mut self, l: &Line<'a>) -> Result<(), Diagnostic> {
         let args = l.args();
-        let name = *args.first().ok_or_else(|| self.missing(l, "a name, x and y"))?;
+        let name = *args
+            .first()
+            .ok_or_else(|| self.missing(l, "a name, x and y"))?;
         Self::new_id(l, name, &self.node_ix, "node")?;
         let xt = *args.get(1).ok_or_else(|| self.missing(l, "x and y"))?;
         let yt = *args.get(2).ok_or_else(|| self.missing(l, "y"))?;
@@ -655,7 +677,11 @@ impl<'a> Parser<'a> {
         let mut fix = Fix::FREE;
         for &t in &args[3..] {
             let Some((k, v)) = t.s.split_once('=') else {
-                return Err(Self::err(l, t, format!("unexpected {} (fix=xy, fix=y)", t.s)));
+                return Err(Self::err(
+                    l,
+                    t,
+                    format!("unexpected {} (fix=xy, fix=y)", t.s),
+                ));
             };
             if !k.eq_ignore_ascii_case("fix") {
                 return Err(Self::err(l, t, format!("unknown node option {k} (fix=)")));
@@ -695,8 +721,21 @@ impl<'a> Parser<'a> {
             .ok_or_else(|| Self::err(l, t, format!("unknown node {}", t.s)))
     }
 
-    /// A node name, a `B1..B5` range, in order.
+    /// Node names, `B1..B5` ranges and comma lists (`B1,B3`), in order.
     fn node_list(&self, l: &Line, t: Tok, out: &mut Vec<usize>) -> Result<(), Diagnostic> {
+        let mut col = t.col;
+        for part in t.s.split(',') {
+            let len = part.chars().count();
+            if !part.is_empty() {
+                self.node_item(l, Tok { s: part, col, len }, out)?;
+            }
+            col += len + 1;
+        }
+        Ok(())
+    }
+
+    /// One node name or `B1..B5` range.
+    fn node_item(&self, l: &Line, t: Tok, out: &mut Vec<usize>) -> Result<(), Diagnostic> {
         let Some((a, b)) = t.s.split_once("..") else {
             out.push(self.node_ref(l, t)?);
             return Ok(());
@@ -754,8 +793,12 @@ impl<'a> Parser<'a> {
             .first()
             .ok_or_else(|| self.missing(l, "an id, two nodes and a section"))?;
         Self::new_id(l, id, &self.member_ix, "member")?;
-        let at = *args.get(1).ok_or_else(|| self.missing(l, "two nodes and a section"))?;
-        let bt = *args.get(2).ok_or_else(|| self.missing(l, "a second node and a section"))?;
+        let at = *args
+            .get(1)
+            .ok_or_else(|| self.missing(l, "two nodes and a section"))?;
+        let bt = *args
+            .get(2)
+            .ok_or_else(|| self.missing(l, "a second node and a section"))?;
         let st = *args.get(3).ok_or_else(|| self.missing(l, "a section"))?;
         let a = self.node_ref(l, at)?;
         let b = self.node_ref(l, bt)?;
@@ -768,7 +811,10 @@ impl<'a> Parser<'a> {
             return Err(Self::err(
                 l,
                 bt,
-                format!("{} has no length: {} and {} are at the same place", id.s, at.s, bt.s),
+                format!(
+                    "{} has no length: {} and {} are at the same place",
+                    id.s, at.s, bt.s
+                ),
             ));
         }
         let section = self
@@ -880,11 +926,19 @@ impl<'a> Parser<'a> {
             return Err(self.missing(l, "a weight (40t)"));
         };
         if weight < 0.0 {
-            return Err(Self::err(l, case, "a moving load's weight can't be negative"));
+            return Err(Self::err(
+                l,
+                case,
+                "a moving load's weight can't be negative",
+            ));
         }
         if lane.len() < 2 {
             let t = lane_tok.unwrap_or(case);
-            return Err(Self::err(l, t, "a lane needs at least two nodes (lane=B0..B6)"));
+            return Err(Self::err(
+                l,
+                t,
+                "a lane needs at least two nodes (lane=B0..B6)",
+            ));
         }
         let x = x.unwrap_or_else(|| {
             lane.iter()
@@ -921,7 +975,13 @@ impl<'a> Parser<'a> {
                 match k.to_ascii_lowercase().as_str() {
                     "fx" => fx = Some(f),
                     "fy" => fy = Some(f),
-                    _ => return Err(Self::err(l, t, format!("unknown load option {k} (Fx=, Fy=)"))),
+                    _ => {
+                        return Err(Self::err(
+                            l,
+                            t,
+                            format!("unknown load option {k} (Fx=, Fy=)"),
+                        ));
+                    }
                 }
                 continue;
             }
@@ -962,7 +1022,9 @@ impl<'a> Parser<'a> {
                 self.warn(
                     l,
                     t,
-                    format!("the self-weight is already added on line {first}; now it counts twice"),
+                    format!(
+                        "the self-weight is already added on line {first}; now it counts twice"
+                    ),
                 );
             } else {
                 self.self_line = Some(l.no);
@@ -1003,7 +1065,9 @@ impl<'a> Parser<'a> {
     fn buckle(&mut self, l: &Line) -> Result<(), Diagnostic> {
         self.once(l, ".buckle");
         let args = l.args();
-        let method = *args.first().ok_or_else(|| self.missing(l, "a method (euler K=1.0)"))?;
+        let method = *args
+            .first()
+            .ok_or_else(|| self.missing(l, "a method (euler K=1.0)"))?;
         match method.s.to_ascii_lowercase().as_str() {
             "euler" => {
                 let mut k = 1.0;
@@ -1050,7 +1114,9 @@ impl<'a> Parser<'a> {
             .strip_prefix("N(")
             .or_else(|| expr.s.strip_prefix("n("))
             .and_then(|s| s.strip_suffix(')'))
-            .ok_or_else(|| Self::err(l, expr, "only member forces can be plotted: N(M8) or N(M*)"))?;
+            .ok_or_else(|| {
+                Self::err(l, expr, "only member forces can be plotted: N(M8) or N(M*)")
+            })?;
         let member = if inner.ends_with('*') {
             None
         } else if self.member_ix.contains_key(inner) {
@@ -1069,7 +1135,11 @@ impl<'a> Parser<'a> {
             .rsplit_once('.')
             .is_some_and(|(_, x)| x.eq_ignore_ascii_case("x"));
         if !is_truck_x {
-            return Err(Self::err(l, var, "only the moving load's x can be swept: truck.x"));
+            return Err(Self::err(
+                l,
+                var,
+                "only the moving load's x can be swept: truck.x",
+            ));
         }
         let nums = &args[3..];
         let range = match nums.len() {

@@ -28,12 +28,12 @@ pub fn set_truck(text: &str, tonnes: Option<f64>, x: Option<f64>) -> Option<Stri
     done.then_some(out)
 }
 
-/// Byte spans of the whitespace/comma separated tokens of `code`.
+/// Byte spans of the whitespace-separated tokens of `code`.
 fn spans(code: &str) -> Vec<(usize, usize)> {
     let mut v = Vec::new();
     let mut start = None;
     for (i, c) in code.char_indices() {
-        let sep = c.is_whitespace() || c == ',';
+        let sep = c.is_whitespace();
         match (sep, start) {
             (false, None) => start = Some(i),
             (true, Some(s)) => {
@@ -53,7 +53,9 @@ fn patch_line(raw: &str, tonnes: Option<f64>, x: Option<f64>) -> Option<String> 
     if raw.trim_start().starts_with('*') {
         return None;
     }
-    let code_end = raw.find(';').unwrap_or_else(|| raw.trim_end_matches(['\n', '\r']).len());
+    let code_end = raw
+        .find(';')
+        .unwrap_or_else(|| raw.trim_end_matches(['\n', '\r']).len());
     let code = &raw[..code_end];
     let toks = spans(code);
     let first = *toks.first()?;
@@ -83,13 +85,20 @@ fn patch_line(raw: &str, tonnes: Option<f64>, x: Option<f64>) -> Option<String> 
     }
     if let Some(x) = x {
         let xs = js_number(x);
-        match toks.iter().copied().find(|&t| key(t).as_deref() == Some("x")) {
+        match toks
+            .iter()
+            .copied()
+            .find(|&t| key(t).as_deref() == Some("x"))
+        {
             Some((s, e)) => {
                 let eq = code[s..e].find('=').map(|p| s + p + 1).unwrap_or(e);
                 edits.push(((eq, e), xs));
             }
             None => {
-                let after = weight.or(toks.get(1).copied()).map(|t| t.1).unwrap_or(first.1);
+                let after = weight
+                    .or(toks.get(1).copied())
+                    .map(|t| t.1)
+                    .unwrap_or(first.1);
                 edits.push(((after, after), format!("  x={xs}")));
             }
         }
@@ -121,6 +130,9 @@ mod tests {
         let p = set_truck(".load truck 40t lane=B0..B6\r\n", None, Some(3.0)).unwrap();
         assert_eq!(p, ".load truck 40t  x=3 lane=B0..B6\r\n");
         // a comment that mentions lane= is not a moving load
-        assert_eq!(set_truck(".load dead B1 Fy=-1 ; lane=B0..B6\n", None, Some(1.0)), None);
+        assert_eq!(
+            set_truck(".load dead B1 Fy=-1 ; lane=B0..B6\n", None, Some(1.0)),
+            None
+        );
     }
 }

@@ -48,7 +48,11 @@ fn safe_id(raw: &str, prefix: char, used: &mut HashSet<String>) -> String {
         })
         .take(28)
         .collect();
-    if !s.chars().next().is_some_and(|c| c.is_ascii_alphabetic() || c == '_') {
+    if !s
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+    {
         s.insert(0, prefix);
     }
     let base = s.clone();

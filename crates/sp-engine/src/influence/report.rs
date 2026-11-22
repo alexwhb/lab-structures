@@ -286,10 +286,7 @@ pub(super) fn build(net: &Netlist, truss: Truss, solution: Solution, x: f64) -> 
     let deg = m + r - 2 * j;
     let determinacy = check(
         "Determinacy",
-        format!(
-            "m + r \u{2212} 2j = {m} + {r} \u{2212} {} = {deg}",
-            2 * j
-        ),
+        format!("m + r \u{2212} 2j = {m} + {r} \u{2212} {} = {deg}", 2 * j),
         match deg {
             0 => "Statically determinate: lose any member and it becomes a mechanism.".to_string(),
             d if d > 0 => format!("Indeterminate to degree {d}: there are spare load paths."),
@@ -351,7 +348,11 @@ pub(super) fn build(net: &Netlist, truss: Truss, solution: Solution, x: f64) -> 
         ),
         Some(sp) => {
             let sag = if ok {
-                -solution.displacements.get(sp.mid).map(|d| d[1]).unwrap_or(0.0)
+                -solution
+                    .displacements
+                    .get(sp.mid)
+                    .map(|d| d[1])
+                    .unwrap_or(0.0)
             } else {
                 0.0
             };

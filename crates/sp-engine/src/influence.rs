@@ -260,7 +260,10 @@ pub fn force_kn(report: &Report, member: usize) -> f64 {
     if !report.solution.stable {
         return 0.0;
     }
-    report.member(member).map(|r| r.force / 1000.0).unwrap_or(0.0)
+    report
+        .member(member)
+        .map(|r| r.force / 1000.0)
+        .unwrap_or(0.0)
 }
 
 /// The sweep for a netlist: the `.plot` range, else the lane's extent in 1 m steps.
@@ -307,7 +310,14 @@ pub fn influence_line(net: &Netlist, member: usize) -> Option<InfluenceLine> {
     }
     let m = &truss.members[member];
     let mat = truss.materials.get(m.material)?;
-    let r = check(0.0, truss.length(member), m.area, m.inertia, mat, net.k_factor);
+    let r = check(
+        0.0,
+        truss.length(member),
+        m.area,
+        m.inertia,
+        mat,
+        net.k_factor,
+    );
     let limit_tension = r.tension_capacity / 1000.0;
     let limit_compression = r.compression_limit / 1000.0;
     let scale = peak

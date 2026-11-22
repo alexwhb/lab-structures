@@ -169,8 +169,12 @@ fn report_prints_what_the_mockup_prints() {
         let want_rows: Vec<Vec<String>> =
             case["rows"].as_array().unwrap().iter().map(strs).collect();
         assert_eq!(rows_of(&r), want_rows, "{p:?}");
-        let want_checks: Vec<Vec<String>> =
-            case["checks"].as_array().unwrap().iter().map(strs).collect();
+        let want_checks: Vec<Vec<String>> = case["checks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(strs)
+            .collect();
         assert_eq!(checks_of(&r), want_checks, "{p:?}");
         assert_eq!(r.status.label(), case["statusLabel"].as_str().unwrap());
         assert_eq!(
@@ -209,7 +213,11 @@ fn influence_line_matches_the_mockup() {
         let il = influence::influence_line(&g.netlist, pick.member).unwrap();
         assert_eq!(il.id, case["ilId"].as_str().unwrap());
         assert_eq!(il.peak_text(), case["ilPeak"].as_str().unwrap(), "{p:?}");
-        assert_eq!(il.peak_at_text(), case["ilPeakAt"].as_str().unwrap(), "{p:?}");
+        assert_eq!(
+            il.peak_at_text(),
+            case["ilPeakAt"].as_str().unwrap(),
+            "{p:?}"
+        );
         assert_eq!(il.limit_text(), case["ilLim"].as_str().unwrap(), "{p:?}");
         assert_eq!(il.label(), case["ilLabel"].as_str().unwrap(), "{p:?}");
         assert_eq!(il.range_text(), "x 0 → 48 m");
@@ -298,12 +306,19 @@ fn parsing_the_generated_text_shows_the_same_numbers() {
         // the worst member of an exact tie (M8 / M9 under a symmetric load) is round-off too
         let tail = |mut c: Vec<Vec<String>>| {
             if let Some(w) = c.get_mut(3) {
-                w[1] = w[1].split_once(" at ").map(|x| x.1.to_string()).unwrap_or_default();
+                w[1] = w[1]
+                    .split_once(" at ")
+                    .map(|x| x.1.to_string())
+                    .unwrap_or_default();
             }
             c
         };
-        let want_checks: Vec<Vec<String>> =
-            case["checks"].as_array().unwrap().iter().map(strs).collect();
+        let want_checks: Vec<Vec<String>> = case["checks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(strs)
+            .collect();
         assert_eq!(tail(checks_of(&r)), tail(want_checks), "{p:?}");
         let status = |s: &str| s.replace(|c: char| c.is_ascii_digit(), "#");
         assert_eq!(
@@ -322,11 +337,7 @@ fn truck_patch_equals_regeneration() {
         let g = generate::generate(&p);
         for (t, x) in [(0.0, 0.0), (120.0, 48.0), (37.0, 12.5), (40.0, 24.0)] {
             let patched = netlist::set_truck(&g.text, Some(t), Some(x)).unwrap();
-            let regen = generate::generate(&Params {
-                truck_t: t,
-                x,
-                ..p
-            });
+            let regen = generate::generate(&Params { truck_t: t, x, ..p });
             assert_eq!(patched, regen.text);
         }
     }

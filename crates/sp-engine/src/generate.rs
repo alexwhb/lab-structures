@@ -280,7 +280,10 @@ pub fn generate(params: &Params) -> Generated {
 
     let chord_a = 0.0025 * size;
     let web_a = 0.0015 * size;
-    let sections = vec![Section::boxed("chord", chord_a), Section::boxed("web", web_a)];
+    let sections = vec![
+        Section::boxed("chord", chord_a),
+        Section::boxed("web", web_a),
+    ];
     let members: Vec<NetMember> = pairs
         .iter()
         .enumerate()
@@ -350,7 +353,11 @@ pub fn generate(params: &Params) -> Generated {
         let k = if kind.chord() { "chord" } else { "web" };
         l(".member", format!("{}  {a}  {b}  {k}", m.id), "");
     }
-    l(".load", "dead  B1..B5  Fy=-80  +self".into(), "10 kN/m deck");
+    l(
+        ".load",
+        "dead  B1..B5  Fy=-80  +self".into(),
+        "10 kN/m deck",
+    );
     l(
         ".load",
         format!(

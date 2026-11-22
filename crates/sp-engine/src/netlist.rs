@@ -49,8 +49,8 @@
 //! Directives are case-insensitive; names are case-sensitive and start with a letter. All
 //! values are stored in SI (m, N, Pa, m², m⁴, kg/m³).
 
-use crate::truss::{Fix, G, Material, Member, NodalLoad, Node, Solution, SolveError, SolveOptions};
 use crate::truss::Truss;
+use crate::truss::{Fix, G, Material, Member, NodalLoad, Node, Solution, SolveError, SolveOptions};
 use serde::{Deserialize, Serialize};
 
 mod edit;
