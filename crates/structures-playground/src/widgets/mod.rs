@@ -38,6 +38,7 @@ pub mod slider;
 pub mod tabs;
 pub mod text;
 pub mod toast;
+pub mod world;
 
 pub use badge::{BadgeLook, badge, badge_with};
 pub use buttons::{Button, ButtonKind, Toggle, ghost, prim};
