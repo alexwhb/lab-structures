@@ -676,13 +676,37 @@ impl Game {
             explain,
             playing: self.playing(),
             slug: self.level().slug(),
-            clock: match phase {
-                Phase::Build => "building".into(),
-                Phase::Testing => format!("load {lam_pct}%"),
-                Phase::Held => "held".into(),
-                _ => "collapse".into(),
-            },
+            clock: self.clock(),
         }
+    }
+
+    /// The header clock: `building`, `load 63%`, `held`, `collapse`.
+    pub fn clock(&self) -> String {
+        match self.phase() {
+            Phase::Build => "building".into(),
+            Phase::Testing => format!("load {}%", round_str(self.lam() * 100.0)),
+            Phase::Held => "held".into(),
+            _ => "collapse".into(),
+        }
+    }
+
+    /// A one-line summary (MCP `describe_screen`): level, counts, status, cost, phase.
+    pub fn summary(&self) -> String {
+        let r = self.analysis();
+        let level = self.level().level();
+        format!(
+            "Bridge · {} · {} joints, {} members · {} · ${}k{} · {}",
+            level.name,
+            self.design().nodes.len(),
+            self.design().members.len(),
+            status_of(r).label,
+            to_fixed(r.cost, 1),
+            level
+                .budget
+                .map(|b| format!(" / ${}k", num(b)))
+                .unwrap_or_default(),
+            self.clock()
+        )
     }
 
     fn inspector(
