@@ -1,125 +1,172 @@
-//! The Bridge's structure as a `.str` netlist (Share, "Open in Advanced": NAV-4, NAV-6,
-//! ADV-9), in the Advanced workbench's grammar (SPEC ADV-3): `.units SI kN m`, `.material`,
-//! one `.section` per size used (`A=..cm2 I=A^2`), `.node` with `fix=xy` / `fix=y`, `.member`
-//! with its size, one `.load` line per hung weight (kN) with `+self`, `.static`,
-//! `.buckle euler K=1.0`.
+//! The Bridge's structure as a `.str` netlist and back (Share, "Open in Advanced", "Open in
+//! Playground", ⌘V: SPEC NAV-4, NAV-6, ADV-9), on the Advanced workbench's
+//! [`crate::netlist`] writer and parser.
 //!
-//! Reading a netlist back is the Advanced parser's job (`sp_engine::netlist`); the Bridge
-//! turns its truss into a design with [`super::Design::from_truss`].
+//! [`write`] gives `.material` (the game material), one `.section` per size used (`Thin` /
+//! `Medium` / `Thick`, `I=A^2`), `.node`s with `fix=xy` (pin) / `fix=y` (roller), `.member`s
+//! with their size, the hung weights as `.load weights … Fy=-20t`, `.load self +self` (half of
+//! each member's weight at each end, the Bridge's lumping), `.static linear`, `.buckle euler
+//! K=1.0`: solving it in Advanced gives the Bridge's forces to the newton. [`read`] takes any
+//! netlist whose nodes fit the stage's 2 m grid into a [`Design`] for the Sandbox.
 
-use super::data::{LevelKey, MaterialKey, N_PER_TONNE, SizeKey, Support};
-use super::design::Design;
-use super::fmt::num;
+use super::data::{LevelKey, MaterialKey};
+use super::design::{Design, ImportError};
+use crate::netlist::{self, WriteTruss};
 
-/// Formats a number for the netlist: shortest exact form, at most 6 decimals.
-fn n(v: f64) -> String {
-    let r = (v * 1e6).round() / 1e6;
-    num(r)
+/// Why a netlist can't go into the Bridge.
+#[derive(Debug, Clone, PartialEq, thiserror::Error)]
+pub enum ReadError {
+    /// It doesn't parse (the first error, with its line).
+    #[error("line {line}: {message}")]
+    Parse {
+        /// 1-based line.
+        line: usize,
+        /// The parser's message.
+        message: String,
+    },
+    /// It parses but doesn't fit the Bridge (off the grid, underground, sideways loads, …).
+    #[error("{0}")]
+    Import(#[from] ImportError),
+    /// No joints at all.
+    #[error("it has no joints")]
+    Empty,
 }
 
-/// Writes the design as a netlist named `name` (the file stem, e.g. `river-level`).
+/// Writes the design as a netlist named `name` (the file stem: `river-level`, `sandbox`).
 pub fn write(design: &Design, mat: MaterialKey, level: LevelKey, name: &str) -> String {
-    let spec = mat.spec();
-    let mut out = String::new();
-    let line = |out: &mut String, s: String| {
-        out.push_str(&s);
-        out.push('\n');
-    };
-    line(&mut out, format!("* {name}.str"));
-    line(
-        &mut out,
-        format!(
-            "* Bridge · {} · {} joints, {} members",
-            level.level().name,
-            design.nodes.len(),
-            design.members.len()
-        ),
+    let (truss, loads) = design.to_truss(mat, 1.0);
+    // to_truss keeps the members whose joints exist, in order
+    let sections: Vec<String> = design
+        .members
+        .iter()
+        .filter(|m| design.joint(&m.a).is_some() && design.joint(&m.b).is_some())
+        .map(|m| m.size.name().to_string())
+        .collect();
+    let comment = format!(
+        "Bridge · {} · {} joints, {} members",
+        level.level().name,
+        design.nodes.len(),
+        design.members.len()
     );
-    line(&mut out, ".units  SI  kN  m".into());
-    line(
-        &mut out,
-        format!(
-            ".material  {}  E={}GPa  fy={}MPa  rho={}  ; representative",
-            spec.name.replace(' ', "-"),
-            n(spec.e / 1e9),
-            n(spec.fy / 1e6),
-            n(spec.rho)
-        ),
-    );
-    for s in SizeKey::ALL {
-        if design.members.iter().any(|m| m.size == s) {
-            line(
-                &mut out,
-                format!(
-                    ".section  {}  A={}cm2  I=A^2  ; box, b/t = 24",
-                    s.name(),
-                    n(s.area() * 1e4)
-                ),
-            );
+    netlist::write_truss(&WriteTruss {
+        name,
+        comment: &comment,
+        truss: &truss,
+        sections: &sections,
+        loads: &loads,
+        self_weight: true,
+    })
+}
+
+/// Reads a netlist into a design and its material (the first `.material`, matched to the
+/// Bridge's four by name; anything else builds in steel). Static point loads and the moving
+/// truck where it stands become hung weights.
+pub fn read(text: &str) -> Result<(Design, MaterialKey), ReadError> {
+    let net = netlist::parse(text).map_err(|diags| {
+        let d = diags
+            .iter()
+            .find(|d| d.is_error())
+            .or(diags.first())
+            .cloned();
+        match d {
+            Some(d) => ReadError::Parse {
+                line: d.line,
+                message: d.message,
+            },
+            None => ReadError::Parse {
+                line: 1,
+                message: "not a netlist".into(),
+            },
         }
+    })?;
+    if net.nodes.is_empty() {
+        return Err(ReadError::Empty);
     }
-    for j in &design.nodes {
-        let fix = match j.sup {
-            Some(Support::Pin) => "  fix=xy  ; pin",
-            Some(Support::Roller) => "  fix=y  ; roller",
-            None => "",
-        };
-        line(&mut out, format!(".node  {}  {}  {}{fix}", j.id, j.x, j.y));
+    let truss = net.to_truss();
+    let mut loads = net.point_loads();
+    if net.truck.is_some() {
+        loads.extend(net.truck_loads(net.truck_x()));
     }
-    for m in &design.members {
-        line(
-            &mut out,
-            format!(".member  {}  {}  {}  {}", m.id, m.a, m.b, m.size.name()),
-        );
-    }
-    let mut first = true;
-    for (id, t) in &design.loads {
-        let self_w = if first { "  +self" } else { "" };
-        first = false;
-        line(
-            &mut out,
-            format!(
-                ".load  bridge  {}  Fy={}{self_w}  ; {} t",
-                id,
-                n(-t * N_PER_TONNE / 1000.0),
-                num(*t)
-            ),
-        );
-    }
-    if design.loads.is_empty() {
-        line(&mut out, ".load  bridge  +self  ; self-weight only".into());
-    }
-    line(&mut out, ".static  ; linear, small displacement".into());
-    line(&mut out, ".buckle  euler  K=1.0".into());
-    out
+    let mat = truss
+        .materials
+        .first()
+        .and_then(|m| MaterialKey::from_name(&m.name))
+        .unwrap_or_default();
+    let design = Design::from_truss(&truss, &loads)?;
+    Ok((design, mat))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bridge::data::SizeKey;
 
     #[test]
     fn writes_the_starter_truss() {
         let d = Design::starter();
         let t = write(&d, MaterialKey::Steel, LevelKey::Sandbox, "sandbox");
-        assert!(t.starts_with("* sandbox.str\n"));
-        assert!(t.contains(".material  Steel  E=200GPa  fy=250MPa  rho=7850"));
-        assert!(t.contains(".section  Medium  A=80cm2  I=A^2"));
-        assert!(!t.contains(".section  Thin"));
-        assert!(t.contains(".node  J1  8  0  fix=xy"));
-        assert!(t.contains(".node  J6  48  0  fix=y"));
-        assert!(t.contains(".member  M16  J10  J4  Medium"));
+        assert!(t.starts_with("* sandbox.str\n"), "{t}");
+        assert!(t.contains("Medium"));
+        assert!(!t.contains("Thin"));
+        assert!(t.contains("fix=xy"));
+        assert!(t.contains("fix=y"));
         assert_eq!(t.lines().filter(|l| l.starts_with(".node")).count(), 10);
+        assert_eq!(t.lines().filter(|l| l.starts_with(".member")).count(), 16);
     }
 
     #[test]
-    fn writes_level_loads_in_kn() {
-        let d = Design::for_level(LevelKey::River);
-        let t = write(&d, MaterialKey::CarbonFiber, LevelKey::River, "river-level");
-        assert!(t.contains(".material  Carbon-fiber  E=70GPa  fy=600MPa  rho=1600"));
-        assert!(
-            t.contains(".load  bridge  J3  Fy=-196.2  +self  ; 20 t"),
-            "{t}"
-        );
+    fn round_trips_designs_and_materials() {
+        for mat in MaterialKey::ALL {
+            let mut d = Design::starter();
+            d.members[2].size = SizeKey::Thick;
+            d.members[9].size = SizeKey::Thin;
+            d.set_load("J3", 20.0);
+            d.set_load("J9", 7.5);
+            let text = write(&d, mat, LevelKey::Sandbox, "sandbox");
+            let (back, m) = read(&text).unwrap_or_else(|e| panic!("{mat:?}: {e}\n{text}"));
+            assert_eq!(m, mat, "{text}");
+            assert_eq!(back, d, "{text}");
+        }
+    }
+
+    /// ADV-9: the netlist solved by the Advanced side gives the Bridge's forces to the newton.
+    #[test]
+    fn advanced_solves_it_to_the_newton() {
+        let mut d = Design::starter();
+        d.members.push(crate::bridge::Bar {
+            id: "M17".into(),
+            a: "J8".into(),
+            b: "J4".into(),
+            size: SizeKey::Medium,
+        });
+        d.set_load("J3", 25.0);
+        d.set_load("J4", 25.0);
+        let text = write(&d, MaterialKey::Steel, LevelKey::Sandbox, "sandbox");
+        let net = crate::netlist::parse(&text).unwrap();
+        let sol = net.solve_at(net.truck_x()).unwrap();
+        let ours = d.analyse(MaterialKey::Steel, 1.0, &[]);
+        assert!(sol.stable && ours.ok);
+        for (i, m) in ours.members.iter().enumerate() {
+            let a = m.unwrap().force;
+            let b = sol.members[i].unwrap().force;
+            assert!((a - b).abs() < 1.0, "M{}: {a} vs {b}", i + 1);
+        }
+    }
+
+    #[test]
+    fn reads_the_advanced_example_and_refuses_bad_ones() {
+        let text = "* river-crossing.str\n.units SI kN m\n.material glulam E=12GPa fy=30MPa rho=500\n.section chord A=100cm2 I=A^2\n.node B0 0 0 fix=xy\n.node B1 8 0\n.node T1 8 6\n.node B2 16 0 fix=y\n.member M1 B0 B1 chord\n.member M2 B1 B2 chord\n.member M3 B0 T1 chord\n.member M4 T1 B2 chord\n.member M5 B1 T1 chord\n.load dead B1 Fy=-98.1\n.load truck 10t x=8 lane=B0..B2 share=0.5\n";
+        let (d, m) = read(text).unwrap();
+        assert_eq!(m, MaterialKey::Timber);
+        assert_eq!(d.nodes.len(), 4);
+        assert_eq!(d.nodes[0].id, "J1");
+        assert_eq!(d.members[0].size, SizeKey::Medium); // 100 cm² is nearest 80 by ratio
+        assert_eq!(d.loads, vec![("J2".to_string(), 15.0)]);
+        assert!(matches!(read("hello"), Err(ReadError::Parse { .. })));
+        assert!(matches!(
+            read(".node A 1 0\n"),
+            Err(ReadError::Import(ImportError::OffGrid(_)))
+        ));
+        assert!(read("").is_err());
     }
 }
