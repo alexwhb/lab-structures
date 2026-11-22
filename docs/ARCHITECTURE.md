@@ -51,9 +51,81 @@ Units SI (m, N, Pa, kg); forces positive in tension. No panics on any input.
 
 ### `bridge` (agent `bridge`)
 
-TODO (owner fills in): levels, game materials and sizes, cost and stars, the editing model
-(joints, members, supports, loads, undo), the Test ramp (λ, progressive breaking, log), the
-collapse simulation, explain sentences.
+The Playground › Bridge game: `Playground.dc.html`'s `class Component` without the drawing,
+**bit-exact with the mockup** (golden test below). The screen owns nothing but pixels.
+
+- **`bridge::Game`** — the state machine. Reading: `level()`, `design()`, `material()`,
+  `tool()`, `size()`, `weight()`, `sag()`, `show_forces()`, `best()` / `best_for(level)`,
+  `pending()`, `selection() -> Option<&Selection::{Joint(id), Member(id)}>`, `phase() ->
+  Phase::{Build, Testing, Collapse, Collapsed, Held}`, `lam()`, `broken()`, `log() ->
+  &[LogEntry { member, lam, mode, bad, loose }]`, `stars()`, `hover()`, `dragging()`,
+  `toast()`, `sim()`, `analysis()` (the solve shown now), `undo_depth()`, `revision()` (bumped
+  on every change), `building()`, `in_sim()`, `animating()` / `playing()`, `clock()`
+  (`building` / `load 63%` / `held` / `collapse`), `summary()` (MCP one-liner), `view()`.
+  Editing (the mockup's handlers, its rules and toasts): `pick_tool`, `pick_size`,
+  `pick_weight`, `toggle_sag`, `toggle_forces`, `pick_material` (building only),
+  `pick_level`, `clear` (= Reset), `click_joint(id)`, `click_grid(x, y)` (grid metres; see
+  `data::snap(stage_px_x, stage_px_y)`), `click_member(id)`, `joint_down(id)` /
+  `pointer_move(x, y)` / `pointer_up()` (drag), `clear_hover()`, `finish_line()`,
+  `set_support(id, Option<Support>)`, `add_load(id, ±t)`, `set_member_size(id, size)`,
+  `delete_member`, `delete_joint`, `delete_selected` (Delete), `nudge(dx, dy)` (arrow keys,
+  2 m steps, drag rules), `starter()` / `can_starter()`, `undo()` (40 steps),
+  `open_in_sandbox(design, material)`, `set_best`. Test: `start_or_stop()` (refuses with
+  "Connect the loaded joint…"), `back_to_build()`, `replay()` (slow motion), `tick()` (one 33 ms
+  tick: λ += 1/55, ≤ 30 breaks, loose-load / mechanism collapse, hold at λ = 1 with stars and
+  best; or 3 collapse steps), `advance(dt)` (toasts fade after 2.6 s), `run_test(max_ticks)`
+  (headless Test, for MCP `bridge_test`). Constants in `game`: `UNDO_DEPTH`, `LAMBDA_STEP`,
+  `MAX_BREAKS_PER_TICK`, `TICK_SECONDS`, `TOAST_SECONDS`.
+- **`bridge::view::View`** (`Game::view()`) — everything the screen shows: joint `positions`
+  (grid m, displaced × 40 with sag / simulated), `members: Vec<MemberView { index, id, a, b,
+  size, band: Band }>` (`Band::{T1..T3, C1..C3, Zero, Over, None}`, `band.level()` → opacity
+  index into `sp_theme::FORCE_BANDS`), `supports`, `loads` (crate + tag "20 t"), `sparks`,
+  `bad` (mechanism ring), `hover`, `ghost`, `handles: Vec<HandleView { text "−120", numeric,
+  selected, over, label "Member M7, 63% of its limit" }>`, `joints: Vec<JointView { locked,
+  pending, selected, bad, label "Joint J3, pin support, carrying 20 t" }>`, `water_flowing`,
+  `crosshair`, `stage_label`, `surface_label`, `legend`, `toast`, `loading { frac, text }`,
+  `result { title, held, stars, replay }`, `hint`, `show_sizes` / `show_weights` /
+  `has_pending`, `levels` (rows with best stars), `goal`, `status { label, tone:
+  Tone::{Muted, Ok, Warn, Danger} }`, `cost_text`, `over_budget`, `test_label`,
+  `inspector: Inspector::{Member(MemberInspector { title, length, fill, ut, tone, text,
+  size }), Joint(JointInspector { title, pos, support, can_support, locked, load, note,
+  can_delete; chip_dim() }), Nothing(BuiltFrom { material, joints, members, weight,
+  can_starter })}`, `explain`, `playing`, `slug`, `clock`. `view::status_of(&Analysis)`,
+  `view::fmt_kn`.
+- **`bridge::data`** — `MaterialKey::{Steel, Timber, Aluminum, CarbonFiber}` (`spec() ->
+  GameMaterial { name, e, fy, rho, cost $/kg }`, `from_name`), `SizeKey::{Thin, Medium,
+  Thick}` (`area()` 0.004 / 0.008 / 0.016 m², `stroke_px()`, `nearest(area)`),
+  `Support::{Pin, Roller}`, `SupportRule::{Banks, LeftBank, Anywhere}` (`allows(x, y)`,
+  `refusal()` toast), `LevelKey::{River, Overhang, Haul, Sandbox}` (`level() -> &Level { name,
+  goal, budget, sup, nodes, loads }`, `slug()` = header document, `key()`), `stars_for(cost,
+  budget)`, the stage geometry (`STAGE_W/H`, `px(x)`, `py(y)`, `snap`, `ground(x)`,
+  `underground`), `WEIGHT_STEPS`, `MAX_LOAD_T`, `N_PER_TONNE` (9810), `JOINT_COST_K`.
+- **`bridge::design`** — `Design { nodes: Vec<Joint { id "J3", x, y (i32 grid m), sup,
+  locked }>, members: Vec<Bar { id "M7", a, b (joint ids), size }>, loads: Vec<(id, t)>
+  (first-hung order), n_n, n_m }`; `Design::for_level`, `starter` (a mechanism until its
+  middle panel gets a diagonal, as in the mockup), lookups, `set_load`, `to_truss(mat, λ)`,
+  `analyse(mat, λ, broken) -> Analysis { ok, bad, displacement, members:
+  Vec<Option<MemberResult>>, worst, mass, cost, n_act, used, reactions }` (self-weight half per
+  end at λ, then weights × 9 810 N × λ, on `truss::Truss::solve`), `from_truss(&Truss, loads)
+  -> Result<Design, ImportError>` (grid / underground / overlap / duplicate / sideways-load
+  checks), `Band::of`.
+- **`bridge::sim::Sim`** — the collapse, step for step as `initSim` / `stepSim` (Verlet,
+  0.996, 14 passes, tear at 5 % with sparks, pins fixed, rollers keep height, ground, water
+  drag below −8 m, 3.2 s; slow motion 0.3× for 1.6 s).
+- **`bridge::netlist`** — `write(design, mat, level, name) -> String` (on
+  `netlist::write_truss`: sizes as `.section`s, pins / rollers as `fix=`, weights as `.load
+  weights … Fy=-20t`, `.load self +self`), `read(text) -> Result<(Design, MaterialKey),
+  ReadError>` (on `netlist::parse`; static loads and the truck where it stands become
+  weights). Advanced's solve of `write`'s output matches the Bridge to the newton (ADV-9).
+- **`bridge::fmt`** — JavaScript-exact `to_fixed` (ties up), `js_round`, `num`, `stars`.
+- `truss::hypot` (added for the Bridge, used for every member length): V8's `Math.hypot`, so
+  symmetric members tie-break like the mockup.
+- Tests: `tests/bridge_goldens.rs` replays `tests/bridge_goldens.json` (10 scenarios, 69
+  snapshots written by `node crates/sp-engine/tests/bridge_goldens.mjs`, which runs the
+  mockup's `Component` verbatim) and matches state, forces, displacements, cost, the collapse
+  simulation, every string and the drawn geometry to within 2 ulps; `tests/bridge_props.rs`
+  (random edits / NaN / huge loads never panic, invariants, undo, round trip, ENG-4 perf:
+  60-joint solve ≈ 0.15 ms, a full 30-solve tick ≈ 4 ms).
 
 ### `netlist`, `generate`, `influence` (agent `advanced`)
 
@@ -287,10 +359,10 @@ user navigates on before that, it still reaches its target. Delivered carries ar
 | widget | CSS | use |
 |---|---|---|
 | `prim(label)`, `ghost(label)` → `Button` | `.prim`, `.ghost` 36 px; `.big()` 44 px | `.icon(Icon::Play)`, `.enabled(b)`, `.pressed(b)` (toggle look + `aria-pressed`), `.full_width()`, `.centered()`, `.height(h)`, `.accessible_name(s)`, `.link()`; `.show(ui)` / `.show_at(ui, rect)` |
-| `SegGroup::new(name, &items, selected)` + `SegItem::new(label).icon(..)` | `.seg` in a well (`.style(SegStyle::Header)`), compact `.mini` | `.show(ui).clicked: Option<usize>`; items report pressed |
+| `SegGroup::new(name, &items, selected)` + `SegItem::new(label).icon(..)` | `.seg` in a well (`.style(SegStyle::Header)`), compact `.mini` | `.fill()` (equal `flex: 1` items, centred), `.links()`, `.navigation()`; `.show(ui).clicked: Option<usize>`; items report pressed |
 | `Toggle::new(label, on)` | `.chip` toggle (34 px pill; `.chip-on`) | `.dot(colour)` (material swatch), `.dimmed(b)` (`.chip-dim`), `.enabled(b)`, `.accessible_name(s)`; `.show(ui)` / `.show_at(ui, rect)`, `.clicked()` = flip; reports pressed |
 | `Checkbox::new(label, checked)` | `input[type=checkbox]` row (18 px, accent; 44 px row, gap 10) | `.gap(8.0).height(40.0)` (Advanced), `.enabled(b)`; `.clicked()` = flip; an AccessKit `CheckBox` |
-| `Slider::new(label, &mut v, range)` | `input[type=range]` (sand) with its label / value row | `.step(s)`, `.value_text(s)`, `.width(w)` |
+| `Slider::new(label, &mut v, range)` | `input[type=range]` (sand) with its label / value row | `.step(s)`, `.value_text(s)`, `.width(w)`; arrow keys step it (keeping focus), AccessKit increment / decrement / set value |
 | `lbl(ui, text)`, `lbl_colored` | `.lbl` eyebrow | |
 | `Card::panel()`, `Card::well()` | `.panel`, `.well` | `.padding()`, `.gap()`, `.fill()`, `.border()`, `.label(name)` (a `Group`); `.show(ui, \|ui\| ..)` |
 | `StatTile::new(label, value)` | stat tile (a `.well`) | `.color(c)`, `.compact()` |
@@ -317,8 +389,11 @@ Materials), `Column::readouts("Readouts")` (1 1 300, 260–360, border-left), pl
 `.min()`, `.max()`, `.pad(y, x)`, `.gap()`, `.border_left()`, `.border_right()`, `.scroll(b)`.
 `layout::columns(ui, ctx, &COLS, |ui, ctx, i| ..)` lays the row out (CSS flex-wrap with min /
 max widths): side by side the columns fill `ctx.body_height()` and asides scroll on their own;
-stacked (narrow windows) each line is at least the route's `panel_height()` and only the page
-scrolls. `layout::resolve(width, &cols)` is the pure maths. `layout::stage(ui)` paints the
+stacked (narrow windows) each line is as tall as its tallest column's content — what the
+column *allocated*, measured the pass before (a column that only paints into
+`available_rect_before_wrap()` must allocate it, e.g. `ui.advance_cursor_after_rect(rect)`) —
+the lines share out the rest only when together shorter than the route's `panel_height()`, and
+only the page scrolls. `layout::resolve(width, &cols)` is the pure maths. `layout::stage(ui)` paints the
 `.graph` ground over the rest of `ui`; `layout::graph_panel(ui, rect, fill)` returns a clipped
 child `Ui` for a rounded stage panel, `graph_panel_border(ui, rect)` draws its border on top.
 
