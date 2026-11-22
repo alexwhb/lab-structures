@@ -148,6 +148,7 @@ pub struct SegGroup<'a> {
     style: SegStyle,
     links: bool,
     navigation: bool,
+    fill: bool,
 }
 
 impl<'a> SegGroup<'a> {
@@ -160,12 +161,20 @@ impl<'a> SegGroup<'a> {
             style: SegStyle::Mini { fill: false },
             links: false,
             navigation: false,
+            fill: false,
         }
     }
 
     /// The look (default `.mini`, wrapping).
     pub fn style(mut self, style: SegStyle) -> Self {
         self.style = style;
+        self
+    }
+
+    /// `.seg` / tool items share the available width equally (`flex: 1; justify-content:
+    /// center`, e.g. Materials' Strain axis); the well spans the width. (`.mini` groups use `SegStyle::Mini { fill }`.)
+    pub fn fill(mut self) -> Self {
+        self.fill = true;
         self
     }
 
@@ -235,6 +244,14 @@ impl<'a> SegGroup<'a> {
                 }
                 // `display: flex` (block-level): the well spans the available width
                 (rects, vec2(width.max(maxx + 2.0 * pad), y + h + 2.0 * pad))
+            }
+            SegStyle::Header | SegStyle::Tool if self.fill => {
+                let inner = (width - 2.0 * pad).max(0.0);
+                let w = ((inner - gap * (n as f32 - 1.0)) / n as f32).max(0.0);
+                let rects = (0..n)
+                    .map(|i| Rect::from_min_size(pos2(pad + i as f32 * (w + gap), pad), vec2(w, h)))
+                    .collect();
+                (rects, vec2(width, h + 2.0 * pad))
             }
             SegStyle::Header | SegStyle::Tool => {
                 let mut x = pad;
@@ -330,7 +347,8 @@ impl<'a> SegGroup<'a> {
                 galley(&group, it.label, font.clone(), fg)
             };
             let content = icon_w + g.size().x;
-            let mut x = if fill_mode {
+            // `flex: 1; justify-content: center` items centre their content
+            let mut x = if fill_mode || self.fill {
                 r.center().x - content / 2.0
             } else {
                 r.left() + self.style.item_pad()

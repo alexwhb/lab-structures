@@ -16,6 +16,8 @@ pub struct Gallery {
     pub style: usize,
     /// The selected member size (a `.mini` group).
     pub size: usize,
+    /// The selected strain axis (a filled `.seg` group).
+    pub zoom: usize,
     /// "Exaggerate sag".
     pub sag: bool,
     /// "Show forces".
@@ -36,6 +38,7 @@ impl Default for Gallery {
             clicks: Default::default(),
             style: 0,
             size: 1,
+            zoom: 0,
             sag: true,
             forces: false,
             floors: 60.0,
@@ -135,6 +138,15 @@ impl Gallery {
             .clicked
         {
             self.style = i;
+        }
+        const ZOOMS: [SegItem<'static>; 2] = [SegItem::new("0–25 %"), SegItem::new("0–2 %")];
+        if let Some(i) = SegGroup::new("Strain axis range", &ZOOMS, Some(self.zoom))
+            .style(SegStyle::Header)
+            .fill()
+            .show(ui)
+            .clicked
+        {
+            self.zoom = i;
         }
         const SIZES: [SegItem<'static>; 3] = [
             SegItem::new("Thin"),

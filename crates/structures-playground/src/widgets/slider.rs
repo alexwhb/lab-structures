@@ -109,6 +109,11 @@ impl<'a> Slider<'a> {
                     i.key_pressed(Key::ArrowRight) || i.key_pressed(Key::ArrowUp),
                 )
             });
+            if dec || inc {
+                // egui honours the lock filter only from the second focused frame: on the
+                // first, its arrow-key focus navigation would move focus on; cancel it
+                ui.memory_mut(|m| m.move_focus(eframe::egui::FocusDirection::None));
+            }
             if dec {
                 *self.value = snap(*self.value - key_step);
             }

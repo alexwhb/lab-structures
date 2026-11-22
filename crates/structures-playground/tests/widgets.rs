@@ -82,6 +82,11 @@ fn segmented_groups_select() {
     assert_eq!(pg.accesskit_node().is_selected(), Some(true));
     click(&mut h, "Thick", Role::Button);
     assert_eq!(h.state().size, 2);
+    // a filled .seg group: equal items across the width
+    let (a, b) = (rect(&h, "0–25 %"), rect(&h, "0–2 %"));
+    assert!((a.width() - b.width()).abs() < 0.5, "{a:?} {b:?}");
+    click(&mut h, "0–2 %", Role::Button);
+    assert_eq!(h.state().zoom, 1);
 }
 
 #[test]
@@ -112,6 +117,27 @@ fn chips_and_checkbox() {
     let cb = h.get_by_role_and_label(Role::CheckBox, "Tuned mass damper at the top");
     assert_eq!(cb.accesskit_node().toggled(), Some(Toggled::True));
     assert!(cb.rect().height() >= 44.0);
+}
+
+/// The slider keeps keyboard focus while the arrow keys step it (NAV-5), also on the first
+/// press after it got focus.
+#[test]
+fn slider_steps_with_the_arrow_keys_and_keeps_focus() {
+    let mut h = gallery();
+    h.get_by_role_and_label(Role::Slider, "Floors").focus();
+    h.step();
+    // ArrowUp steps up too, and the checkbox above would take egui's arrow-key focus move
+    h.key_press(egui::Key::ArrowUp);
+    h.step();
+    for _ in 0..2 {
+        h.key_press(egui::Key::ArrowRight);
+        h.step();
+    }
+    assert_eq!(h.state().floors, 63.0);
+    h.key_press(egui::Key::ArrowLeft);
+    h.step();
+    assert_eq!(h.state().floors, 62.0);
+    assert!(h.get_by_role_and_label(Role::Slider, "Floors").is_focused());
 }
 
 /// Badges and readouts are labelled text (PROV-1, readouts).

@@ -1,8 +1,7 @@
 //! Page layout: the mockup's body rows are `display: flex; flex-wrap: wrap` with columns
 //! (`flex: <grow> <shrink> <basis>`, `min-width`, `max-width`, `box-sizing: border-box`). At
 //! 1440 they sit side by side and fill the window under the chrome (header + world tab row);
-//! at 390 they stack, each at least the route's [`panel_height`](crate::Route::panel_height),
-//! and the page scrolls.
+//! at 390 they stack, each line as tall as its content, and the page scrolls.
 //!
 //! ```ignore
 //! // the Tower / Ground / Materials row
@@ -283,9 +282,12 @@ pub fn resolve(width: f32, cols: &[Column]) -> Vec<Vec<Placed>> {
 /// `add(ui, ctx, i)` for each column inside its padding (a top-down `Ui` with `gap` spacing).
 ///
 /// Side by side, columns fill [`Ctx::body_height`] and a `scroll` column scrolls on its own
-/// (`overflow: auto`). Stacked (narrow windows), each line is the route's
-/// [`panel_height`](crate::Route::panel_height) and nothing scrolls but the page: a `scroll`
-/// column whose content is taller grows its line instead (measured the frame before). One
+/// (`overflow: auto`). Stacked (narrow windows), each line is as tall as its tallest
+/// column's content — what the column *allocated* (measured the pass before) — and nothing
+/// scrolls but the page; if the lines together are shorter than the route's
+/// [`panel_height`](crate::Route::panel_height) the rest is shared out equally (CSS
+/// `align-content: stretch`). A column that only paints into `ui.available_rect_before_wrap()`
+/// must allocate what it drew (e.g. `ui.advance_cursor_after_rect(rect)`) to keep its height. One
 /// scroller means `scroll_to_rect`, keyboard focus and AccessKit `ScrollIntoView` always
 /// reach the page (an inner egui `ScrollArea` would swallow them). Returns the rect used.
 pub fn columns(
@@ -306,16 +308,36 @@ pub fn columns(
     .max(MIN_PANEL_H);
     let route_id = ctx.route().id();
     let content_id = |i: usize| Id::unique(("column-content", route_id, i));
+    // Stacked (CSS `flex-wrap` in a `min-height: <board>` page): each line is as tall as its
+    // tallest column's content (measured the pass before; the panel height until then), and
+    // only when all lines together are shorter than the board's body does `align-content:
+    // stretch` share the rest out equally.
+    let heights: Vec<f32> = if stacked {
+        let mut h: Vec<f32> = lines
+            .iter()
+            .map(|line| {
+                let measured: Vec<f32> = line
+                    .iter()
+                    .filter_map(|p| ui.data(|d| d.get_temp::<f32>(content_id(p.index))))
+                    .collect();
+                if measured.len() < line.len() {
+                    panel_h
+                } else {
+                    measured.into_iter().fold(0.0, f32::max)
+                }
+            })
+            .collect();
+        let total: f32 = h.iter().sum();
+        if total < panel_h {
+            let extra = (panel_h - total) / h.len() as f32;
+            h.iter_mut().for_each(|x| *x += extra);
+        }
+        h
+    } else {
+        vec![panel_h; lines.len()]
+    };
     let mut y = origin.y;
-    for line in &lines {
-        let height = if stacked {
-            line.iter()
-                .filter(|p| cols[p.index].scroll)
-                .filter_map(|p| ui.data(|d| d.get_temp::<f32>(content_id(p.index))))
-                .fold(panel_h, f32::max)
-        } else {
-            panel_h
-        };
+    for (line, &height) in lines.iter().zip(&heights) {
         for p in line {
             let c = &cols[p.index];
             let rect = Rect::from_min_size(pos2(origin.x + p.x, y), vec2(p.width, height));
@@ -372,17 +394,15 @@ pub fn columns(
                 );
                 inner_ui.spacing_mut().item_spacing = vec2(c.gap, c.gap);
                 add(&mut inner_ui, ctx, p.index);
-                if c.scroll {
-                    // stacked: remember the content's height so the line can grow to it
+                if stacked {
+                    // remember the content's height (what it allocated) for its line
                     let need = inner_ui.min_rect().height() + 2.0 * c.pad_y;
                     let id = content_id(p.index);
                     let old = ui.data(|d| d.get_temp::<f32>(id));
                     if old.is_none_or(|o| (o - need).abs() > 0.5) {
                         ui.data_mut(|d| d.insert_temp(id, need));
-                        if need > panel_h || old.is_some_and(|o| o > panel_h) {
-                            ui.ctx()
-                                .request_discard("stacked column content height changed");
-                        }
+                        ui.ctx()
+                            .request_discard("stacked column content height changed");
                     }
                 }
             }
