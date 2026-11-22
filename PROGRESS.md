@@ -101,7 +101,7 @@ Shared-file etiquette:
   JavaScript-exact (`toFixed` rounds ties up, unlike `format!`); use them for mockup-exact
   strings. **DATA-SOURCES owners**: when you add or change a constant, add its row (class +
   source) to `docs/DATA-SOURCES.md` (or tell me).
-- **materials → shell** (open): (1) **Stacked lines at 390 should be content-height.** The
+- **materials → shell** (**Done**, 4fe97a3: stacked lines are content-height — every column must allocate what it draws; the slider keeps focus from the first arrow press; `SegGroup::fill()` for `.seg` groups, centred items): (1) **Stacked lines at 390 should be content-height.** The
   mockup's row is `flex: 1 1 auto; flex-wrap: wrap` in a `min-height: 900px` column, so
   `align-content: stretch` only shares out free space when the page is shorter than the
   window; at 390 the Materials parts aside is ~612 px tall in the reference but `layout::columns`
