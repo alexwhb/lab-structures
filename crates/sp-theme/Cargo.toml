@@ -1,0 +1,11 @@
+[package]
+name = "sp-theme"
+description = "Structures Playground visual tokens: the series greys with the sand accent, force and status colours, material swatches, app identities and component sizes, on top of labkit's lab-theme."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+egui = { workspace = true }
+lab-theme = { workspace = true }

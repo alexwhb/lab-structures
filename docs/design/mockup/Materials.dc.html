@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Structures Playground — Materials lab</title>
+<script src="652c313c-45fb-4dec-b95b-07ce120b6eae"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style></style>
+<style>
+body{margin:0;background:#0A0A0A}
+.paper{background-color:#0A0A0A;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);background-size:60px 60px,60px 60px,12px 12px,12px 12px}
+a{color:#D6C7A1}a:hover{color:#E9DFC6}
+.seg{border:0;background:transparent;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;padding:0 14px;min-height:36px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none}
+.seg:hover{color:#EAEAEA}
+.seg-on{background:#2A2A2A;color:#F5F5F5}
+.ghost{border:1px solid #2E2E2E;background:#171717;color:#D9D9D9;font:500 13px Inter,system-ui,sans-serif;min-height:36px;padding:0 12px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.ghost:hover{background:#1F1F1F;color:#F5F5F5}
+.prim{border:1px solid #4D4636;background:#24221C;color:#E9DFC6;font:600 13px Inter,system-ui,sans-serif;min-height:36px;padding:0 14px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.prim:hover{background:#2E2B23;color:#E9DFC6}
+.sw{width:36px;height:36px;border:0;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.sw:hover{background:#1C1C1C}
+.sw-on{background:#2A2A2A}
+.lbl{margin:0;font:600 11px Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#A3A3A3}
+.ptile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:84px;border:1px solid #242424;border-radius:12px;background:rgba(18,18,18,.92);color:#EAEAEA;font:600 12px/1.25 Inter,system-ui,sans-serif;cursor:pointer;padding:10px 6px;text-align:center}
+.ptile:hover{border-color:#4D4636;background:#1E1C17}
+.ptile-on{border-color:#D6C7A1;background:#1E1C17}
+.tab{display:flex;align-items:center;min-height:44px;padding:0 4px;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;text-decoration:none;border-bottom:2px solid transparent;box-sizing:border-box}
+.tab:hover{color:#F5F5F5}
+.tab-on{color:#F5F5F5;border-bottom-color:#D6C7A1}
+.panel{background:rgba(17,17,17,.88);border:1px solid #242424;border-radius:12px}
+.h{margin:0;font:600 15px 'Space Grotesk',Inter,sans-serif;letter-spacing:-.01em}
+.mono{font-family:'JetBrains Mono',monospace}
+.mut{color:#A3A3A3}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid #2E2E2E;background:#141414;font:600 12px Inter,system-ui,sans-serif}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:5px;font:500 11px 'JetBrains Mono',monospace;border:1px solid #2E2E2E;color:#D9D9D9;background:#121212}
+.bar{height:8px;border-radius:4px;background:#1E1E1E;overflow:hidden}
+.well{background:#0D0D0D;border:1px solid #242424;border-radius:8px}
+input[type=range]{accent-color:#D6C7A1;width:100%;margin:0;height:28px}
+input[type=checkbox]{accent-color:#D6C7A1;width:18px;height:18px;margin:0}
+.graph{background-color:#0B0C0E;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:120px 120px,120px 120px,24px 24px,24px 24px}
+.chip{position:absolute;transform:translate(-50%,-130%);padding:3px 8px;border-radius:6px;background:rgba(11,12,14,.92);border:1px solid #2A2D33;font:400 12px 'JetBrains Mono',monospace;color:#ECEAE6;white-space:nowrap;pointer-events:none}
+@keyframes flow{to{stroke-dashoffset:-48}}
+.flow{animation:flow 1.6s linear infinite}
+.still .flow{animation-play-state:paused}
+</style>
+</helmet>
+<div class="paper" style="min-height: 900px; display: flex; flex-direction: column; color: #EAEAEA; font-family: Inter, system-ui, sans-serif">
+  <header style="min-height: 56px; display: flex; align-items: center; gap: 12px 16px; padding: 8px 16px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.85); flex-wrap: wrap; box-sizing: border-box">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <svg width="26" height="26" sc-camel-view-box="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="6" fill="#171717" stroke="#D6C7A1" stroke-width="1.5"></rect><path d="M5 18h16M5 18l4-9h8l4 9M9 9l4 9 4-9" fill="none" stroke="#D6C7A1" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></path><circle cx="13" cy="18" r="1.8" fill="#7FB0E0"></circle></svg>
+      <span style="font: 600 16px 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.01em">Structures Playground</span>
+      <span style="color: #4A4A4A">/</span>
+      <span style="font-size: 13px; color: #D9D9D9">tensile-test</span>
+    </div>
+
+    <nav aria-label="Mode" style="display: flex; gap: 2px; padding: 3px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px">
+      <a class="seg seg-on" href="Main.dc.html" aria-current="page"><svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 11h12M1 11l3-6h6l3 6M4 5l3 6 3-6"></path></svg>Playground</a>
+      <a class="seg" href="Advanced.dc.html"><svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5v11h11"></path><path d="M3.5 4h4M3.5 6.5h6M3.5 9h3"></path></svg>Advanced</a>
+    </nav>
+
+
+    <div style="display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap">
+      <button type="button" class="prim" sc-camel-on-click="{{toggleDrive}}">
+        <sc-if value="{{playing}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><rect x="2" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect><rect x="7.4" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect></svg>Pause</sc-if>
+        <sc-if value="{{notPlaying}}" hint-placeholder-val="{{ true }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><path d="M3 1.5l7 4.5-7 4.5z" fill="currentColor"></path></svg>Pull</sc-if>
+      </button>
+      <button type="button" class="ghost" sc-camel-on-click="{{reset}}"><svg width="12" height="12" sc-camel-view-box="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 1 0 1.7-4"></path><path d="M2.5 2.5V6H6"></path></svg>Reset</button>
+      <span class="mono" style="font-size: 12px; color: #A3A3A3; padding: 0 8px">{{clock}}</span>
+      <button type="button" class="ghost">Share</button>
+    </div>
+  </header>
+  <nav aria-label="Playground worlds" style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; padding: 0 16px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.85)">
+    <a class="tab" href="Main.dc.html">Bridge</a>
+    <a class="tab" href="Tower.dc.html">Tower</a>
+    <a class="tab" href="Ground.dc.html">Ground</a>
+    <a class="tab tab-on" href="Materials.dc.html" aria-current="page">Materials</a>
+    <span style="margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 0">
+      <span class="badge"><span class="dot" style="background: #D6C7A1"></span>Curves: representative</span>
+      <span class="badge"><span class="dot" style="background: #A3A3A3"></span>Heat effects: illustrative</span>
+      <span class="badge"><span class="dot" style="background: #A3A3A3"></span>Not certified data</span>
+    </span>
+  </nav>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto; min-height: 0">
+
+    <aside aria-label="Parts" style="flex: 1 1 250px; max-width: 300px; min-width: 220px; border-right: 1px solid #242424; background: rgba(17,17,17,0.84); padding: 14px 12px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <h2 class="lbl">Sample</h2>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{mats}}" as="m" hint-placeholder-count="5">
+            <button type="button" class="{{m.cls}}" aria-pressed="{{m.pressed}}" sc-camel-on-click="{{m.pick}}">
+              <span style="width: 52px; height: 18px; border-radius: 4px; background: {{m.fill}}; box-shadow: inset 0 -3px 0 rgba(0,0,0,.25), 0 4px 0 {{m.side}}, 0 8px 10px rgba(0,0,0,.6)"></span>
+              <span>{{m.name}}</span>
+            </button>
+          </sc-for>
+        </div>
+        <p class="mut" style="margin: 0; font-size: 12px; line-height: 1.5">{{note}}</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><label for="temp" class="lbl">Temperature</label><output for="temp" class="mono" style="font-size: 12px; color: {{tempColor}}">{{tempLabel}}</output></div>
+        <input id="temp" type="range" min="-40" max="600" step="10" value="{{temp}}" sc-camel-on-change="{{setTemp}}">
+        <p class="mut" style="margin: 0; font-size: 12px; line-height: 1.5">{{tempNote}}</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <h2 class="lbl">Strain axis</h2>
+        <div role="group" aria-label="Strain axis range" style="display: flex; gap: 2px; padding: 3px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px">
+          <sc-for list="{{zooms}}" as="z" hint-placeholder-count="2"><button type="button" class="{{z.cls}}" aria-pressed="{{z.pressed}}" sc-camel-on-click="{{z.pick}}" style="flex: 1; justify-content: center">{{z.name}}</button></sc-for>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <h2 class="lbl">Coming to this bench</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px"><span class="badge">Fatigue</span><span class="badge">Creep</span><span class="badge">Phase diagrams</span><span class="badge">Grain growth</span></div>
+      </div>
+    </aside>
+
+    <main style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px">
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <h1 style="margin: 0; font: 600 22px 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.01em">Pull it until it breaks</h1>
+          <p class="mut" style="margin: 0; font-size: 13px">A tensile test: grip a dog-bone sample, stretch it, record force against stretch.</p>
+        </div>
+        <span class="pill" style="color: {{statusColor}}"><span class="dot" style="background: {{statusColor}}"></span>{{statusLabel}}</span>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 12px">
+        <div class="{{stageCls}}" role="img" aria-label="{{rigLabel}}" style="position: relative; flex: 1 1 300px; min-width: 0; aspect-ratio: 420 / 560; border: 1px solid #242424; border-radius: 12px; overflow: hidden">
+          <svg sc-camel-view-box="0 0 420 560" width="100%" height="100%" aria-hidden="true" style="position: absolute; inset: 0">
+            <path d="M60 500 H360 L392 480 H92 Z" fill="#33363C"></path>
+            <path d="M60 500 H360 V530 H60 Z" fill="#24262A"></path>
+            <path d="M90 60 H112 V500 H90 Z M308 60 H330 V500 H308 Z" fill="#2E323A"></path>
+            <path d="M112 60 L126 52 V488 L112 500 Z M330 60 L344 52 V488 L330 500 Z" fill="#1B1D21"></path>
+            <path d="M80 34 H340 V60 H80 Z" fill="#3C414A"></path>
+            <path d="{{headD}}" fill="#4A4F58" stroke="#5E636C"></path>
+            <path d="{{headTopD}}" fill="#5A606A"></path>
+            <path d="M176 452 H244 V480 H176 Z" fill="#4A4F58" stroke="#5E636C"></path>
+            <path d="{{specD}}" fill="{{specFill}}" stroke="#0A0A0A" stroke-width="1"></path>
+            <path d="{{gaugeD}}" stroke="#D6C7A1" stroke-width="1.5" fill="none"></path>
+            <path d="{{crackD}}" stroke="#E5534B" stroke-width="2" fill="none"></path>
+          </svg>
+          <div style="position: absolute; left: 10px; top: 10px; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; background: rgba(10,10,10,.82); border: 1px solid #242424">
+            <span class="lbl">Load cell</span><span class="mono" style="font-size: 16px; color: #D6C7A1">{{force}}</span><span class="mut" style="font-size: 11px">50 mm² section</span>
+          </div>
+          <span class="badge" style="position: absolute; right: 10px; bottom: 10px">stretch exaggerated</span>
+        </div>
+
+        <div class="graph" role="img" aria-label="{{plotLabel}}" style="position: relative; flex: 999 1 380px; min-width: 0; aspect-ratio: 560 / 400; border: 1px solid #242424; border-radius: 12px; overflow: hidden">
+          <svg sc-camel-view-box="0 0 560 400" width="100%" height="100%" aria-hidden="true" style="position: absolute; inset: 0">
+            <path d="M56 20 V350 H544" stroke="#5A5A5A" stroke-width="1.2" fill="none"></path>
+            <path d="{{gridD}}" stroke="#2A2A2A" stroke-width="1" fill="none"></path>
+            <path d="{{ghostD}}" stroke="#6A6A6A" stroke-opacity="0.55" stroke-width="1.5" fill="none"></path>
+            <path d="{{curveD}}" stroke="{{curveColor}}" stroke-width="3" fill="none" stroke-linejoin="round"></path>
+            <path d="{{doneD}}" stroke="#D6C7A1" stroke-width="3" fill="none" stroke-linejoin="round"></path>
+            <circle cx="{{mx}}" cy="{{my}}" r="6" fill="#D6C7A1" stroke="#0A0A0A" stroke-width="2"></circle>
+          </svg>
+          <sc-for list="{{ticksY}}" as="t" hint-placeholder-count="5"><span class="mono" style="position: absolute; left: 4px; top: {{t.y}}%; transform: translateY(-50%); font-size: 10px; color: #A3A3A3">{{t.v}}</span></sc-for>
+          <sc-for list="{{ticksX}}" as="t" hint-placeholder-count="6"><span class="mono" style="position: absolute; left: {{t.x}}%; top: 90%; transform: translateX(-50%); font-size: 10px; color: #A3A3A3">{{t.v}}</span></sc-for>
+          <span class="mono" style="position: absolute; left: 12%; top: 2%; font-size: 11px; color: #D9D9D9">stress MPa</span>
+          <span class="mono" style="position: absolute; right: 2%; top: 94%; font-size: 11px; color: #D9D9D9">strain %</span>
+          <sc-for list="{{curveLabels}}" as="c" hint-placeholder-count="5"><span style="position: absolute; left: {{c.x}}%; top: {{c.y}}%; transform: translate(4px, -110%); font-size: 11px; color: {{c.c}}; font-weight: {{c.fw}}; white-space: nowrap">{{c.name}}</span></sc-for>
+        </div>
+      </div>
+
+      <div class="panel" style="display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 12px 16px; align-items: center">
+        <div style="flex: 1 1 320px; display: flex; flex-direction: column; gap: 2px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline"><label for="strain" style="font-size: 13px; font-weight: 600">Stretch</label><output for="strain" class="mono" style="font-size: 12px; color: #D6C7A1">{{strainLabel}}</output></div>
+          <input id="strain" type="range" min="0" max="{{zoom}}" step="{{step}}" value="{{e}}" sc-camel-on-change="{{setE}}">
+        </div>
+        <button type="button" class="ghost" sc-camel-on-click="{{newSample}}">Fresh sample</button>
+      </div>
+    </main>
+
+    <aside aria-label="Readouts" style="flex: 1 1 300px; max-width: 360px; min-width: 260px; border-left: 1px solid #242424; background: rgba(17,17,17,0.84); padding: 14px 12px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box">
+      <section style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{tiles}}" as="t" hint-placeholder-count="6">
+          <div class="well" style="padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><span class="lbl">{{t.k}}</span><span class="mono" style="font-size: 17px">{{t.v}}</span><span class="mut" style="font-size: 11px">{{t.n}}</span></div>
+        </sc-for>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 8px">
+        <h2 class="lbl">Strength per kilogram</h2>
+        <sc-for list="{{spec}}" as="c" hint-placeholder-count="5">
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 12px">
+            <span style="width: 86px; color: {{c.tc}}; font-weight: {{c.fw}}">{{c.name}}</span>
+            <div class="bar" style="flex: 1"><div style="width: {{c.w}}%; height: 8px; background: {{c.color}}"></div></div>
+            <span class="mono" style="min-width: 52px; text-align: right">{{c.v}}</span>
+          </div>
+        </sc-for>
+        <p class="mut" style="margin: 0; font-size: 11px">Peak strength ÷ density, kN·m/kg. Why aircraft love carbon fiber.</p>
+      </section>
+
+      <section class="panel" style="padding: 12px; display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><h2 class="h">Challenge · Break all five</h2><span class="mono" style="font-size: 11px; color: #A3A3A3">5 / 12</span></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px">
+          <sc-for list="{{broken}}" as="b" hint-placeholder-count="5"><span class="pill" style="color: {{b.c}}"><span class="dot" style="background: {{b.c}}"></span>{{b.name}}</span></sc-for>
+        </div>
+        <p class="mut" style="margin: 0; font-size: 12px">Then guess which one broke with the least warning.</p>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 6px">
+        <h2 class="lbl">What’s happening</h2>
+        <p style="margin: 0; font-size: 13px; line-height: 1.55; color: #D4D4D4; text-wrap: pretty">{{explain}}</p>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mat: 'steel', e: 0, temp: 20, zoom: 25, playing: false, broke: {} };
+  }
+  componentDidMount() { this.timer = setInterval(() => this.tick(), 50); }
+  componentWillUnmount() { clearInterval(this.timer); }
+
+  defs() {
+    return {
+      steel: { name: 'Steel', pts: [[0,0],[0.1375,275],[1.5,275],[5,360],[10,415],[15,430],[19,405],[22,360]], E: 200, rho: 7850, uts: 15, color: '#9AA3AD', fill: '#9AA3AD', side: '#4E545B', note: 'Mild structural steel. Yields, flows, hardens, necks, then tears. Lots of warning.' },
+      alu: { name: 'Aluminum', pts: [[0,0],[0.4,276],[1,290],[4,305],[8,310],[11,300],[12,290]], E: 69, rho: 2700, uts: 8, color: '#D5DAE0', fill: '#D5DAE0', side: '#7C838B', note: '6061-T6 aluminum. A third of steel’s weight and stiffness, no clean yield point.' },
+      concrete: { name: 'Concrete', pts: [[0,0],[0.1,30],[0.2,40],[0.3,34],[0.35,28]], E: 30, rho: 2400, uts: 0.2, color: '#B9B4A8', fill: '#B9B4A8', side: '#66625A', note: 'Shown in compression. In tension it cracks at about a tenth of this, which is why it gets steel rebar.' },
+      timber: { name: 'Timber', pts: [[0,0],[0.67,80]], E: 12, rho: 500, uts: 0.67, color: '#C49A5E', fill: '#C49A5E', side: '#6E5231', note: 'Clear wood pulled along the grain. Strong for its weight, but it snaps without stretching.' },
+      cf: { name: 'Carbon fiber', pts: [[0,0],[0.86,600]], E: 70, rho: 1600, uts: 0.86, color: '#7D8590', fill: '#3B3F46', side: '#1C1E22', note: 'Quasi-isotropic laminate. Huge strength, straight line to failure, no yield at all.' }
+    };
+  }
+
+  tempFactor(k, T) {
+    const lerp = (a, b, t0, t1) => (T <= t0 ? a : (T >= t1 ? b : a + (b - a) * (T - t0) / (t1 - t0)));
+    if (k === 'steel') return T <= 300 ? 1 : lerp(1, 0.47, 300, 600);
+    if (k === 'alu') return T <= 100 ? 1 : (T <= 300 ? lerp(1, 0.3, 100, 300) : lerp(0.3, 0.08, 300, 400));
+    if (k === 'concrete') return T <= 200 ? 1 : lerp(1, 0.45, 200, 600);
+    if (k === 'timber') return T <= 100 ? 1 : (T <= 200 ? lerp(1, 0.5, 100, 200) : lerp(0.5, 0, 200, 300));
+    if (k === 'cf') return T <= 100 ? 1 : lerp(1, 0.25, 100, 200);
+    return 1;
+  }
+
+  stressAt(k, e, T) {
+    const p = this.defs()[k].pts; const f = this.tempFactor(k, T);
+    const brk = p[p.length - 1][0];
+    if (e > brk) return { s: 0, broken: true, brk };
+    for (let i = 1; i < p.length; i++) if (e <= p[i][0]) { const a = p[i - 1], b = p[i]; return { s: (a[1] + (b[1] - a[1]) * (e - a[0]) / (b[0] - a[0])) * f, broken: false, brk }; }
+    return { s: p[p.length - 1][1] * f, broken: false, brk };
+  }
+
+  tick() {
+    const s = this.state; if (!s.playing) return;
+    const step = s.zoom === 25 ? 0.08 : 0.006;
+    const e = Math.min(s.zoom, s.e + step);
+    const r = this.stressAt(s.mat, e, s.temp);
+    if (r.broken || e >= s.zoom) { const b = Object.assign({}, s.broke); if (r.broken) b[s.mat] = true; this.setState({ e, playing: false, broke: b }); return; }
+    this.setState({ e });
+  }
+
+  renderVals() {
+    const s = this.state; const D = this.defs(); const m = D[s.mat];
+    const now = this.stressAt(s.mat, s.e, s.temp);
+    const f = this.tempFactor(s.mat, s.temp);
+    const X0 = 56, X1 = 544, Y0 = 350, Y1 = 20, SMAX = 700;
+    const gx = (e) => X0 + Math.min(e, s.zoom) / s.zoom * (X1 - X0), gy = (v) => Y0 - v / SMAX * (Y0 - Y1);
+    const pathOf = (k, upTo) => {
+      const p = D[k].pts; const fk = this.tempFactor(k, s.temp); let d = '';
+      for (let i = 0; i < p.length; i++) {
+        if (upTo !== undefined && p[i][0] > upTo) { const prev = p[i - 1]; const v = this.stressAt(k, upTo, s.temp).s; d += ' L' + gx(upTo).toFixed(1) + ' ' + gy(v).toFixed(1); break; }
+        if (p[i][0] > s.zoom * 1.0001 && i > 0) { const a = p[i - 1], b = p[i]; const v = (a[1] + (b[1] - a[1]) * (s.zoom - a[0]) / (b[0] - a[0])) * fk; d += ' L' + gx(s.zoom).toFixed(1) + ' ' + gy(v).toFixed(1); break; }
+        d += (i ? ' L' : 'M') + gx(p[i][0]).toFixed(1) + ' ' + gy(p[i][1] * fk).toFixed(1);
+      }
+      if (upTo === undefined && p[p.length - 1][0] <= s.zoom) { const l = p[p.length - 1]; d += ' L' + gx(l[0]).toFixed(1) + ' ' + Y0; }
+      return d;
+    };
+    let ghostD = ''; Object.keys(D).forEach((k) => { if (k !== s.mat) ghostD += pathOf(k) + ' '; });
+    const curveD = pathOf(s.mat);
+    const doneD = s.e > 0 ? pathOf(s.mat, Math.min(s.e, now.brk)) : '';
+    const curveLabels = Object.keys(D).map((k) => { const p = D[k].pts; let idx = p.length - 1; while (idx > 0 && p[idx][0] > s.zoom) idx--; const pk = p[idx]; return { name: D[k].name, x: (gx(pk[0]) / 560 * 100).toFixed(1), y: (gy(pk[1] * this.tempFactor(k, s.temp)) / 400 * 100).toFixed(1), c: k === s.mat ? '#F5F5F5' : '#8A8A8A', fw: k === s.mat ? '600' : '400' }; });
+    let gridD = ''; for (let v = 100; v <= 700; v += 100) gridD += 'M' + X0 + ' ' + gy(v).toFixed(1) + ' H' + X1 + ' ';
+    const xs = s.zoom === 25 ? [0, 5, 10, 15, 20, 25] : [0, 0.5, 1, 1.5, 2];
+    xs.forEach((x) => { gridD += 'M' + gx(x).toFixed(1) + ' ' + Y1 + ' V' + Y0 + ' '; });
+
+    const ext = Math.min(s.e, now.brk) * 4.5;
+    const topY = 190 - ext, botY = 452, midY = (topY + 40 + botY) / 2;
+    const necking = s.e > m.uts && m.uts > 1 ? Math.min(0.55, (Math.min(s.e, now.brk) - m.uts) / (now.brk - m.uts) * 0.55) : 0;
+    const gw = 13, sw = 24, gwN = gw * (1 - necking);
+    const sideL = (xc, sgn) => [[xc + sgn * sw, topY], [xc + sgn * sw, topY + 40], [xc + sgn * gw, topY + 60], [xc + sgn * gwN, midY], [xc + sgn * gw, botY - 20], [xc + sgn * sw, botY - 0], [xc + sgn * sw, botY + 20]];
+    let specD = '';
+    if (!now.broken) {
+      const L = sideL(210, -1), R = sideL(210, 1);
+      specD = 'M' + L.map((p) => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' L') + ' L' + R.reverse().map((p) => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' L') + ' Z';
+    } else {
+      const gap = 10, w2 = m.uts > 1 ? gwN : gw;
+      specD = 'M' + (210 - sw) + ' ' + topY.toFixed(1) + ' H' + (210 + sw) + ' V' + (topY + 40).toFixed(1) + ' L' + (210 + gw) + ' ' + (topY + 60).toFixed(1) + ' L' + (210 + w2) + ' ' + (midY - gap).toFixed(1) + ' H' + (210 - w2) + ' L' + (210 - gw) + ' ' + (topY + 60).toFixed(1) + ' L' + (210 - sw) + ' ' + (topY + 40).toFixed(1) + ' Z ';
+      specD += 'M' + (210 - w2) + ' ' + (midY + gap).toFixed(1) + ' H' + (210 + w2) + ' L' + (210 + gw) + ' ' + (botY - 20) + ' L' + (210 + sw) + ' ' + botY + ' V' + (botY + 20) + ' H' + (210 - sw) + ' V' + botY + ' L' + (210 - gw) + ' ' + (botY - 20) + ' Z';
+    }
+    const crackD = now.broken ? 'M' + (210 - gwN - 4) + ' ' + (midY - 10).toFixed(1) + ' L' + (210 - 4) + ' ' + (midY - 4).toFixed(1) + ' L' + (210 + 4) + ' ' + (midY - 9).toFixed(1) + ' L' + (210 + gwN + 4) + ' ' + (midY - 3).toFixed(1) : '';
+    const gaugeD = 'M' + (210 + sw + 10) + ' ' + (topY + 60).toFixed(1) + ' V' + (botY - 20) + ' M' + (210 + sw + 4) + ' ' + (topY + 60).toFixed(1) + ' H' + (210 + sw + 16) + ' M' + (210 + sw + 4) + ' ' + (botY - 20) + ' H' + (210 + sw + 16);
+    const hy = topY - 30;
+    const headD = 'M150 ' + hy.toFixed(1) + ' H270 V' + (hy + 30).toFixed(1) + ' H150 Z M112 ' + (hy + 6).toFixed(1) + ' H308 V' + (hy + 18).toFixed(1) + ' H112 Z';
+    const headTopD = 'M150 ' + hy.toFixed(1) + ' L162 ' + (hy - 8).toFixed(1) + ' H282 L270 ' + hy.toFixed(1) + ' Z';
+
+    let tough = 0; const p = m.pts; for (let i = 1; i < p.length; i++) tough += (p[i][0] - p[i - 1][0]) / 100 * (p[i][1] + p[i - 1][1]) / 2;
+    const yieldS = s.mat === 'steel' ? 275 : (s.mat === 'alu' ? 276 : null);
+    const peak = Math.max.apply(null, p.map((q) => q[1])) * f;
+    let statusLabel = 'Elastic: springs back', statusColor = '#5FBF8A';
+    const elasticLimit = p[1][0];
+    if (s.e > elasticLimit && p.length > 2) { statusLabel = 'Plastic: permanently stretched'; statusColor = '#D6C7A1'; }
+    if (necking > 0.02) { statusLabel = 'Necking'; statusColor = '#E7A47C'; }
+    if (now.broken) { statusLabel = 'Fractured at ' + now.brk + '%'; statusColor = '#E5534B'; }
+    if (s.e === 0) { statusLabel = 'Ready'; statusColor = '#A3A3A3'; }
+
+    let explain = 'At first the sample behaves like a stiff spring: let go and it returns to its length. The slope of that first straight line is the stiffness, E. Press Play to keep pulling.';
+    if (s.e > elasticLimit && !now.broken && p.length > 2) explain = 'Past the yield point the atoms start slipping past each other. The metal stretches a lot for little extra force, and it will not spring back fully. That slack is what lets steel bend instead of snap, a warning before failure.';
+    if (necking > 0.02 && !now.broken) explain = 'The sample has passed its peak strength. One spot thins out (necking), all the stretching concentrates there, and the force it can carry drops until it tears.';
+    if (now.broken) explain = (p.length > 2 ? 'It tore after stretching ' + now.brk + '%. The area under the curve is the energy it soaked up first: its toughness.' : 'It snapped at ' + now.brk + '% with no yielding and no warning. Strong but brittle: tiny area under the curve, so little energy absorbed.') + ' Try another material, or heat it up.';
+    if (s.temp >= 200 && (s.mat === 'alu' || s.mat === 'cf' || s.mat === 'timber')) explain += ' At ' + s.temp + '°C this one has lost much of its strength.';
+
+    const spec = Object.keys(D).map((k) => { const pk = Math.max.apply(null, D[k].pts.map((q) => q[1])) * this.tempFactor(k, s.temp); return { k, name: D[k].name, val: pk * 1e6 / D[k].rho / 1000 }; });
+    const maxSpec = Math.max.apply(null, spec.map((c) => c.val).concat([1]));
+    const zoomDefs = [[25, '0 – 25 %'], [2, '0 – 2 %']];
+    return {
+      ghostD, curveD, doneD, gridD, specD, crackD, gaugeD, headD, headTopD,
+      curveColor: m.color, specFill: m.fill,
+      mx: gx(Math.min(s.e, now.brk)).toFixed(1), my: gy(now.s).toFixed(1),
+      ticksY: [100, 200, 300, 400, 500, 600, 700].map((v) => ({ v, y: (gy(v) / 400 * 100).toFixed(1) })),
+      ticksX: xs.map((v) => ({ v, x: (gx(v) / 560 * 100).toFixed(1) })),
+      curveLabels,
+      stageCls: 'graph',
+      rigLabel: m.name + ' sample in a tensile test machine, stretched ' + s.e.toFixed(2) + '%. ' + statusLabel + '.',
+      plotLabel: 'Stress-strain curves for five materials. ' + m.name + ' highlighted, now at ' + now.s.toFixed(0) + ' MPa.',
+      force: (now.s * 50 / 1000).toFixed(1) + ' kN', statusLabel, statusColor, explain, note: m.note,
+      temp: s.temp, tempLabel: s.temp + ' °C', tempColor: s.temp >= 200 ? '#E7A47C' : '#D6C7A1',
+      tempNote: f < 1 ? 'Strength now ' + Math.round(f * 100) + '% of room temperature (illustrative).' : 'Room-temperature strength.',
+      e: s.e, zoom: s.zoom, step: s.zoom === 25 ? 0.05 : 0.005,
+      strainLabel: s.e.toFixed(s.zoom === 25 ? 2 : 3) + ' % · ' + now.s.toFixed(0) + ' MPa',
+      tiles: [
+        { k: 'Stiffness E', v: m.E + ' GPa', n: 'slope of the first line' },
+        { k: yieldS ? 'Yield' : 'Yield', v: yieldS ? (yieldS * f).toFixed(0) + ' MPa' : 'none', n: yieldS ? 'where it stops springing back' : 'brittle: no yield' },
+        { k: 'Peak strength', v: peak.toFixed(0) + ' MPa', n: s.mat === 'concrete' ? 'in compression' : 'ultimate' },
+        { k: 'Stretch at break', v: now.brk + ' %', n: p.length > 2 && now.brk > 2 ? 'ductile' : 'brittle' },
+        { k: 'Toughness', v: tough.toFixed(2) + ' MJ/m³', n: 'area under the curve' },
+        { k: 'Density', v: m.rho + ' kg/m³', n: '' }
+      ],
+      spec: spec.map((c) => ({ name: c.name, v: c.val.toFixed(0), w: (c.val / maxSpec * 100).toFixed(0), color: c.k === s.mat ? '#D6C7A1' : '#6A6A6A', tc: c.k === s.mat ? '#F5F5F5' : '#A3A3A3', fw: c.k === s.mat ? '600' : '400' })),
+      broken: Object.keys(D).map((k) => ({ name: D[k].name, c: s.broke[k] ? '#5FBF8A' : '#6A6A6A' })),
+      mats: Object.keys(D).map((k) => ({ name: D[k].name, fill: D[k].fill, side: D[k].side, cls: 'ptile' + (s.mat === k ? ' ptile-on' : ''), pressed: s.mat === k ? 'true' : 'false', pick: () => this.setState({ mat: k, e: 0, playing: false, zoom: D[k].pts[D[k].pts.length - 1][0] < 2 ? 2 : 25 }) })),
+      zooms: zoomDefs.map((z) => ({ name: z[1], cls: 'seg' + (s.zoom === z[0] ? ' seg-on' : ''), pressed: s.zoom === z[0] ? 'true' : 'false', pick: () => this.setState({ zoom: z[0], e: Math.min(this.state.e, z[0]) }) })),
+      playing: s.playing, notPlaying: !s.playing, clock: 'ε = ' + s.e.toFixed(2) + ' %',
+      setTemp: (e) => this.setState({ temp: Number(e.target.value) }),
+      setE: (e) => this.setState({ e: Number(e.target.value), playing: false }),
+      newSample: () => this.setState({ e: 0, playing: false }),
+      toggleDrive: () => { const st = this.state; const r = this.stressAt(st.mat, st.e, st.temp); this.setState({ playing: !st.playing, e: !st.playing && (r.broken || st.e >= st.zoom) ? 0 : st.e }); },
+      reset: () => this.setState({ mat: 'steel', e: 0, temp: 20, zoom: 25, playing: false, broke: {} })
+    };
+  }
+}
+</script>
+
+
+</body></html>

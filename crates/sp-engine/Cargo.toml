@@ -1,0 +1,14 @@
+[package]
+name = "sp-engine"
+description = "Structures Playground engine (no UI): 2D truss stiffness solver and member checks, plus (per module) progressive failure, collapse, netlists, tower wind and sway, soils and foundations, and material curves."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

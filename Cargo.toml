@@ -1,0 +1,43 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/sp-theme",
+    "crates/sp-engine",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+rust-version = "1.90"
+
+[workspace.dependencies]
+# Shared, version-pinned deps (the same versions Breadbox, Chem and Automata Playground use).
+egui = "0.37.0"
+eframe = { version = "0.37.0", default-features = false, features = ["accesskit", "default_fonts", "wgpu", "persistence"] }
+egui_kittest = { version = "0.37.0", features = ["wgpu", "snapshot", "eframe"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+anyhow = "1"
+log = "0.4"
+# The lab-series shared libraries live in the sibling labkit repo (never edit them from here).
+lab-theme = { path = "../labkit/crates/lab-theme" }
+lab-ui = { path = "../labkit/crates/lab-ui" }
+lab-mcp = { path = "../labkit/crates/lab-mcp", default-features = false }
+# This workspace's crates.
+sp-theme = { path = "crates/sp-theme" }
+sp-engine = { path = "crates/sp-engine" }
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.test]
+opt-level = 2
+
+[profile.release]
+lto = "thin"
+codegen-units = 4

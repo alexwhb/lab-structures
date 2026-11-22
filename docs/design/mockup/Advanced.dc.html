@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Structures Playground — Advanced</title>
+<script src="2f5db810-a5ff-4c48-8186-b4cce189a07a"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style></style>
+<style>
+body{margin:0;background:#0A0A0A}
+.paper{background-color:#0A0A0A;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);background-size:60px 60px,60px 60px,12px 12px,12px 12px}
+a{color:#D6C7A1}a:hover{color:#E9DFC6}
+.seg{border:0;background:transparent;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;padding:0 14px;min-height:36px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none}
+.seg:hover{color:#EAEAEA}
+.seg-on{background:#2A2A2A;color:#F5F5F5}
+.ghost{border:1px solid #2E2E2E;background:#171717;color:#D9D9D9;font:500 13px Inter,system-ui,sans-serif;min-height:36px;padding:0 12px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.ghost:hover{background:#1F1F1F;color:#F5F5F5}
+.prim{border:1px solid #4D4636;background:#24221C;color:#E9DFC6;font:600 13px Inter,system-ui,sans-serif;min-height:36px;padding:0 14px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.prim:hover{background:#2E2B23;color:#E9DFC6}
+.sw{width:36px;height:36px;border:0;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.sw:hover{background:#1C1C1C}
+.sw-on{background:#2A2A2A}
+.lbl{margin:0;font:600 11px Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#A3A3A3}
+.ptile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:84px;border:1px solid #242424;border-radius:12px;background:rgba(18,18,18,.92);color:#EAEAEA;font:600 12px/1.25 Inter,system-ui,sans-serif;cursor:pointer;padding:10px 6px;text-align:center}
+.ptile:hover{border-color:#4D4636;background:#1E1C17}
+.ptile-on{border-color:#D6C7A1;background:#1E1C17}
+.tab{display:flex;align-items:center;min-height:44px;padding:0 4px;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;text-decoration:none;border-bottom:2px solid transparent;box-sizing:border-box}
+.tab:hover{color:#F5F5F5}
+.tab-on{color:#F5F5F5;border-bottom-color:#D6C7A1}
+.panel{background:rgba(17,17,17,.88);border:1px solid #242424;border-radius:12px}
+.h{margin:0;font:600 15px 'Space Grotesk',Inter,sans-serif;letter-spacing:-.01em}
+.mono{font-family:'JetBrains Mono',monospace}
+.mut{color:#A3A3A3}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid #2E2E2E;background:#141414;font:600 12px Inter,system-ui,sans-serif}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:5px;font:500 11px 'JetBrains Mono',monospace;border:1px solid #2E2E2E;color:#D9D9D9;background:#121212}
+.bar{height:8px;border-radius:4px;background:#1E1E1E;overflow:hidden}
+.well{background:#0D0D0D;border:1px solid #242424;border-radius:8px}
+input[type=range]{accent-color:#D6C7A1;width:100%;margin:0;height:28px}
+input[type=checkbox]{accent-color:#D6C7A1;width:18px;height:18px;margin:0}
+.graph{background-color:#0B0C0E;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:120px 120px,120px 120px,24px 24px,24px 24px}
+.chip{position:absolute;transform:translate(-50%,-130%);padding:3px 8px;border-radius:6px;background:rgba(11,12,14,.92);border:1px solid #2A2D33;font:400 12px 'JetBrains Mono',monospace;color:#ECEAE6;white-space:nowrap;pointer-events:none}
+@keyframes flow{to{stroke-dashoffset:-48}}
+.flow{animation:flow 1.6s linear infinite}
+.still .flow{animation-play-state:paused}
+</style>
+</helmet>
+<div class="paper" style="min-height: 1000px; display: flex; flex-direction: column; color: #EAEAEA; font-family: Inter, system-ui, sans-serif">
+  <header style="min-height: 56px; display: flex; align-items: center; gap: 12px 16px; padding: 8px 16px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.85); flex-wrap: wrap; box-sizing: border-box">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <svg width="26" height="26" sc-camel-view-box="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="6" fill="#171717" stroke="#D6C7A1" stroke-width="1.5"></rect><path d="M5 18h16M5 18l4-9h8l4 9M9 9l4 9 4-9" fill="none" stroke="#D6C7A1" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></path><circle cx="13" cy="18" r="1.8" fill="#7FB0E0"></circle></svg>
+      <span style="font: 600 16px 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.01em">Structures Playground</span>
+      <span style="color: #4A4A4A">/</span>
+      <span style="font-size: 13px; color: #D9D9D9">river-crossing</span>
+    </div>
+
+    <nav aria-label="Mode" style="display: flex; gap: 2px; padding: 3px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px">
+      <a class="seg" href="Main.dc.html"><svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 11h12M1 11l3-6h6l3 6M4 5l3 6 3-6"></path></svg>Playground</a>
+      <a class="seg seg-on" href="Advanced.dc.html" aria-current="page"><svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5v11h11"></path><path d="M3.5 4h4M3.5 6.5h6M3.5 9h3"></path></svg>Advanced</a>
+    </nav>
+
+
+    <div style="display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap">
+      <button type="button" class="prim" sc-camel-on-click="{{toggleDrive}}">
+        <sc-if value="{{playing}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><rect x="2" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect><rect x="7.4" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect></svg>Pause</sc-if>
+        <sc-if value="{{notPlaying}}" hint-placeholder-val="{{ true }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><path d="M3 1.5l7 4.5-7 4.5z" fill="currentColor"></path></svg>Drive across</sc-if>
+      </button>
+      <button type="button" class="ghost" sc-camel-on-click="{{reset}}"><svg width="12" height="12" sc-camel-view-box="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 1 0 1.7-4"></path><path d="M2.5 2.5V6H6"></path></svg>Reset</button>
+      <span class="mono" style="font-size: 12px; color: #A3A3A3; padding: 0 8px">{{clock}}</span>
+      <button type="button" class="ghost">Share</button>
+    </div>
+  </header>
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 8px 16px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.85)">
+    <span class="mono" style="font-size: 13px; color: #D9D9D9">river-crossing.str</span>
+    <div role="group" aria-label="Truss style" style="display: flex; gap: 2px; padding: 3px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px">
+      <sc-for list="{{styles}}" as="t" hint-placeholder-count="3"><button type="button" class="{{t.cls}}" aria-pressed="{{t.pressed}}" sc-camel-on-click="{{t.pick}}">{{t.name}}</button></sc-for>
+    </div>
+    <label style="display: flex; align-items: center; gap: 8px; min-height: 40px; font-size: 13px; cursor: pointer"><input type="checkbox" checked="{{braced}}" sc-camel-on-change="{{toggleBraced}}">Cross-braced</label>
+    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px">Material
+      <sc-raw-select value="{{mat}}" sc-camel-on-change="{{setMat}}" style="min-height: 36px; padding: 0 8px; border: 1px solid #2E2E2E; border-radius: 6px; background: #121212; color: #EAEAEA; font: inherit; font-size: 13px">
+        <option value="steel">Steel</option><option value="alu">Aluminum</option><option value="timber">Glulam</option><option value="cf">Carbon fiber</option>
+      </sc-raw-select>
+    </label>
+    <div style="display: flex; align-items: center; gap: 8px; flex: 1 1 200px; max-width: 260px"><label for="asz" style="font-size: 13px; white-space: nowrap">Size</label><input id="asz" type="range" min="1" max="20" step="1" value="{{size}}" sc-camel-on-change="{{setSize}}"><output for="asz" class="mono" style="font-size: 12px; color: #D6C7A1; min-width: 22px">{{size}}</output></div>
+    <div style="display: flex; align-items: center; gap: 8px; flex: 1 1 200px; max-width: 260px"><label for="atr" style="font-size: 13px; white-space: nowrap">Truck</label><input id="atr" type="range" min="0" max="120" step="1" value="{{truckT}}" sc-camel-on-change="{{setTruck}}"><output for="atr" class="mono" style="font-size: 12px; color: #D6C7A1; min-width: 36px">{{truckT}} t</output></div>
+    <div style="display: flex; align-items: center; gap: 8px; flex: 1 1 220px; max-width: 300px"><label for="axp" style="font-size: 13px; white-space: nowrap">x</label><input id="axp" type="range" min="0" max="48" step="0.5" value="{{xt}}" sc-camel-on-change="{{setPos}}"><output for="axp" class="mono" style="font-size: 12px; color: #D6C7A1; min-width: 52px">{{xt}} m</output></div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 16px; padding: 16px; flex: 1 1 auto; align-items: flex-start">
+
+    <section class="panel" aria-label="Netlist" style="flex: 1 1 360px; max-width: 440px; min-width: 0; display: flex; flex-direction: column; overflow: hidden">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #242424"><h2 class="h">Netlist</h2><span class="badge">example: 48 m truss</span></div>
+      <div class="mono" style="font-size: 12px; line-height: 1.75; padding: 10px 0; max-height: 820px; overflow: auto">
+        <sc-for list="{{lines}}" as="l" hint-placeholder-count="30">
+          <div style="display: flex; gap: 12px; padding: 0 14px; white-space: pre"><span style="color: #4A4A4A; min-width: 20px; text-align: right">{{l.n}}</span><span><span style="color: {{l.dc}}">{{l.dir}}</span> <span style="color: #D9D9D9">{{l.args}}</span><span style="color: #7E8A7E">{{l.cmt}}</span></span></div>
+        </sc-for>
+      </div>
+    </section>
+
+    <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+      <section class="panel" aria-label="Schematic" style="display: flex; flex-direction: column; overflow: hidden">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #242424"><h2 class="h">Elevation · .static result</h2><span class="pill" style="color: {{statusColor}}"><span class="dot" style="background: {{statusColor}}"></span>{{statusLabel}}</span></div>
+        <div class="graph" role="img" aria-label="{{schemLabel}}" style="position: relative; width: 100%; aspect-ratio: 1000 / 270">
+          <svg sc-camel-view-box="0 0 1000 270" width="100%" height="100%" aria-hidden="true" style="position: absolute; inset: 0">
+            <path d="{{zD}}" stroke="#5E5E5E" stroke-width="2.5" fill="none" stroke-linecap="round"></path>
+            <path d="{{tD}}" stroke="#7FB0E0" stroke-width="2.5" fill="none" stroke-linecap="round"></path>
+            <path d="{{cD}}" stroke="#E0905E" stroke-width="2.5" fill="none" stroke-linecap="round"></path>
+            <path d="{{fD}}" stroke="#E5534B" stroke-width="3" stroke-dasharray="8 5" fill="none"></path>
+            <path d="{{nodeD}}" fill="#0A0A0A" stroke="#D4D4D4" stroke-width="1.5"></path>
+            <path d="M60 203 L52 215 H68 Z M948 203 L940 213 H956 Z M60 220 H948" stroke="#8A8A8A" stroke-width="1.5" fill="#8A8A8A"></path>
+            <path d="{{arrowD}}" stroke="#D6C7A1" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          <sc-for list="{{nodeLabels}}" as="n" hint-placeholder-count="12"><span class="mono" style="position: absolute; left: {{n.x}}%; top: {{n.y}}%; transform: translate(-50%, -50%); font-size: 11px; color: #A3A3A3">{{n.id}}</span></sc-for>
+          <sc-for list="{{memLabels}}" as="m" hint-placeholder-count="21"><span class="mono" style="position: absolute; left: {{m.x}}%; top: {{m.y}}%; transform: translate(-50%, -50%); padding: 0 3px; border-radius: 3px; background: rgba(11,12,14,.85); font-size: 10px; color: {{m.c}}">{{m.id}}</span></sc-for>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="Influence line" style="display: flex; flex-direction: column; overflow: hidden">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #242424">
+          <h2 class="h">.plot N({{ilId}}) vs truck x</h2>
+          <div role="group" aria-label="Member to plot" style="display: flex; flex-wrap: wrap; gap: 2px; padding: 3px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px">
+            <sc-for list="{{ilPicks}}" as="p" hint-placeholder-count="4"><button type="button" class="{{p.cls}}" aria-pressed="{{p.pressed}}" sc-camel-on-click="{{p.pick}}">{{p.name}}</button></sc-for>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding: 12px 14px">
+          <div class="graph" role="img" aria-label="{{ilLabel}}" style="position: relative; flex: 999 1 420px; min-width: 0; aspect-ratio: 640 / 220; border: 1px solid #242424; border-radius: 8px">
+            <svg sc-camel-view-box="0 0 640 220" width="100%" height="100%" aria-hidden="true" style="position: absolute; inset: 0">
+              <path d="M40 110 H620" stroke="#4A4A4A" stroke-width="1"></path>
+              <path d="{{ilCap}}" stroke="#E5534B" stroke-width="1.2" stroke-dasharray="5 5" fill="none"></path>
+              <path d="{{ilFill}}" fill="{{ilColor}}" fill-opacity="0.14"></path>
+              <path d="{{ilD}}" stroke="{{ilColor}}" stroke-width="2.5" fill="none" stroke-linejoin="round"></path>
+              <path d="{{ilCursor}}" stroke="#D6C7A1" stroke-width="1.5"></path>
+              <circle cx="{{ilCx}}" cy="{{ilCy}}" r="5" fill="#D6C7A1"></circle>
+            </svg>
+            <span class="mono" style="position: absolute; left: 8px; top: 6px; font-size: 10px; color: #A3A3A3">+ tension</span>
+            <span class="mono" style="position: absolute; left: 8px; bottom: 6px; font-size: 10px; color: #A3A3A3">− compression</span>
+            <span class="mono" style="position: absolute; right: 10px; bottom: 6px; font-size: 10px; color: #A3A3A3">x 0 → 48 m</span>
+          </div>
+          <div style="flex: 1 1 200px; display: flex; flex-direction: column; gap: 8px; font-size: 13px">
+            <div class="well" style="padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><span class="lbl">At x = {{xt}} m</span><span class="mono" style="font-size: 16px; color: {{ilColor}}">{{ilNow}}</span></div>
+            <div class="well" style="padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><span class="lbl">Worst over the crossing</span><span class="mono" style="font-size: 16px">{{ilPeak}}</span><span class="mut" style="font-size: 11px">{{ilPeakAt}}</span></div>
+            <div class="well" style="padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><span class="lbl">Limit (red dashes)</span><span class="mono" style="font-size: 16px">{{ilLim}}</span></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside style="flex: 1 1 340px; max-width: 420px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+      <section class="panel" style="display: flex; flex-direction: column; overflow: hidden">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #242424"><h2 class="h">Member results</h2><span class="mut" style="font-size: 12px">sorted by use</span></div>
+        <div style="max-height: 470px; overflow: auto">
+          <sc-raw-table style="width: 100%; border-collapse: collapse; font-size: 12px">
+            <sc-raw-thead><sc-raw-tr style="color: #A3A3A3; text-align: right"><sc-raw-th scope="col" style="padding: 8px 10px; text-align: left; font-weight: 600">ID</sc-raw-th><sc-raw-th scope="col" style="padding: 8px 6px; text-align: left; font-weight: 600">Nodes</sc-raw-th><sc-raw-th scope="col" style="padding: 8px 6px; font-weight: 600">N kN</sc-raw-th><sc-raw-th scope="col" style="padding: 8px 6px; font-weight: 600">σ MPa</sc-raw-th><sc-raw-th scope="col" style="padding: 8px 6px; font-weight: 600">Limit</sc-raw-th><sc-raw-th scope="col" style="padding: 8px 10px; font-weight: 600">Use</sc-raw-th></sc-raw-tr></sc-raw-thead>
+            <sc-raw-tbody>
+              <sc-for list="{{rows}}" as="r" hint-placeholder-count="12">
+                <sc-raw-tr class="mono" style="border-top: 1px solid #1E1E1E; text-align: right"><sc-raw-td style="padding: 6px 10px; text-align: left; color: #D6C7A1">{{r.id}}</sc-raw-td><sc-raw-td style="padding: 6px; text-align: left; color: #D9D9D9">{{r.nodes}}</sc-raw-td><sc-raw-td style="padding: 6px; color: {{r.c}}">{{r.N}}</sc-raw-td><sc-raw-td style="padding: 6px">{{r.sig}}</sc-raw-td><sc-raw-td style="padding: 6px; color: #A3A3A3">{{r.mode}}</sc-raw-td><sc-raw-td style="padding: 6px 10px; color: {{r.uc}}">{{r.ut}}</sc-raw-td></sc-raw-tr>
+              </sc-for>
+            </sc-raw-tbody>
+          </sc-raw-table>
+        </div>
+      </section>
+
+      <section class="panel" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 10px">
+        <h2 class="h">Checks</h2>
+        <sc-for list="{{checks}}" as="c" hint-placeholder-count="5">
+          <div style="display: flex; gap: 10px; font-size: 13px; line-height: 1.45"><span class="dot" style="background: {{c.c}}; margin-top: 6px"></span><span><span style="font-weight: 600">{{c.k}}</span> <span class="mono" style="color: #D9D9D9">{{c.v}}</span><br><span class="mut" style="font-size: 12px">{{c.note}}</span></span></div>
+        </sc-for>
+      </section>
+
+      <section style="display: flex; flex-wrap: wrap; gap: 6px">
+        <span class="badge"><span class="dot" style="background: #5FBF8A"></span>direct stiffness · linear · small δ</span>
+        <span class="badge"><span class="dot" style="background: #5FBF8A"></span>Euler buckling, K = 1</span>
+        <span class="badge"><span class="dot" style="background: #D6C7A1"></span>material values representative</span>
+        <span class="badge"><span class="dot" style="background: #E8A39E"></span>educational, not for design</span>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { style: 'pratt', braced: false, mat: 'steel', size: 4, truckT: 40, xt: 24, playing: false, il: 'topmid' };
+  }
+  componentDidMount() { this.timer = setInterval(() => { const s = this.state; if (!s.playing) return; this.setState({ xt: s.xt >= 48 ? 0 : Math.min(48, s.xt + 0.5) }); }, 90); }
+  componentWillUnmount() { clearInterval(this.timer); }
+
+  mats() {
+    return {
+      steel: { name: 'Steel', E: 200e9, fy: 250e6, rho: 7850, cost: 3.5, fill: '#9AA3AD', side: '#4E545B' },
+      alu: { name: 'Aluminum', E: 69e9, fy: 240e6, rho: 2700, cost: 8, fill: '#D5DAE0', side: '#7C838B' },
+      timber: { name: 'Glulam', E: 12e9, fy: 24e6, rho: 500, cost: 2.2, fill: '#C49A5E', side: '#6E5231' },
+      cf: { name: 'Carbon fiber', E: 70e9, fy: 600e6, rho: 1600, cost: 40, fill: '#3B3F46', side: '#1C1E22' }
+    };
+  }
+
+  build(style, braced) {
+    const N = [];
+    for (let i = 0; i <= 6; i++) N.push({ id: 'B' + i, x: i * 8, y: 0 });
+    for (let i = 1; i < 6; i++) N.push({ id: 'T' + i, x: i * 8, y: 6 });
+    const ix = {}; N.forEach((n, k) => { ix[n.id] = k; });
+    const M = []; const seen = {};
+    const add = (a, b, kind) => { const key = [a, b].sort().join('|'); if (seen[key]) return; seen[key] = 1; M.push({ a: ix[a], b: ix[b], na: a, nb: b, kind }); };
+    for (let i = 0; i < 6; i++) add('B' + i, 'B' + (i + 1), 'bot');
+    for (let i = 1; i < 5; i++) add('T' + i, 'T' + (i + 1), 'top');
+    add('B0', 'T1', 'post'); add('T5', 'B6', 'post');
+    for (let i = 1; i < 6; i++) add('B' + i, 'T' + i, 'vert');
+    const D = { pratt: [['T1','B2'],['T2','B3'],['B3','T4'],['B4','T5']], howe: [['B1','T2'],['B2','T3'],['T3','B4'],['T4','B5']], warren: [['T1','B2'],['B2','T3'],['T3','B4'],['B4','T5']] }[style];
+    D.forEach((d) => add(d[0], d[1], 'diag'));
+    if (braced) { for (let i = 1; i < 5; i++) { add('T' + i, 'B' + (i + 1), 'diag'); add('B' + i, 'T' + (i + 1), 'diag'); } }
+    M.forEach((m, k) => { m.id = 'M' + (k + 1); });
+    return { N, M };
+  }
+
+  solve(model, mat, size, truckKN, xt, removed) {
+    const N = model.N, M = model.M, nd = 2 * N.length;
+    const K = []; for (let i = 0; i < nd; i++) K.push(new Array(nd).fill(0));
+    const F = new Array(nd).fill(0);
+    let vol = 0;
+    M.forEach((m) => {
+      const chord = m.kind === 'bot' || m.kind === 'top' || m.kind === 'post';
+      m.A = (chord ? 0.0025 : 0.0015) * size; m.I = m.A * m.A;
+      const dx = N[m.b].x - N[m.a].x, dy = N[m.b].y - N[m.a].y;
+      m.L = Math.hypot(dx, dy); m.c = dx / m.L; m.s = dy / m.L;
+      if (removed[m.id]) return;
+      vol += m.A * m.L;
+      const k = mat.E * m.A / m.L, cc = m.c * m.c, cs = m.c * m.s, ss = m.s * m.s;
+      const d = [2 * m.a, 2 * m.a + 1, 2 * m.b, 2 * m.b + 1];
+      const kl = [[cc, cs, -cc, -cs], [cs, ss, -cs, -ss], [-cc, -cs, cc, cs], [-cs, -ss, cs, ss]];
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) K[d[i]][d[j]] += k * kl[i][j];
+    });
+    const selfW = vol * mat.rho * 9.81;
+    for (let i = 1; i <= 5; i++) F[2 * i + 1] -= 80e3 + selfW / 5;
+    const onDeck = xt >= 0 && xt <= 48;
+    if (onDeck && truckKN > 0) {
+      const Pt = truckKN * 1e3 / 2; const j = Math.min(5, Math.floor(xt / 8)); const f = (xt - 8 * j) / 8;
+      F[2 * j + 1] -= Pt * (1 - f); F[2 * (j + 1) + 1] -= Pt * f;
+    }
+    const fixed = { 0: 1, 1: 1, 13: 1 };
+    const fr = []; for (let i = 0; i < nd; i++) if (!fixed[i]) fr.push(i);
+    const n = fr.length; const A = fr.map((i) => fr.map((j) => K[i][j])); const b = fr.map((i) => F[i]);
+    let maxd = 0; for (let i = 0; i < n; i++) maxd = Math.max(maxd, Math.abs(A[i][i]));
+    let ok = true;
+    for (let c = 0; c < n && ok; c++) {
+      let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+      if (Math.abs(A[p][c]) < maxd * 1e-9) { ok = false; break; }
+      const tr = A[c]; A[c] = A[p]; A[p] = tr; const tb = b[c]; b[c] = b[p]; b[p] = tb;
+      for (let r = c + 1; r < n; r++) { const f = A[r][c] / A[c][c]; if (f === 0) continue; for (let k = c; k < n; k++) A[r][k] -= f * A[c][k]; b[r] -= f * b[c]; }
+    }
+    const u = new Array(nd).fill(0);
+    if (ok) { const x = new Array(n).fill(0); for (let r = n - 1; r >= 0; r--) { let s = b[r]; for (let k = r + 1; k < n; k++) s -= A[r][k] * x[k]; x[r] = s / A[r][r]; } fr.forEach((d, i) => { u[d] = x[i]; }); }
+    const res = M.map((m) => {
+      if (removed[m.id]) return { m, removed: true, N: 0, ut: 0, mode: '' };
+      const du = (u[2 * m.b] - u[2 * m.a]) * m.c + (u[2 * m.b + 1] - u[2 * m.a + 1]) * m.s;
+      const Nf = ok ? mat.E * m.A / m.L * du : 0;
+      const cap = m.A * mat.fy, pcr = Math.PI * Math.PI * mat.E * m.I / (m.L * m.L);
+      let ut, mode, lim;
+      if (Nf >= 0) { ut = Nf / cap; mode = 'yield'; lim = cap; } else { lim = Math.min(cap, pcr); ut = -Nf / lim; mode = pcr < cap ? 'buckling' : 'crushing'; }
+      return { m, removed: false, N: Nf, ut, mode, lim, sigma: Nf / m.A };
+    });
+    return { u, res, ok, vol, mass: 2 * vol * mat.rho };
+  }
+
+
+  renderVals() {
+    const s = this.state;
+    const mats = this.mats(); const mat = mats[s.mat];
+    const model = this.build(s.style, s.braced);
+    const kN = s.truckT * 9.81;
+    const sol = this.solve(model, mat, s.size, kN, s.xt, {});
+    const N = model.N, M = model.M, ok = sol.ok;
+    const kindL = { bot: 'chord', top: 'chord', post: 'chord', vert: 'web', diag: 'web' };
+    const fmt = (v, d) => (v < 0 ? '−' : '') + Math.abs(v).toFixed(d || 0);
+
+    const lines = [];
+    const L = (dir, args, cmt) => lines.push({ n: lines.length + 1, dir, args: args || '', cmt: cmt ? '  ; ' + cmt : '', dc: dir.charAt(0) === '*' ? '#7E8A7E' : '#D6C7A1' });
+    const sname = { pratt: 'Pratt', howe: 'Howe', warren: 'Warren' }[s.style];
+    L('* river-crossing.str', '', '');
+    L('*', '48 m ' + sname + (s.braced ? ', cross-braced' : '') + ' through-truss (one of two)', '');
+    L('.units', 'SI  kN  m', '');
+    L('.material', s.mat + '  E=' + (mat.E / 1e9) + 'GPa  fy=' + (mat.fy / 1e6) + 'MPa  rho=' + mat.rho, 'representative');
+    L('.section', 'chord  A=' + (0.0025 * s.size * 1e4).toFixed(0) + 'cm2  I=A^2', 'box, b/t = 24');
+    L('.section', 'web    A=' + (0.0015 * s.size * 1e4).toFixed(0) + 'cm2  I=A^2', '');
+    N.forEach((n) => L('.node', n.id + '  ' + n.x + '  ' + n.y + (n.id === 'B0' ? '  fix=xy' : (n.id === 'B6' ? '  fix=y' : '')), n.id === 'B0' ? 'pin' : (n.id === 'B6' ? 'roller' : '')));
+    M.forEach((m) => L('.member', m.id + '  ' + m.na + '  ' + m.nb + '  ' + kindL[m.kind], ''));
+    L('.load', 'dead  B1..B5  Fy=-80  +self', '10 kN/m deck');
+    L('.load', 'truck  ' + s.truckT + 't  x=' + s.xt + '  lane=B0..B6  share=0.5', 'per truss');
+    L('.static', '', 'linear, small displacement');
+    L('.buckle', 'euler  K=1.0', '');
+    L('.plot', 'N(' + 'M*' + ')  vs truck.x  0 48 1', '');
+
+    const X0 = 60, SC = 18.5, Y0 = 200;
+    const px = (n) => [X0 + N[n].x * SC, Y0 - N[n].y * SC];
+    const P = { tD: '', cD: '', zD: '', fD: '' };
+    const memLabels = [];
+    sol.res.forEach((r) => {
+      const a = px(r.m.a), b = px(r.m.b); const d = 'M' + a[0] + ' ' + a[1] + ' L' + b[0] + ' ' + b[1] + ' ';
+      let key = 'zD', c = '#A3A3A3';
+      if (!ok || r.ut > 1) { key = 'fD'; c = '#E8A39E'; } else if (Math.abs(r.N) >= 1000) { key = r.N > 0 ? 'tD' : 'cD'; c = r.N > 0 ? '#7FB0E0' : '#E7A47C'; }
+      P[key] += d;
+      let mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      if (r.m.kind === 'diag' && s.braced) { mx = a[0] + (b[0] - a[0]) * 0.3; my = a[1] + (b[1] - a[1]) * 0.3; }
+      memLabels.push({ id: r.m.id, x: (mx / 1000 * 100).toFixed(2), y: (my / 270 * 100).toFixed(2), c });
+    });
+    let nodeD = ''; const nodeLabels = [];
+    N.forEach((n, k) => { const p = px(k); nodeD += 'M' + (p[0] + 4) + ' ' + p[1] + ' a4 4 0 1 0 -8 0 a4 4 0 1 0 8 0 Z '; nodeLabels.push({ id: n.id, x: (p[0] / 1000 * 100).toFixed(2), y: ((n.y > 0 ? p[1] - 16 : p[1] + 32) / 270 * 100).toFixed(2) }); });
+    const ax = X0 + s.xt * SC;
+    const arrowD = s.truckT > 0 ? 'M' + ax + ' 150 V194 M' + (ax - 6) + ' 186 L' + ax + ' 194 L' + (ax + 6) + ' 186' : '';
+
+    const rows = sol.res.slice().sort((a, b) => b.ut - a.ut).map((r) => ({
+      id: r.m.id, nodes: r.m.na + '–' + r.m.nb,
+      N: ok ? fmt(r.N / 1000) : '—', sig: ok ? fmt(r.N / r.m.A / 1e6) : '—',
+      mode: !ok ? 'unstable' : (r.N >= 0 ? 'yield' : (r.mode === 'buckling' ? 'buckle ' + (r.lim / 1000).toFixed(0) : 'crush')),
+      ut: ok ? Math.round(r.ut * 100) + '%' : '—',
+      c: !ok ? '#A3A3A3' : (Math.abs(r.N) < 1000 ? '#A3A3A3' : (r.N > 0 ? '#7FB0E0' : '#E7A47C')),
+      uc: r.ut > 1 ? '#E8A39E' : (r.ut > 0.8 ? '#D6C7A1' : '#EAEAEA')
+    }));
+    const worst = sol.res.reduce((a, r) => (r.ut > a.ut ? r : a), { ut: 0 });
+    const failed = !ok || worst.ut > 1;
+
+    const find = (a, b) => M.find((m) => (m.na === a && m.nb === b) || (m.na === b && m.nb === a));
+    const picks = [
+      { key: 'topmid', name: 'Top chord T2–T3', m: find('T2', 'T3') },
+      { key: 'botmid', name: 'Bottom chord B2–B3', m: find('B2', 'B3') },
+      { key: 'post', name: 'End post B0–T1', m: find('B0', 'T1') },
+      { key: 'vert', name: 'Vertical B2–T2', m: find('B2', 'T2') }
+    ];
+    const pick = picks.find((p) => p.key === s.il) || picks[0];
+    const pm = pick.m; const mi = M.indexOf(pm);
+    const pts = []; let peak = 0, peakAt = 0;
+    for (let x = 0; x <= 48; x += 1) {
+      const r = this.solve(model, mat, s.size, kN, x, {}); const v = r.ok ? r.res[mi].N / 1000 : 0;
+      pts.push([x, v]); if (Math.abs(v) > Math.abs(peak)) { peak = v; peakAt = x; }
+    }
+    const rNow = sol.res[mi];
+    const limT = pm.A * mat.fy / 1000, limC = Math.min(pm.A * mat.fy, Math.PI * Math.PI * mat.E * pm.I / (pm.L * pm.L)) / 1000;
+    const scale = Math.max(Math.abs(peak), limT * 0.25, limC * 0.25, 1) * 1.15;
+    const gx = (x) => 40 + x / 48 * 580, gy = (v) => 110 - Math.max(-1.3, Math.min(1.3, v / scale)) * 95;
+    const ilD = pts.map((p, i) => (i ? 'L' : 'M') + gx(p[0]).toFixed(1) + ' ' + gy(p[1]).toFixed(1)).join(' ');
+    const ilFill = ilD + ' L620 110 L40 110 Z';
+    const capY1 = gy(limT), capY2 = gy(-limC);
+    const ilCap = (limT < scale * 1.3 ? 'M40 ' + capY1.toFixed(1) + ' H620 ' : '') + (limC < scale * 1.3 ? 'M40 ' + capY2.toFixed(1) + ' H620' : '');
+    const ilColor = peak >= 0 ? '#7FB0E0' : '#E0905E';
+    const nowV = ok ? rNow.N / 1000 : 0;
+
+    const m = M.length, r3 = 3, j = N.length; const deg = m + r3 - 2 * j;
+    const sag = ok ? -sol.u[7] : 0;
+    const totalDead = 5 * (80e3 + sol.vol * mat.rho * 9.81 / 5);
+    const Pt = kN * 1e3 / 2; const RB = totalDead / 2 + Pt * s.xt / 48, RA = totalDead + Pt - RB;
+    const checks = [
+      { k: 'Determinacy', v: 'm + r − 2j = ' + m + ' + 3 − ' + 2 * j + ' = ' + deg, note: deg === 0 ? 'Statically determinate: lose any member and it becomes a mechanism.' : 'Indeterminate to degree ' + deg + ': there are spare load paths.', c: deg === 0 ? '#D6C7A1' : '#5FBF8A' },
+      { k: 'Reactions', v: 'A ' + (RA / 1000).toFixed(0) + ' kN · B ' + (RB / 1000).toFixed(0) + ' kN', note: 'Vertical, per truss. They always sum to the total load.', c: '#5FBF8A' },
+      { k: 'Midspan deflection', v: ok ? (sag * 1000).toFixed(1) + ' mm = L/' + Math.round(48 / Math.max(sag, 1e-6)) : 'unstable', note: 'Illustrative target L/800 for a road bridge.', c: ok && 48 / sag >= 800 ? '#5FBF8A' : '#D6C7A1' },
+      { k: 'Worst member', v: ok ? worst.m.id + ' at ' + Math.round(worst.ut * 100) + '%' : 'no solution', note: ok ? (worst.N < 0 ? 'Compression, governed by ' + worst.mode + '.' : 'Tension, governed by yield.') : 'Stiffness matrix is singular.', c: failed ? '#E5534B' : (worst.ut > 0.8 ? '#D6C7A1' : '#5FBF8A') },
+      { k: 'Steel weight', v: (sol.mass / 1000).toFixed(1) + ' t', note: 'Both trusses, members only.', c: '#A3A3A3' }
+    ];
+
+    const styleDefs = [['pratt', 'Pratt'], ['howe', 'Howe'], ['warren', 'Warren']];
+    return Object.assign(P, {
+      lines, nodeD, nodeLabels, memLabels, arrowD, rows, checks,
+      schemLabel: sname + ' truss elevation with member forces. ' + (failed ? 'Over its limit.' : 'Holding.'),
+      statusLabel: !ok ? 'Mechanism' : (failed ? worst.m.id + ' over its limit' : 'Holding · worst ' + Math.round(worst.ut * 100) + '%'),
+      statusColor: failed ? '#E5534B' : (worst.ut > 0.8 ? '#D6C7A1' : '#5FBF8A'),
+      ilId: pm.id, ilD, ilFill, ilCap, ilColor,
+      ilCursor: 'M' + gx(s.xt).toFixed(1) + ' 14 V206',
+      ilCx: gx(s.xt).toFixed(1), ilCy: gy(nowV).toFixed(1),
+      ilLabel: 'Force in ' + pm.id + ' as the truck moves from 0 to 48 m. Peak ' + peak.toFixed(0) + ' kN at ' + peakAt + ' m.',
+      ilNow: fmt(nowV) + ' kN ' + (nowV >= 0 ? 'T' : 'C'),
+      ilPeak: fmt(peak) + ' kN', ilPeakAt: 'truck at x = ' + peakAt + ' m',
+      ilLim: '+' + limT.toFixed(0) + ' / −' + limC.toFixed(0) + ' kN',
+      ilPicks: picks.map((p) => ({ name: p.name, cls: 'seg' + (p.key === pick.key ? ' seg-on' : ''), pressed: p.key === pick.key ? 'true' : 'false', pick: () => this.setState({ il: p.key }) })),
+      styles: styleDefs.map((t) => ({ name: t[1], cls: 'seg' + (s.style === t[0] ? ' seg-on' : ''), pressed: s.style === t[0] ? 'true' : 'false', pick: () => this.setState({ style: t[0] }) })),
+      braced: s.braced, mat: s.mat, size: s.size, truckT: s.truckT, xt: s.xt,
+      playing: s.playing, notPlaying: !s.playing, clock: 'x = ' + s.xt.toFixed(1) + ' m',
+      toggleBraced: () => this.setState({ braced: !this.state.braced }),
+      setMat: (e) => this.setState({ mat: e.target.value }),
+      setSize: (e) => this.setState({ size: Number(e.target.value) }),
+      setTruck: (e) => this.setState({ truckT: Number(e.target.value) }),
+      setPos: (e) => this.setState({ xt: Number(e.target.value), playing: false }),
+      toggleDrive: () => this.setState({ playing: !this.state.playing }),
+      reset: () => this.setState({ style: 'pratt', braced: false, mat: 'steel', size: 4, truckT: 40, xt: 24, playing: false, il: 'topmid' })
+    });
+  }
+}
+</script>
+
+
+</body></html>

@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Structures Playground — Build it, break it</title>
+<script src="de1d4a92-cf4a-44d0-adb6-bd136e640c5f"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style></style>
+<style>
+body{margin:0;background:#0A0A0A}
+.paper{background-color:#0A0A0A;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);background-size:60px 60px,60px 60px,12px 12px,12px 12px}
+a{color:#D6C7A1}a:hover{color:#E9DFC6}
+.seg{border:0;background:transparent;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;padding:0 14px;min-height:36px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none}
+.seg:hover{color:#EAEAEA}
+.seg-on{background:#2A2A2A;color:#F5F5F5}
+.ghost{border:1px solid #2E2E2E;background:#171717;color:#D9D9D9;font:500 13px Inter,system-ui,sans-serif;min-height:36px;padding:0 12px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.ghost:hover{background:#1F1F1F;color:#F5F5F5}
+.prim{border:1px solid #4D4636;background:#24221C;color:#E9DFC6;font:600 13px Inter,system-ui,sans-serif;min-height:36px;padding:0 14px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.prim:hover{background:#2E2B23;color:#E9DFC6}
+.sw{width:36px;height:36px;border:0;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.sw:hover{background:#1C1C1C}
+.sw-on{background:#2A2A2A}
+.lbl{margin:0;font:600 11px Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#A3A3A3}
+.ptile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:84px;border:1px solid #242424;border-radius:12px;background:rgba(18,18,18,.92);color:#EAEAEA;font:600 12px/1.25 Inter,system-ui,sans-serif;cursor:pointer;padding:10px 6px;text-align:center}
+.ptile:hover{border-color:#4D4636;background:#1E1C17}
+.ptile-on{border-color:#D6C7A1;background:#1E1C17}
+.tab{display:flex;align-items:center;min-height:44px;padding:0 4px;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;text-decoration:none;border-bottom:2px solid transparent;box-sizing:border-box}
+.tab:hover{color:#F5F5F5}
+.tab-on{color:#F5F5F5;border-bottom-color:#D6C7A1}
+.panel{background:rgba(17,17,17,.88);border:1px solid #242424;border-radius:12px}
+.h{margin:0;font:600 15px 'Space Grotesk',Inter,sans-serif;letter-spacing:-.01em}
+.mono{font-family:'JetBrains Mono',monospace}
+.mut{color:#A3A3A3}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid #2E2E2E;background:#141414;font:600 12px Inter,system-ui,sans-serif}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:5px;font:500 11px 'JetBrains Mono',monospace;border:1px solid #2E2E2E;color:#D9D9D9;background:#121212}
+.bar{height:8px;border-radius:4px;background:#1E1E1E;overflow:hidden}
+.well{background:#0D0D0D;border:1px solid #242424;border-radius:8px}
+input[type=range]{accent-color:#D6C7A1;width:100%;margin:0;height:28px}
+input[type=checkbox]{accent-color:#D6C7A1;width:18px;height:18px;margin:0}
+.graph{background-color:#0B0C0E;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:120px 120px,120px 120px,24px 24px,24px 24px}
+.chip{position:absolute;transform:translate(-50%,-130%);padding:3px 8px;border-radius:6px;background:rgba(11,12,14,.92);border:1px solid #2A2D33;font:400 12px 'JetBrains Mono',monospace;color:#ECEAE6;white-space:nowrap;pointer-events:none}
+@keyframes flow{to{stroke-dashoffset:-48}}
+.flow{animation:flow 1.6s linear infinite}
+.still .flow{animation-play-state:paused}
+.tool{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:60px;min-height:56px;border:1px solid transparent;border-radius:10px;background:transparent;color:#A3A3A3;font:500 11px Inter,system-ui,sans-serif;cursor:pointer;padding:6px 0}
+.tool:hover{background:#1C1C1C;color:#EAEAEA}
+.tool-on{background:#24221C;border-color:#4D4636;color:#E9DFC6}
+.chips{display:flex;gap:4px}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 12px;border:1px solid #2E2E2E;border-radius:999px;background:#141414;color:#C9C9C9;font:500 12px Inter,system-ui,sans-serif;cursor:pointer}
+.chip:hover{color:#F5F5F5;border-color:#3A3A3A}
+.chip-on{background:#24221C;border-color:#6A604A;color:#E9DFC6}
+.chip-dim{opacity:.45}
+.surface{position:absolute;inset:0;border:0;background:transparent;padding:0;margin:0}
+.surface:focus-visible{outline:2px solid #D6C7A1;outline-offset:-2px}
+.joint{position:absolute;transform:translate(-50%,-50%);width:30px;height:30px;border:0;border-radius:50%;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.jdot{width:11px;height:11px;border-radius:50%;background:#0C0D0F;border:2px solid #D4D4D4;box-sizing:border-box}
+.joint:hover .jdot{border-color:#E9DFC6;transform:scale(1.25)}
+.j-lock .jdot{border-radius:3px;border-color:#D6C7A1}
+.j-pend .jdot{background:#D6C7A1;border-color:#E9DFC6;box-shadow:0 0 0 5px rgba(214,199,161,.25)}
+.j-sel .jdot{box-shadow:0 0 0 4px rgba(233,223,198,.35)}
+.j-bad .jdot{border-color:#E5534B;box-shadow:0 0 0 4px rgba(229,83,75,.3)}
+.mh{position:absolute;transform:translate(-50%,-50%);min-width:14px;height:14px;padding:0;border:1px solid #3A3A3A;border-radius:7px;background:rgba(12,13,15,.9);color:#D9D9D9;font:500 10px 'JetBrains Mono',monospace;cursor:pointer;white-space:nowrap}
+.mh-num{height:20px;padding:0 6px;border-radius:5px}
+.mh-sel{border-color:#D6C7A1;color:#E9DFC6}
+.mh-over{border-color:#E5534B;color:#F2B8B3}
+.ltag{position:absolute;transform:translate(-50%,0);padding:1px 6px;border-radius:4px;background:rgba(12,13,15,.85);font:500 11px 'JetBrains Mono',monospace;color:#E6D6B8;pointer-events:none;white-space:nowrap}
+.lvl{display:flex;align-items:center;justify-content:space-between;min-height:40px;padding:0 12px;border:1px solid #242424;border-radius:8px;background:#121212;color:#C9C9C9;font:500 13px Inter,system-ui,sans-serif;cursor:pointer;text-align:left}
+.lvl:hover{border-color:#3A3A3A;color:#F5F5F5}
+.lvl-on{border-color:#6A604A;background:#24221C;color:#E9DFC6}
+.still-flow{animation-play-state:paused}
+</style>
+</helmet>
+<div class="paper" style="min-height: 900px; display: flex; flex-direction: column; color: #EAEAEA; font-family: Inter, system-ui, sans-serif">
+  <header style="min-height: 56px; display: flex; align-items: center; gap: 12px 16px; padding: 8px 16px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.85); flex-wrap: wrap; box-sizing: border-box">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <svg width="26" height="26" sc-camel-view-box="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="6" fill="#171717" stroke="#D6C7A1" stroke-width="1.5"></rect><path d="M5 18h16M5 18l4-9h8l4 9M9 9l4 9 4-9" fill="none" stroke="#D6C7A1" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></path><circle cx="13" cy="18" r="1.8" fill="#7FB0E0"></circle></svg>
+      <span style="font: 600 16px 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.01em">Structures Playground</span>
+      <span style="color: #4A4A4A">/</span>
+      <span style="font-size: 13px; color: #D9D9D9">{{levelSlug}}</span>
+    </div>
+
+    <nav aria-label="Mode" style="display: flex; gap: 2px; padding: 3px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px">
+      <a class="seg seg-on" href="Main.dc.html" aria-current="page"><svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 11h12M1 11l3-6h6l3 6M4 5l3 6 3-6"></path></svg>Playground</a>
+      <a class="seg" href="Advanced.dc.html"><svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5v11h11"></path><path d="M3.5 4h4M3.5 6.5h6M3.5 9h3"></path></svg>Advanced</a>
+    </nav>
+
+
+    <div style="display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap">
+      <button type="button" class="prim" sc-camel-on-click="{{toggleDrive}}">
+        <sc-if value="{{playing}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><rect x="2" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect><rect x="7.4" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect></svg>Pause</sc-if>
+        <sc-if value="{{notPlaying}}" hint-placeholder-val="{{ true }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><path d="M3 1.5l7 4.5-7 4.5z" fill="currentColor"></path></svg>Test</sc-if>
+      </button>
+      <button type="button" class="ghost" sc-camel-on-click="{{reset}}"><svg width="12" height="12" sc-camel-view-box="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 1 0 1.7-4"></path><path d="M2.5 2.5V6H6"></path></svg>Reset</button>
+      <span class="mono" style="font-size: 12px; color: #A3A3A3; padding: 0 8px">{{clock}}</span>
+      <button type="button" class="ghost">Share</button>
+    </div>
+  </header>
+  <nav aria-label="Playground worlds" style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; padding: 0 16px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.85)">
+    <a class="tab tab-on" href="Main.dc.html" aria-current="page">Bridge</a>
+    <a class="tab" href="Tower.dc.html">Tower</a>
+    <a class="tab" href="Ground.dc.html">Ground</a>
+    <a class="tab" href="Materials.dc.html">Materials</a>
+    <span style="margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 0">
+      <span class="badge"><span class="dot" style="background: #5FBF8A"></span>Solver: linear statics, exact</span>
+      <span class="badge"><span class="dot" style="background: #D6C7A1"></span>Materials: representative</span>
+      <span class="badge"><span class="dot" style="background: #A3A3A3"></span>Game costs</span>
+    </span>
+  </nav>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto; min-height: 0">
+
+    <nav aria-label="Tools" style="flex: 0 0 76px; border-right: 1px solid #242424; background: rgba(17,17,17,0.84); padding: 12px 8px; display: flex; flex-direction: column; gap: 6px; box-sizing: border-box">
+      <sc-for list="{{tools}}" as="t" hint-placeholder-count="6">
+        <button type="button" class="{{t.cls}}" aria-pressed="{{t.pressed}}" sc-camel-on-click="{{t.pick}}" title="{{t.tip}}">
+          <svg width="22" height="22" sc-camel-view-box="0 0 22 22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{t.d}}"></path></svg>
+          <span>{{t.name}}</span>
+        </button>
+      </sc-for>
+      <div style="height: 1px; background: #242424; margin: 6px 0"></div>
+      <button type="button" class="tool" sc-camel-on-click="{{undo}}" title="Undo the last change"><svg width="22" height="22" sc-camel-view-box="0 0 22 22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6L4 10l4 4"></path><path d="M4 10h9a5 5 0 0 1 0 10h-3"></path></svg><span>Undo</span></button>
+      <button type="button" class="tool" sc-camel-on-click="{{clearAll}}" title="Start this level again"><svg width="22" height="22" sc-camel-view-box="0 0 22 22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h14M9 6V4h4v2M6 6l1 13h8l1-13"></path></svg><span>Clear</span></button>
+    </nav>
+
+    <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; box-sizing: border-box">
+      <div class="panel" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 8px 12px; min-height: 52px; box-sizing: border-box">
+        <span style="font-size: 13px; color: #D4D4D4; flex: 1 1 220px">{{hint}}</span>
+        <sc-if value="{{showSizes}}" hint-placeholder-val="{{ true }}">
+          <div role="group" aria-label="Member size" style="display: flex; align-items: center; gap: 6px"><span class="lbl">Size</span><div class="chips"><sc-for list="{{sizes}}" as="c" hint-placeholder-count="3"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}">{{c.name}}</button></sc-for></div></div>
+        </sc-if>
+        <sc-if value="{{showWeights}}" hint-placeholder-val="{{ false }}">
+          <div role="group" aria-label="Weight to add" style="display: flex; align-items: center; gap: 6px"><span class="lbl">Weight</span><div class="chips"><sc-for list="{{weights}}" as="c" hint-placeholder-count="4"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}">{{c.name}}</button></sc-for></div></div>
+        </sc-if>
+        <sc-if value="{{hasPending}}" hint-placeholder-val="{{ false }}"><button type="button" class="ghost" sc-camel-on-click="{{finish}}">Finish line</button></sc-if>
+        <div style="display: flex; gap: 6px; margin-left: auto">
+          <button type="button" class="{{sagCls}}" aria-pressed="{{sagPressed}}" sc-camel-on-click="{{toggleSag}}">Exaggerate sag</button>
+          <button type="button" class="{{numCls}}" aria-pressed="{{numPressed}}" sc-camel-on-click="{{toggleNums}}">Show forces</button>
+        </div>
+      </div>
+
+      <div style="position: relative; width: 100%; aspect-ratio: 1120 / 600; border: 1px solid #242424; border-radius: 12px; overflow: hidden; background: #0C0D0F; touch-action: none" sc-camel-on-pointer-move="{{onMove}}" sc-camel-on-pointer-up="{{onUp}}" sc-camel-on-pointer-leave="{{onUp}}">
+        <svg sc-camel-view-box="0 0 1120 600" width="100%" height="100%" role="img" aria-label="{{stageLabel}}" style="position: absolute; inset: 0; display: block">
+          <defs><pattern id="sgrid" x="56" y="380" width="36" height="36" sc-camel-pattern-units="userSpaceOnUse"><circle cx="0" cy="0" r="1.3" fill="#3A3D42"></circle></pattern></defs>
+          <rect x="0" y="0" width="1120" height="600" fill="url(#sgrid)"></rect>
+          <path d="M197 524 H923 V600 H197 Z" fill="#0B1A24"></path>
+          <path class="{{flowCls}}" d="M215 540 H905 M240 558 H900 M205 576 H890" stroke="#24546E" stroke-width="2" stroke-dasharray="18 30" fill="none"></path>
+          <path d="M194 590 H926 V600 H194 Z" fill="#1A1713"></path>
+          <path d="M0 380 H200 L218 368 H0 Z" fill="#2B2721"></path>
+          <path d="M0 380 H200 L194 600 H0 Z" fill="#1A1713"></path>
+          <path d="M920 380 H1120 V368 H938 Z" fill="#2B2721"></path>
+          <path d="M920 380 H1120 V600 H926 Z" fill="#1A1713"></path>
+          <path d="{{backD}}" stroke="#34373C" stroke-width="3" fill="none" stroke-linecap="round"></path>
+          <path d="{{ghostD}}" stroke="#D6C7A1" stroke-opacity="0.55" stroke-width="2" stroke-dasharray="6 6" fill="none"></path>
+          <path d="{{t1S}}" stroke="#7FB0E0" stroke-opacity="0.45" stroke-width="3" fill="none" stroke-linecap="round"></path>
+          <path d="{{t1M}}" stroke="#7FB0E0" stroke-opacity="0.45" stroke-width="4.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{t1L}}" stroke="#7FB0E0" stroke-opacity="0.45" stroke-width="6.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{t2S}}" stroke="#7FB0E0" stroke-opacity="0.75" stroke-width="3" fill="none" stroke-linecap="round"></path>
+          <path d="{{t2M}}" stroke="#7FB0E0" stroke-opacity="0.75" stroke-width="4.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{t2L}}" stroke="#7FB0E0" stroke-opacity="0.75" stroke-width="6.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{t3S}}" stroke="#7FB0E0" stroke-opacity="1" stroke-width="3" fill="none" stroke-linecap="round"></path>
+          <path d="{{t3M}}" stroke="#7FB0E0" stroke-opacity="1" stroke-width="4.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{t3L}}" stroke="#7FB0E0" stroke-opacity="1" stroke-width="6.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{c1S}}" stroke="#E0905E" stroke-opacity="0.45" stroke-width="3" fill="none" stroke-linecap="round"></path>
+          <path d="{{c1M}}" stroke="#E0905E" stroke-opacity="0.45" stroke-width="4.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{c1L}}" stroke="#E0905E" stroke-opacity="0.45" stroke-width="6.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{c2S}}" stroke="#E0905E" stroke-opacity="0.75" stroke-width="3" fill="none" stroke-linecap="round"></path>
+          <path d="{{c2M}}" stroke="#E0905E" stroke-opacity="0.75" stroke-width="4.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{c2L}}" stroke="#E0905E" stroke-opacity="0.75" stroke-width="6.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{c3S}}" stroke="#E0905E" stroke-opacity="1" stroke-width="3" fill="none" stroke-linecap="round"></path>
+          <path d="{{c3M}}" stroke="#E0905E" stroke-opacity="1" stroke-width="4.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{c3L}}" stroke="#E0905E" stroke-opacity="1" stroke-width="6.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{zS}}" stroke="#5E5E5E" stroke-opacity="1" stroke-width="3" fill="none" stroke-linecap="round"></path>
+          <path d="{{zM}}" stroke="#5E5E5E" stroke-opacity="1" stroke-width="4.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{zL}}" stroke="#5E5E5E" stroke-opacity="1" stroke-width="6.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{nS}}" stroke="#9AA0A8" stroke-opacity="1" stroke-width="3" fill="none" stroke-linecap="round"></path>
+          <path d="{{nM}}" stroke="#9AA0A8" stroke-opacity="1" stroke-width="4.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{nL}}" stroke="#9AA0A8" stroke-opacity="1" stroke-width="6.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{xS}}" stroke="#E5534B" stroke-opacity="1" stroke-width="3" stroke-dasharray="9 6" fill="none" stroke-linecap="round"></path>
+          <path d="{{xM}}" stroke="#E5534B" stroke-opacity="1" stroke-width="4.5" stroke-dasharray="9 6" fill="none" stroke-linecap="round"></path>
+          <path d="{{xL}}" stroke="#E5534B" stroke-opacity="1" stroke-width="6.5" stroke-dasharray="9 6" fill="none" stroke-linecap="round"></path>
+          
+          <path d="{{cableD}}" stroke="#8A8F98" stroke-width="1.2" fill="none"></path>
+          <path d="{{crateSideD}}" fill="#5A4630"></path>
+          <path d="{{crateTopD}}" fill="#9C7E55"></path>
+          <path d="{{crateD}}" fill="#7E6442" stroke="#3E3022" stroke-width="1"></path>
+          <path d="{{supD}}" fill="#8A8F98"></path>
+          <path d="{{sparkD}}" stroke="#E5534B" stroke-width="2.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{badD}}" stroke="#E5534B" stroke-width="2" fill="none" stroke-dasharray="4 3"></path>
+          <path d="{{hoverD}}" fill="#D6C7A1" fill-opacity="0.6"></path>
+        </svg>
+
+        <button type="button" class="surface" style="cursor: {{cursor}}" aria-label="{{surfaceLabel}}" sc-camel-on-click="{{onSurface}}"></button>
+
+        <sc-for list="{{memHandles}}" as="m" hint-placeholder-count="0">
+          <button type="button" class="{{m.cls}}" style="left: {{m.x}}%; top: {{m.y}}%" aria-label="{{m.label}}" sc-camel-on-click="{{m.pick}}">{{m.text}}</button>
+        </sc-for>
+        <sc-for list="{{joints}}" as="j" hint-placeholder-count="2">
+          <button type="button" class="{{j.cls}}" style="left: {{j.x}}%; top: {{j.y}}%" aria-label="{{j.label}}" sc-camel-on-click="{{j.pick}}" sc-camel-on-pointer-down="{{j.down}}"><span class="jdot"></span></button>
+        </sc-for>
+        <sc-for list="{{loadTags}}" as="l" hint-placeholder-count="0">
+          <span class="ltag" style="left: {{l.x}}%; top: {{l.y}}%">{{l.text}}</span>
+        </sc-for>
+
+        <sc-if value="{{toastOn}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; left: 50%; top: 14px; transform: translateX(-50%); padding: 6px 12px; border-radius: 8px; background: rgba(10,10,10,.92); border: 1px solid #3A3A3A; font-size: 13px; color: #EAEAEA">{{toast}}</span></sc-if>
+
+        <sc-if value="{{testing}}" hint-placeholder-val="{{ false }}">
+          <div style="position: absolute; left: 50%; top: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 10px; background: rgba(10,10,10,.92); border: 1px solid #3A3A3A">
+            <span class="lbl">Loading</span>
+            <div class="bar" style="width: 180px"><div style="width: {{lamPct}}%; height: 8px; background: #D6C7A1"></div></div>
+            <span class="mono" style="font-size: 12px">{{lamPct}}%</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{showResult}}" hint-placeholder-val="{{ false }}">
+          <div style="position: absolute; left: 50%; top: 14px; transform: translateX(-50%); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; padding: 10px 14px; border-radius: 12px; background: rgba(10,10,10,.94); border: 1px solid {{resultBorder}}; max-width: 90%">
+            <span style="font: 600 15px 'Space Grotesk', Inter, sans-serif; color: {{resultColor}}">{{resultTitle}}</span>
+            <span class="mono" style="font-size: 14px; color: #D6C7A1">{{stars}}</span>
+            <sc-if value="{{collapsed}}" hint-placeholder-val="{{ false }}"><button type="button" class="ghost" sc-camel-on-click="{{replay}}">Replay in slow motion</button></sc-if>
+            <button type="button" class="prim" sc-camel-on-click="{{backToBuild}}">Back to building</button>
+          </div>
+        </sc-if>
+
+        <div style="position: absolute; left: 12px; bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 6px 10px; border-radius: 8px; background: rgba(10,10,10,.82); border: 1px solid #242424; font-size: 12px; color: #D9D9D9; pointer-events: none">
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 4px; border-radius: 2px; background: #7FB0E0"></span>Stretched (tension)</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 4px; border-radius: 2px; background: #E0905E"></span>Squeezed (compression)</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 0; border-top: 3px dashed #E5534B"></span>Will break</span>
+          <span class="mut">brighter = closer to its limit</span>
+        </div>
+      </div>
+    </main>
+
+    <aside aria-label="Level and inspector" style="flex: 1 1 300px; max-width: 360px; min-width: 260px; border-left: 1px solid #242424; background: rgba(17,17,17,0.84); padding: 14px 12px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box">
+      <section style="display: flex; flex-direction: column; gap: 8px">
+        <h2 class="lbl">Level</h2>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <sc-for list="{{levels}}" as="v" hint-placeholder-count="4">
+            <button type="button" class="{{v.cls}}" aria-pressed="{{v.pressed}}" sc-camel-on-click="{{v.pick}}"><span>{{v.name}}</span><span class="mono" style="font-size: 12px; color: #D6C7A1">{{v.best}}</span></button>
+          </sc-for>
+        </div>
+      </section>
+
+      <section class="panel" style="padding: 12px; display: flex; flex-direction: column; gap: 10px">
+        <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #D4D4D4">{{goal}}</p>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+          <span class="pill" style="color: {{statusColor}}"><span class="dot" style="background: {{statusColor}}"></span>{{statusLabel}}</span>
+          <span class="mono" style="font-size: 13px; color: {{costColor}}">{{costText}}</span>
+        </div>
+        <button type="button" class="prim" sc-camel-on-click="{{toggleTest}}" style="min-height: 44px; font-size: 14px">{{testLabel}}</button>
+      </section>
+
+      <sc-if value="{{selMember}}" hint-placeholder-val="{{ false }}">
+        <section class="well" style="padding: 12px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between"><h2 class="h">{{mi.title}}</h2><span class="mut" style="font-size: 12px">{{mi.len}}</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><div class="bar" style="flex: 1"><div style="width: {{mi.w}}%; height: 8px; background: {{mi.color}}"></div></div><span class="mono" style="font-size: 13px">{{mi.ut}}</span></div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #D4D4D4">{{mi.text}}</p>
+          <div role="group" aria-label="Size of this member" style="display: flex; align-items: center; gap: 8px"><span class="lbl">Size</span><div class="chips"><sc-for list="{{mi.sizes}}" as="c" hint-placeholder-count="3"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}">{{c.name}}</button></sc-for></div></div>
+          <button type="button" class="ghost" sc-camel-on-click="{{mi.del}}">Delete member</button>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{selNode}}" hint-placeholder-val="{{ false }}">
+        <section class="well" style="padding: 12px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between"><h2 class="h">{{ni.title}}</h2><span class="mut mono" style="font-size: 12px">{{ni.pos}}</span></div>
+          <div role="group" aria-label="Support" style="display: flex; align-items: center; gap: 8px"><span class="lbl">Support</span><div class="chips"><sc-for list="{{ni.sups}}" as="c" hint-placeholder-count="3"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}">{{c.name}}</button></sc-for></div></div>
+          <div style="display: flex; align-items: center; gap: 8px"><span class="lbl">Weight</span>
+            <button type="button" class="ghost" sc-camel-on-click="{{ni.less}}" aria-label="Less weight" style="width: 40px">−</button>
+            <span class="mono" style="min-width: 54px; text-align: center; font-size: 14px">{{ni.load}}</span>
+            <button type="button" class="ghost" sc-camel-on-click="{{ni.more}}" aria-label="More weight" style="width: 40px">+</button>
+          </div>
+          <p class="mut" style="margin: 0; font-size: 12px">{{ni.note}}</p>
+          <sc-if value="{{ni.canDel}}" hint-placeholder-val="{{ true }}"><button type="button" class="ghost" sc-camel-on-click="{{ni.del}}">Delete joint</button></sc-if>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{selNone}}" hint-placeholder-val="{{ true }}">
+        <section style="display: flex; flex-direction: column; gap: 8px">
+          <h2 class="lbl">Built from</h2>
+          <div class="chips" role="group" aria-label="Material" style="flex-wrap: wrap"><sc-for list="{{mats}}" as="c" hint-placeholder-count="4"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}"><span class="dot" style="background: {{c.sw}}"></span>{{c.name}}</button></sc-for></div>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+            <div class="well" style="padding: 8px 10px"><span class="lbl">Joints</span><div class="mono" style="font-size: 16px">{{nJ}}</div></div>
+            <div class="well" style="padding: 8px 10px"><span class="lbl">Members</span><div class="mono" style="font-size: 16px">{{nM}}</div></div>
+            <div class="well" style="padding: 8px 10px"><span class="lbl">Weight</span><div class="mono" style="font-size: 16px">{{massT}}</div></div>
+          </div>
+          <sc-if value="{{canStarter}}" hint-placeholder-val="{{ false }}"><button type="button" class="ghost" sc-camel-on-click="{{starter}}">Drop in a starter truss</button></sc-if>
+        </section>
+      </sc-if>
+
+      <section style="display: flex; flex-direction: column; gap: 6px">
+        <h2 class="lbl">What’s happening</h2>
+        <p style="margin: 0; font-size: 13px; line-height: 1.55; color: #D4D4D4; text-wrap: pretty">{{explain}}</p>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = Object.assign(this.levelState('river'), { tool: 'member', size: 'M', weight: 10, sag: true, nums: false, best: {}, toast: '', toastAt: 0, tick: 0 });
+    this.hist = [];
+    this.sim = null;
+  }
+  componentDidMount() { this.timer = setInterval(() => this.tick(), 33); }
+  componentWillUnmount() { clearInterval(this.timer); }
+
+  // ---------- data ----------
+  mats() {
+    return {
+      steel: { name: 'Steel', E: 200e9, fy: 250e6, rho: 7850, cost: 3.5, sw: '#9AA3AD' },
+      timber: { name: 'Timber', E: 12e9, fy: 30e6, rho: 500, cost: 2.2, sw: '#C49A5E' },
+      alu: { name: 'Aluminum', E: 69e9, fy: 240e6, rho: 2700, cost: 8, sw: '#D5DAE0' },
+      cf: { name: 'Carbon fiber', E: 70e9, fy: 600e6, rho: 1600, cost: 40, sw: '#5B616B' }
+    };
+  }
+  sizes() { return { S: { name: 'Thin', A: 0.004 }, M: { name: 'Medium', A: 0.008 }, L: { name: 'Thick', A: 0.016 } }; }
+  levels() {
+    return {
+      river: { name: '1 · River crossing', goal: 'Get a 20 t truck across the 40 m gap. It waits at the middle joint. Budget $30k.', budget: 30, sup: 'banks',
+        nodes: [[8, 0, 'pin', 1], [48, 0, 'roller', 1], [28, 0, null, 1]], loads: { 2: 20 } },
+      overhang: { name: '2 · Overhang', goal: 'Hold 5 t out over the water, 12 m from the bank. Supports only on the left bank. Budget $14k.', budget: 14, sup: 'left',
+        nodes: [[2, 0, 'pin', 1], [8, 0, 'pin', 1], [20, 2, null, 1]], loads: { 2: 5 } },
+      haul: { name: '3 · Heavy haul', goal: 'Two 25 t loads at once. You may build piers down to the riverbed. Budget $60k.', budget: 60, sup: 'any',
+        nodes: [[8, 0, 'pin', 1], [48, 0, 'roller', 1], [18, 0, null, 1], [38, 0, null, 1]], loads: { 2: 25, 3: 25 } },
+      sandbox: { name: 'Sandbox', goal: 'No rules. Build anything, hang any weight on it, press Test, watch it hold or fall.', budget: null, sup: 'any',
+        nodes: [[8, 0, 'pin', 0], [48, 0, 'roller', 0]], loads: {} }
+    };
+  }
+  levelState(key) {
+    const L = this.levels()[key];
+    const nodes = L.nodes.map((n, i) => ({ id: 'J' + (i + 1), x: n[0], y: n[1], sup: n[2], locked: !!n[3] }));
+    const loads = {}; Object.keys(L.loads).forEach((i) => { loads[nodes[i].id] = L.loads[i]; });
+    return { level: key, nodes, members: [], loads, mat: 'steel', nN: nodes.length, nM: 0, pending: null, sel: null, phase: 'build', lam: 0, broken: {}, log: [], hover: null, drag: null };
+  }
+
+  ground(x) { return x <= 8 || x >= 48 ? 0 : -12; }
+  supOk(x, y) {
+    const L = this.levels()[this.state.level];
+    const onBank = Math.abs(y) < 0.01 && (x <= 8 || x >= 48);
+    const onBed = Math.abs(y + 12) < 0.01 && x > 8 && x < 48;
+    if (L.sup === 'left') return Math.abs(y) < 0.01 && x <= 8;
+    if (L.sup === 'banks') return onBank;
+    return onBank || onBed;
+  }
+
+  // ---------- solver ----------
+  solve(st, lam, broken) {
+    const mat = this.mats()[st.mat], SZ = this.sizes();
+    const act = st.members.filter((m) => !broken[m.id]);
+    const used = {}; act.forEach((m) => { used[m.a] = 1; used[m.b] = 1; });
+    st.nodes.forEach((n) => { if (n.sup) used[n.id] = 1; });
+    const ids = st.nodes.filter((n) => used[n.id]).map((n) => n.id);
+    const ix = {}; ids.forEach((id, k) => { ix[id] = k; });
+    const byId = {}; st.nodes.forEach((n) => { byId[n.id] = n; });
+    const nd = 2 * ids.length;
+    const K = []; for (let i = 0; i < nd; i++) K.push(new Array(nd).fill(0));
+    const F = new Array(nd).fill(0);
+    let mass = 0; const geo = {};
+    act.forEach((m) => {
+      const a = byId[m.a], b = byId[m.b]; const A = SZ[m.size].A, I = A * A;
+      const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy); const c = dx / L, s = dy / L;
+      geo[m.id] = { A, I, L, c, s };
+      const w = A * L * mat.rho; mass += w;
+      const ia = ix[m.a], ib = ix[m.b];
+      F[2 * ia + 1] -= w * 9.81 / 2 * lam; F[2 * ib + 1] -= w * 9.81 / 2 * lam;
+      const k = mat.E * A / L, cc = c * c, cs = c * s, ss = s * s;
+      const d = [2 * ia, 2 * ia + 1, 2 * ib, 2 * ib + 1];
+      const kl = [[cc, cs, -cc, -cs], [cs, ss, -cs, -ss], [-cc, -cs, cc, cs], [-cs, -ss, cs, ss]];
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) K[d[i]][d[j]] += k * kl[i][j];
+    });
+    Object.keys(st.loads).forEach((id) => { if (ix[id] !== undefined) F[2 * ix[id] + 1] -= st.loads[id] * 9810 * lam; });
+    const fixed = {};
+    ids.forEach((id) => { const n = byId[id]; if (n.sup === 'pin') { fixed[2 * ix[id]] = 1; fixed[2 * ix[id] + 1] = 1; } if (n.sup === 'roller') fixed[2 * ix[id] + 1] = 1; });
+    const fr = []; for (let i = 0; i < nd; i++) if (!fixed[i]) fr.push(i);
+    const n = fr.length; const A = fr.map((i) => fr.map((j) => K[i][j])); const b = fr.map((i) => F[i]);
+    let maxd = 0; for (let i = 0; i < n; i++) maxd = Math.max(maxd, Math.abs(A[i][i]));
+    let ok = true, bad = null;
+    for (let c = 0; c < n; c++) {
+      let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+      if (Math.abs(A[p][c]) <= maxd * 1e-9) { ok = false; bad = ids[fr[c] >> 1]; break; }
+      const tr = A[c]; A[c] = A[p]; A[p] = tr; const tb = b[c]; b[c] = b[p]; b[p] = tb;
+      for (let r = c + 1; r < n; r++) { const f = A[r][c] / A[c][c]; if (f === 0) continue; for (let k = c; k < n; k++) A[r][k] -= f * A[c][k]; b[r] -= f * b[c]; }
+    }
+    const u = {};
+    if (ok) { const x = new Array(n).fill(0); for (let r = n - 1; r >= 0; r--) { let s = b[r]; for (let k = r + 1; k < n; k++) s -= A[r][k] * x[k]; x[r] = s / A[r][r]; } const ud = new Array(nd).fill(0); fr.forEach((d, i) => { ud[d] = x[i]; }); ids.forEach((id) => { u[id] = [ud[2 * ix[id]], ud[2 * ix[id] + 1]]; }); }
+    const res = {};
+    act.forEach((m) => {
+      const g = geo[m.id]; let N = 0;
+      if (ok) { const ua = u[m.a], ub = u[m.b]; N = mat.E * g.A / g.L * ((ub[0] - ua[0]) * g.c + (ub[1] - ua[1]) * g.s); }
+      const cap = g.A * mat.fy, pcr = Math.PI * Math.PI * mat.E * g.I / (g.L * g.L);
+      let ut, mode, lim;
+      if (N >= 0) { ut = N / cap; mode = 'snapped'; lim = cap; } else { lim = Math.min(cap, pcr); ut = -N / lim; mode = pcr < cap ? 'buckled' : 'crushed'; }
+      res[m.id] = { N, ut, mode, lim, L: g.L };
+    });
+    let worst = null; Object.keys(res).forEach((id) => { if (!worst || res[id].ut > res[worst].ut) worst = id; });
+    const cost = mass * mat.cost / 1000 + st.nodes.length * 0.25;
+    return { ok, bad, u, res, worst, mass, cost, nAct: act.length, ids };
+  }
+
+  // ---------- sim ----------
+  initSim(st, broken, slow) {
+    const mat = this.mats()[st.mat], SZ = this.sizes();
+    const idx = {}; const P = st.nodes.map((n, i) => { idx[n.id] = i; return { x: n.x, y: n.y, qx: n.x, qy: n.y, m: 60 + (st.loads[n.id] || 0) * 1000, sup: n.sup, y0: n.y, att: false }; });
+    const cons = [];
+    st.members.forEach((m) => {
+      if (broken[m.id]) return;
+      const a = idx[m.a], b = idx[m.b]; const L = Math.hypot(P[b].x - P[a].x, P[b].y - P[a].y); const w = SZ[m.size].A * L * mat.rho;
+      P[a].m += w / 2; P[b].m += w / 2; P[a].att = true; P[b].att = true; cons.push({ a, b, L, id: m.id });
+    });
+    P.forEach((p) => { p.inv = p.sup === 'pin' || (!p.att && !p.sup && !st.loads[st.nodes[P.indexOf(p)].id]) ? 0 : 1 / p.m; });
+    const sparks = [];
+    st.members.forEach((m) => { if (broken[m.id]) { const a = P[idx[m.a]], b = P[idx[m.b]]; sparks.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }); } });
+    this.sim = { P, cons, sparks, t: 0, slow: !!slow, idx, lost: [] };
+  }
+  stepSim(dt) {
+    const S = this.sim; const P = S.P;
+    P.forEach((p) => {
+      if (p.inv === 0) return;
+      let vx = (p.x - p.qx) * 0.996, vy = (p.y - p.qy) * 0.996;
+      if (p.y < -8) { vx *= 0.86; vy *= 0.86; }
+      p.qx = p.x; p.qy = p.y; p.x += vx; p.y += vy - 9.81 * dt * dt;
+    });
+    for (let it = 0; it < 14; it++) {
+      for (let k = S.cons.length - 1; k >= 0; k--) {
+        const c = S.cons[k]; const a = P[c.a], b = P[c.b];
+        const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1e-6;
+        if (it === 0 && Math.abs(len - c.L) / c.L > 0.05) { S.cons.splice(k, 1); S.sparks.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }); S.lost.push(c.id); continue; }
+        const w = a.inv + b.inv; if (w === 0) continue;
+        const f = (len - c.L) / len / w;
+        a.x += dx * f * a.inv; a.y += dy * f * a.inv; b.x -= dx * f * b.inv; b.y -= dy * f * b.inv;
+      }
+      P.forEach((p) => { if (p.sup === 'roller') p.y = p.y0; });
+    }
+    P.forEach((p) => { const g = this.ground(p.x); if (p.y < g) { p.y = g; p.qx = p.x - (p.x - p.qx) * 0.3; p.qy = p.y; } if (p.x < 0) p.x = 0; if (p.x > 62) p.x = 62; });
+    S.t += dt;
+  }
+
+  // ---------- loop ----------
+  tick() {
+    const s = this.state;
+    if (s.toast && Date.now() - s.toastAt > 2600) this.setState({ toast: '' });
+    if (s.phase === 'testing') {
+      const lam = Math.min(1, s.lam + 1 / 55); const broken = Object.assign({}, s.broken); const log = s.log.slice();
+      const r0 = this.solve(s, lam, broken);
+      const loose = Object.keys(s.loads).find((id) => r0.ids.indexOf(id) < 0);
+      if (loose) { this.initSim(s, broken, false); this.setState({ phase: 'collapse', lam, broken, log: [{ id: null, lam, bad: loose, loose: true }] }); return; }
+      for (let k = 0; k < 30; k++) {
+        const r = this.solve(s, lam, broken);
+        if (!r.ok) { this.initSim(s, broken, false); this.seed = { broken: Object.assign({}, broken) }; this.setState({ phase: 'collapse', lam, broken, log: log.concat([{ id: null, lam, bad: r.bad }]) }); return; }
+        if (r.worst && r.res[r.worst].ut > 1) { broken[r.worst] = true; log.push({ id: r.worst, lam, mode: r.res[r.worst].mode }); continue; }
+        break;
+      }
+      if (lam >= 1) { this.finishHold(broken, log); return; }
+      this.setState({ lam, broken, log });
+    } else if (s.phase === 'collapse' && this.sim) {
+      const dt = (1 / 30) * (this.sim.slow ? 0.3 : 1) / 3;
+      for (let i = 0; i < 3; i++) this.stepSim(dt);
+      if (this.sim.t > (this.sim.slow ? 1.6 : 3.2)) { this.setState({ phase: 'collapsed' }); return; }
+      this.setState({ tick: s.tick + 1 });
+    }
+  }
+  finishHold(broken, log) {
+    const s = this.state; const L = this.levels()[s.level]; const r = this.solve(s, 1, broken);
+    let stars = 0;
+    if (L.budget) { if (r.cost <= L.budget) stars = 1; if (r.cost <= L.budget * 0.75) stars = 2; if (r.cost <= L.budget * 0.55) stars = 3; }
+    const best = Object.assign({}, s.best); if (stars > (best[s.level] || 0)) best[s.level] = stars;
+    this.setState({ phase: 'held', lam: 1, broken, log, stars, best });
+  }
+
+  // ---------- editing ----------
+  snap(e) {
+    const r = e.currentTarget.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width * 1120, py = (e.clientY - r.top) / r.height * 600;
+    let x = Math.round((px - 56) / 18 / 2) * 2, y = Math.round((380 - py) / 18 / 2) * 2;
+    x = Math.max(0, Math.min(58, x)); y = Math.max(-12, Math.min(16, y));
+    return { x, y };
+  }
+  push() { const s = this.state; this.hist.push(JSON.stringify({ nodes: s.nodes, members: s.members, loads: s.loads, nN: s.nN, nM: s.nM })); if (this.hist.length > 40) this.hist.shift(); }
+  say(t) { this.setState({ toast: t, toastAt: Date.now() }); }
+  nodeAt(x, y) { return this.state.nodes.find((n) => n.x === x && n.y === y); }
+  addNode(x, y) {
+    const s = this.state;
+    if (y < this.ground(x) - 0.01) { this.say('That spot is underground.'); return null; }
+    const ex = this.nodeAt(x, y); if (ex) return ex;
+    const n = { id: 'J' + (s.nN + 1), x, y, sup: null, locked: false };
+    this.state.nodes = s.nodes.concat([n]); this.state.nN = s.nN + 1;
+    return n;
+  }
+  addMember(a, b) {
+    const s = this.state;
+    if (a === b) return;
+    if (s.members.some((m) => (m.a === a && m.b === b) || (m.a === b && m.b === a))) { this.say('Those two are already joined.'); return; }
+    this.state.members = s.members.concat([{ id: 'M' + (s.nM + 1), a, b, size: s.size }]); this.state.nM = s.nM + 1;
+  }
+  delNode(id) {
+    const s = this.state; const n = s.nodes.find((q) => q.id === id); if (!n || n.locked) { this.say('This joint is part of the level.'); return; }
+    this.push(); const loads = Object.assign({}, s.loads); delete loads[id];
+    this.setState({ nodes: s.nodes.filter((q) => q.id !== id), members: s.members.filter((m) => m.a !== id && m.b !== id), loads, sel: null, pending: s.pending === id ? null : s.pending });
+  }
+  delMember(id) { this.push(); this.setState({ members: this.state.members.filter((m) => m.id !== id), sel: null }); }
+  setSup(id, sup) {
+    const s = this.state; const n = s.nodes.find((q) => q.id === id);
+    if (n.locked) { this.say('This support is part of the level.'); return; }
+    if (sup && !this.supOk(n.x, n.y)) { this.say(this.levels()[s.level].sup === 'left' ? 'Supports go on the left bank in this level.' : (this.levels()[s.level].sup === 'banks' ? 'Supports go on a riverbank.' : 'Supports go on a bank or the riverbed.')); return; }
+    this.push(); this.setState({ nodes: s.nodes.map((q) => (q.id === id ? Object.assign({}, q, { sup }) : q)) });
+  }
+  addLoad(id, t) {
+    const s = this.state; const L = this.levels()[s.level]; const lk = s.nodes.find((n) => n.id === id);
+    const loads = Object.assign({}, s.loads); const cur = loads[id] || 0; const nv = Math.max(0, Math.min(200, cur + t));
+    if (lk.locked && L.loads && Object.keys(L.loads).some((i) => 'J' + (Number(i) + 1) === id) && nv < L.loads[Object.keys(L.loads).find((i) => 'J' + (Number(i) + 1) === id)]) { this.say('The level’s load stays on.'); return; }
+    this.push(); if (nv === 0) delete loads[id]; else loads[id] = nv; this.setState({ loads });
+  }
+  startOrStop() {
+    const st = this.state;
+    if (st.phase !== 'build') { this.sim = null; this.setState({ phase: 'build', lam: 0, broken: {}, log: [] }); return; }
+    const L = this.levels()[st.level];
+    const orphan = Object.keys(L.loads).some((i) => { const id = 'J' + (Number(i) + 1); return !st.members.some((m) => m.a === id || m.b === id); });
+    if (orphan) { this.say('Connect the loaded joint to your structure first.'); return; }
+    this.setState({ phase: 'testing', lam: 0, broken: {}, log: [], sel: null, pending: null, hover: null });
+  }
+  building() { return this.state.phase === 'build'; }
+
+  clickNode(n) {
+    const s = this.state; if (!this.building()) return;
+    if (s.tool === 'select') { this.setState({ sel: { k: 'node', id: n.id } }); return; }
+    if (s.tool === 'member' || s.tool === 'joint') {
+      if (s.tool === 'joint') { this.setState({ sel: { k: 'node', id: n.id } }); return; }
+      if (!s.pending) { this.setState({ pending: n.id }); return; }
+      if (s.pending === n.id) { this.setState({ pending: null }); return; }
+      this.push(); this.addMember(s.pending, n.id); this.setState({ pending: n.id, members: this.state.members, nM: this.state.nM }); return;
+    }
+    if (s.tool === 'support') { const order = [null, 'pin', 'roller']; const next = order[(order.indexOf(n.sup) + 1) % 3]; this.setSup(n.id, next); return; }
+    if (s.tool === 'weight') { this.addLoad(n.id, s.weight); return; }
+    if (s.tool === 'erase') { this.delNode(n.id); }
+  }
+  clickSurface(e) {
+    const s = this.state; if (!this.building()) return;
+    const p = this.snap(e);
+    if (s.tool === 'joint') { this.push(); const n = this.addNode(p.x, p.y); this.setState({ nodes: this.state.nodes, nN: this.state.nN, sel: n ? { k: 'node', id: n.id } : s.sel }); return; }
+    if (s.tool === 'member') {
+      this.push(); const n = this.addNode(p.x, p.y); if (!n) return;
+      if (s.pending) this.addMember(s.pending, n.id);
+      this.setState({ nodes: this.state.nodes, nN: this.state.nN, members: this.state.members, nM: this.state.nM, pending: n.id }); return;
+    }
+    if (s.tool === 'select') this.setState({ sel: null });
+  }
+
+  // ---------- render ----------
+  renderVals() {
+    const s = this.state; const SZ = this.sizes(), MT = this.mats(), LV = this.levels(); const L = LV[s.level];
+    const px = (x) => 56 + x * 18, py = (y) => 380 - y * 18;
+    const inSim = (s.phase === 'collapse' || s.phase === 'collapsed') && this.sim;
+    const lamNow = s.phase === 'build' ? 1 : s.lam;
+    const r = this.solve(s, inSim ? 1 : lamNow, s.broken);
+    const ex = s.sag ? 40 : 1;
+    const pos = {};
+    s.nodes.forEach((n, i) => {
+      if (inSim) { const p = this.sim.P[i]; pos[n.id] = [p.x, p.y]; return; }
+      const u = r.ok && r.u[n.id] ? r.u[n.id] : [0, 0];
+      pos[n.id] = [n.x + u[0] * ex, n.y + u[1] * ex];
+    });
+    const P = (id, ox, oy) => (px(pos[id][0]) + (ox || 0)).toFixed(1) + ' ' + (py(pos[id][1]) + (oy || 0)).toFixed(1);
+    const B = {}; ['t1','t2','t3','c1','c2','c3','z','x','n'].forEach((c) => ['S','M','L'].forEach((z) => { B[c + z] = ''; }));
+    let backD = '';
+    const lostInSim = inSim ? this.sim.lost : [];
+    const alive = s.members.filter((m) => !s.broken[m.id] && lostInSim.indexOf(m.id) < 0);
+    alive.forEach((m) => {
+      const d = 'M' + P(m.a) + ' L' + P(m.b) + ' ';
+      backD += 'M' + P(m.a, 18, -12) + ' L' + P(m.b, 18, -12) + ' ';
+      let c = 'n';
+      if (!inSim && r.ok && r.res[m.id]) { const q = r.res[m.id]; if (q.ut > 1) c = 'x'; else if (Math.abs(q.N) < 500) c = 'z'; else c = (q.N > 0 ? 't' : 'c') + (q.ut < 0.35 ? 1 : (q.ut < 0.7 ? 2 : 3)); }
+      B[c + m.size] += d;
+    });
+    let supD = '';
+    s.nodes.forEach((n) => {
+      if (!n.sup) return; const x = px(n.x), y = py(n.y);
+      supD += 'M' + x + ' ' + y + ' L' + (x - 9) + ' ' + (y + 13) + ' H' + (x + 9) + ' Z ';
+      if (n.sup === 'roller') supD += 'M' + (x - 5) + ' ' + (y + 17) + ' a3 3 0 1 0 0.01 0 M' + (x + 5) + ' ' + (y + 17) + ' a3 3 0 1 0 0.01 0 ';
+    });
+    let crateD = '', crateTopD = '', crateSideD = '', cableD = ''; const loadTags = [];
+    Object.keys(s.loads).forEach((id) => {
+      if (!pos[id]) return; const t = s.loads[id]; const x = px(pos[id][0]), y = py(pos[id][1]); const w = 12 + Math.sqrt(t) * 4, h = w * 0.8, top = y + 9;
+      cableD += 'M' + x + ' ' + (y + 3) + ' V' + top + ' ';
+      crateD += 'M' + (x - w / 2) + ' ' + top + ' h' + w + ' v' + h + ' h' + (-w) + ' Z ';
+      crateTopD += 'M' + (x - w / 2) + ' ' + top + ' l6 -4 h' + w + ' l-6 4 Z ';
+      crateSideD += 'M' + (x + w / 2) + ' ' + top + ' l6 -4 v' + h + ' l-6 4 Z ';
+      loadTags.push({ text: t + ' t', x: (x / 1120 * 100).toFixed(2), y: ((top + h + 10) / 600 * 100).toFixed(2) });
+    });
+    let sparkD = '';
+    if (inSim) this.sim.sparks.forEach((k) => { const x = px(k.x), y = py(k.y); sparkD += 'M' + (x - 6) + ' ' + (y - 6) + ' L' + (x + 6) + ' ' + (y + 6) + ' M' + (x + 6) + ' ' + (y - 6) + ' L' + (x - 6) + ' ' + (y + 6) + ' '; });
+    let badD = '';
+    if (!inSim && !r.ok && r.bad && pos[r.bad]) { const x = px(pos[r.bad][0]), y = py(pos[r.bad][1]); badD = 'M' + (x + 13) + ' ' + y + ' a13 13 0 1 0 -26 0 a13 13 0 1 0 26 0 Z'; }
+    let ghostD = '', hoverD = '';
+    if (s.phase === 'build' && s.hover && (s.tool === 'member' || s.tool === 'joint')) {
+      const hx = px(s.hover.x), hy = py(s.hover.y); hoverD = 'M' + (hx + 5) + ' ' + hy + ' a5 5 0 1 0 -10 0 a5 5 0 1 0 10 0 Z';
+      if (s.tool === 'member' && s.pending && pos[s.pending]) ghostD = 'M' + P(s.pending) + ' L' + hx + ' ' + hy;
+    }
+
+    const fmtK = (v) => (v < 0 ? '−' : '+') + Math.abs(v / 1000).toFixed(0);
+    const showHandles = s.phase === 'build' && (s.tool === 'select' || s.tool === 'erase' || s.nums) || (s.nums && s.phase !== 'build' && !inSim);
+    const memHandles = !showHandles ? [] : alive.map((m) => {
+      const a = pos[m.a], b = pos[m.b]; const q = r.res[m.id];
+      const sel = s.sel && s.sel.k === 'member' && s.sel.id === m.id;
+      const over = q && q.ut > 1;
+      return { x: (px((a[0] + b[0]) / 2) / 1120 * 100).toFixed(2), y: (py((a[1] + b[1]) / 2) / 600 * 100).toFixed(2),
+        text: s.nums && r.ok && q ? fmtK(q.N) : '', cls: 'mh' + (s.nums && r.ok ? ' mh-num' : '') + (sel ? ' mh-sel' : '') + (over ? ' mh-over' : ''),
+        label: 'Member ' + m.id + (q && r.ok ? ', ' + Math.round(q.ut * 100) + '% of its limit' : ''),
+        pick: () => { if (!this.building()) return; if (this.state.tool === 'erase') this.delMember(m.id); else this.setState({ sel: { k: 'member', id: m.id }, tool: this.state.tool === 'erase' ? 'erase' : 'select' }); } };
+    });
+    const joints = inSim ? [] : s.nodes.map((n) => {
+      const p = pos[n.id]; const sel = s.sel && s.sel.k === 'node' && s.sel.id === n.id;
+      return { x: (px(p[0]) / 1120 * 100).toFixed(2), y: (py(p[1]) / 600 * 100).toFixed(2),
+        cls: 'joint' + (n.locked ? ' j-lock' : '') + (s.pending === n.id ? ' j-pend' : '') + (sel ? ' j-sel' : '') + (r.bad === n.id && !r.ok ? ' j-bad' : ''),
+        label: 'Joint ' + n.id + (n.sup ? ', ' + n.sup + ' support' : '') + (s.loads[n.id] ? ', carrying ' + s.loads[n.id] + ' t' : ''),
+        pick: () => this.clickNode(n),
+        down: () => { if (this.building() && this.state.tool === 'select' && !n.locked) { this.push(); this.setState({ drag: n.id, sel: { k: 'node', id: n.id } }); } } };
+    });
+
+    // status
+    const worst = r.worst ? r.res[r.worst] : null;
+    let statusLabel = 'Nothing built yet', statusColor = '#A3A3A3';
+    if (r.nAct > 0) {
+      if (!r.ok) { statusLabel = 'Wobbly: not stable'; statusColor = '#E5534B'; }
+      else if (worst && worst.ut > 1) { statusLabel = 'Will break at ' + Math.round(100 / worst.ut) + '% load'; statusColor = '#E5534B'; }
+      else if (worst && worst.ut > 0.8) { statusLabel = 'Holding, near the limit'; statusColor = '#D8B86A'; }
+      else { statusLabel = 'Holding'; statusColor = '#5FBF8A'; }
+    }
+    const lockedLoadsOk = Object.keys(L.loads).every((i) => { const id = 'J' + (Number(i) + 1); return r.ids.indexOf(id) >= 0 && s.members.some((m) => m.a === id || m.b === id); });
+    let explain = '';
+    const first = s.log.find((l) => l.id);
+    if (s.phase === 'collapse' || s.phase === 'collapsed') {
+      if (first) explain = first.id + ' ' + first.mode + ' at ' + Math.round(first.lam * 100) + '% of the load. ' + (first.mode === 'buckled' ? 'Long, thin members in compression bow sideways long before the material itself gives out. Make it thicker, shorter, or brace it halfway.' : (first.mode === 'snapped' ? 'It was stretched past what the material can take. A thicker member spreads the same pull over more steel.' : 'It was squeezed past its strength.')) + (s.log.length > 1 ? ' Once it went, the load jumped onto its neighbours and the failure spread.' : '');
+      else if (s.log[0] && s.log[0].loose) explain = 'The weight on ' + s.log[0].bad + ' was not hanging on anything, so it simply fell. Join that joint to the structure with members.';
+      else explain = 'It was never stable: joint ' + (s.log[0] && s.log[0].bad ? s.log[0].bad : '') + ' could swing freely, so as soon as weight arrived the shape folded. Close every open four-sided panel with a diagonal.';
+    } else if (s.phase === 'held') {
+      explain = 'It carried the full load' + (Object.keys(s.broken).length ? ', even after losing ' + Object.keys(s.broken).join(', ') + ' along the way: that is redundancy at work' : '') + '. ' + (L.budget ? (r.cost <= L.budget ? 'Under budget. Can you do it cheaper for more stars?' : 'But it is over budget, so no stars. Trim members or go thinner where forces are small.') : 'Now add more weight and find where it gives.');
+    } else if (s.phase === 'testing') {
+      explain = 'Loading it up gradually. Watch the colours brighten as members approach their limits.';
+    } else if (r.nAct === 0) {
+      explain = 'Pick Member and click from joint to joint, or click empty space to make new joints as you go. Triangles are the secret: a triangle cannot change shape without a member stretching or squeezing.';
+    } else if (!r.ok) {
+      explain = 'Joint ' + r.bad + ' can still move without stretching any member, so this would fold under load. Add a diagonal to make a triangle, or a support.';
+    } else if (!lockedLoadsOk) {
+      explain = 'Connect the level’s loaded joint to your structure so the weight has a path to the banks.';
+    } else if (worst) {
+      const wm = r.worst; const q = worst;
+      explain = 'Busiest member: ' + wm + ', ' + (q.N >= 0 ? 'stretched' : 'squeezed') + ' with ' + Math.abs(q.N / 1000).toFixed(0) + ' kN, ' + Math.round(q.ut * 100) + '% of its limit' + (q.N < 0 && q.mode === 'buckled' ? ' (buckling)' : '') + '. Press Test to load it for real.';
+    }
+
+    const sel = s.sel;
+    let mi = null, ni = null;
+    if (sel && sel.k === 'member') {
+      const m = s.members.find((q) => q.id === sel.id);
+      if (m) { const q = r.res[m.id]; mi = {
+        title: m.id + ' · ' + m.a + '–' + m.b, len: q ? q.L.toFixed(1) + ' m' : '',
+        w: q && r.ok ? Math.min(100, q.ut * 100).toFixed(0) : 0, ut: q && r.ok ? Math.round(q.ut * 100) + '%' : '—',
+        color: !q || !r.ok ? '#5E5E5E' : (q.ut > 1 ? '#E5534B' : (q.N >= 0 ? '#7FB0E0' : '#E0905E')),
+        text: !q || !r.ok ? 'No forces until the structure is stable.' : (Math.abs(q.N) < 500 ? 'Carrying almost nothing. A candidate to delete.' : (q.N >= 0 ? 'Stretched with ' + (q.N / 1000).toFixed(0) + ' kN. It will snap at ' + (q.lim / 1000).toFixed(0) + ' kN.' : 'Squeezed with ' + (-q.N / 1000).toFixed(0) + ' kN. It ' + (q.mode === 'buckled' ? 'buckles' : 'crushes') + ' at ' + (q.lim / 1000).toFixed(0) + ' kN.')),
+        sizes: Object.keys(SZ).map((k) => ({ name: SZ[k].name, cls: 'chip' + (m.size === k ? ' chip-on' : ''), pressed: m.size === k ? 'true' : 'false', pick: () => { this.push(); this.setState({ members: this.state.members.map((x) => (x.id === m.id ? Object.assign({}, x, { size: k }) : x)) }); } })),
+        del: () => this.delMember(m.id) }; }
+    }
+    if (sel && sel.k === 'node') {
+      const n = s.nodes.find((q) => q.id === sel.id);
+      if (n) { const can = this.supOk(n.x, n.y); ni = {
+        title: 'Joint ' + n.id + (n.locked ? ' · level' : ''), pos: 'x ' + n.x + ' m · y ' + n.y + ' m',
+        sups: [[null, 'None'], ['pin', 'Pin'], ['roller', 'Roller']].map((o) => ({ name: o[1], cls: 'chip' + (n.sup === o[0] ? ' chip-on' : '') + ((o[0] && !can) || n.locked ? ' chip-dim' : ''), pressed: n.sup === o[0] ? 'true' : 'false', pick: () => this.setSup(n.id, o[0]) })),
+        load: (s.loads[n.id] || 0) + ' t', less: () => this.addLoad(n.id, -s.weight), more: () => this.addLoad(n.id, s.weight),
+        note: n.sup === 'pin' ? 'Pinned: held in place, free to rotate.' : (n.sup === 'roller' ? 'Roller: held up, free to slide sideways, so the structure can expand.' : (can ? 'On the ground: you can make this a support.' : 'In the air. Supports must sit on the ground.')),
+        canDel: !n.locked, del: () => this.delNode(n.id) }; }
+    }
+
+    const toolDefs = [
+      ['select', 'Select', 'M5 3l12 7-5 1.5L9.5 17z', 'Select and drag joints'],
+      ['member', 'Member', 'M4 18L18 4M4 18a1.6 1.6 0 1 0 0.01 0M18 4a1.6 1.6 0 1 0 0.01 0', 'Draw members joint to joint'],
+      ['joint', 'Joint', 'M11 7a4 4 0 1 0 0.01 0M11 2v3M11 17v3M2 11h3M17 11h3', 'Place loose joints'],
+      ['support', 'Support', 'M11 5L4 16H18Z M3 19H19', 'Make a joint a pin or roller'],
+      ['weight', 'Weight', 'M5 9h12v9H5ZM5 9l2-3h12l-2 3M17 18l2-3V6M11 2v4', 'Hang weight on a joint'],
+      ['erase', 'Erase', 'M6 6l10 10M16 6L6 16', 'Delete joints and members']
+    ];
+    const hints = { select: 'Click a member or joint to inspect it. Drag joints to reshape.', member: s.pending ? 'Click the next joint, or empty grid to make one there. Click the glowing joint to stop.' : 'Click a joint to start a member, or click empty grid to drop a joint and start there.', joint: 'Click the grid to place a joint.', support: 'Click a joint on the ground: none → pin → roller.', weight: 'Click any joint to hang weight on it. Click again to stack more.', erase: 'Click a joint or a member’s dot to delete it.' };
+    const sizeList = Object.keys(SZ).map((k) => ({ name: SZ[k].name, cls: 'chip' + (s.size === k ? ' chip-on' : ''), pressed: s.size === k ? 'true' : 'false', pick: () => this.setState({ size: k }) }));
+    const weightList = [1, 5, 10, 25].map((w) => ({ name: w + ' t', cls: 'chip' + (s.weight === w ? ' chip-on' : ''), pressed: s.weight === w ? 'true' : 'false', pick: () => this.setState({ weight: w }) }));
+    const starsTxt = (n) => '★★★'.slice(0, n) + '☆☆☆'.slice(0, 3 - n);
+    const collapsed = s.phase === 'collapse' || s.phase === 'collapsed';
+    const cost = r.cost;
+    const nJ = s.nodes.length;
+    return Object.assign(B, {
+      backD, supD, crateD, crateTopD, crateSideD, cableD, sparkD, badD, ghostD, hoverD, loadTags, memHandles, joints,
+      flowCls: s.phase === 'build' ? 'flow still-flow' : 'flow',
+      cursor: s.phase !== 'build' ? 'default' : (s.tool === 'member' || s.tool === 'joint' ? 'crosshair' : 'default'),
+      surfaceLabel: s.tool === 'member' || s.tool === 'joint' ? 'Building grid: click to place a joint' : 'Building grid',
+      stageLabel: 'Structure with ' + nJ + ' joints and ' + s.members.length + ' members. ' + statusLabel + '.',
+      onSurface: (e) => this.clickSurface(e),
+      onMove: (e) => { const st = this.state; if (st.phase !== 'build') return; const p = this.snap(e);
+        if (st.drag) { if (p.y < this.ground(p.x) || this.state.nodes.some((n) => n.id !== st.drag && n.x === p.x && n.y === p.y)) return; this.setState({ nodes: st.nodes.map((n) => (n.id === st.drag ? Object.assign({}, n, { x: p.x, y: p.y, sup: n.sup && !this.supOk(p.x, p.y) ? null : n.sup }) : n)), hover: null }); return; }
+        if ((st.tool === 'member' || st.tool === 'joint') && (!st.hover || st.hover.x !== p.x || st.hover.y !== p.y)) this.setState({ hover: p }); },
+      onUp: () => { if (this.state.drag) this.setState({ drag: null }); },
+      tools: toolDefs.map((t) => ({ name: t[1], d: t[2], tip: t[3], cls: 'tool' + (s.tool === t[0] ? ' tool-on' : ''), pressed: s.tool === t[0] ? 'true' : 'false', pick: () => this.setState({ tool: t[0], pending: null, hover: null }) })),
+      hint: s.phase === 'build' ? hints[s.tool] : (s.phase === 'testing' ? 'Testing… building is paused.' : 'Building is paused while you look at the result.'),
+      showSizes: s.tool === 'member', sizes: sizeList, showWeights: s.tool === 'weight', weights: weightList,
+      hasPending: !!s.pending && s.phase === 'build', finish: () => this.setState({ pending: null }),
+      sagCls: 'chip' + (s.sag ? ' chip-on' : ''), sagPressed: s.sag ? 'true' : 'false', toggleSag: () => this.setState({ sag: !this.state.sag }),
+      numCls: 'chip' + (s.nums ? ' chip-on' : ''), numPressed: s.nums ? 'true' : 'false', toggleNums: () => this.setState({ nums: !this.state.nums }),
+      toastOn: !!s.toast, toast: s.toast,
+      testing: s.phase === 'testing', lamPct: Math.round(s.lam * 100),
+      showResult: s.phase === 'held' || s.phase === 'collapsed',
+      collapsed: s.phase === 'collapsed',
+      resultTitle: s.phase === 'held' ? (L.budget && cost > L.budget ? 'It held, but over budget' : 'It held!') : 'Collapse' + (first ? ': ' + first.id + ' ' + first.mode + ' at ' + Math.round(first.lam * 100) + '%' : ': it folded'),
+      resultColor: s.phase === 'held' ? '#5FBF8A' : '#E5534B', resultBorder: s.phase === 'held' ? '#2B5A3C' : '#5C2A25',
+      stars: s.phase === 'held' && L.budget ? starsTxt(s.stars || 0) : '',
+      replay: () => { this.initSim(this.state, this.state.broken, true); this.setState({ phase: 'collapse' }); },
+      backToBuild: () => { this.sim = null; this.setState({ phase: 'build', lam: 0, broken: {}, log: [] }); },
+      toggleTest: () => this.startOrStop(),
+      testLabel: s.phase === 'build' ? 'Test it: add the load' : 'Back to building',
+      levels: Object.keys(LV).map((k) => ({ name: LV[k].name, best: LV[k].budget ? starsTxt(s.best[k] || 0) : '', cls: 'lvl' + (s.level === k ? ' lvl-on' : ''), pressed: s.level === k ? 'true' : 'false', pick: () => { this.sim = null; this.hist = []; this.setState(this.levelState(k)); } })),
+      goal: L.goal, statusLabel, statusColor,
+      costText: '$' + cost.toFixed(1) + 'k' + (L.budget ? ' / $' + L.budget + 'k' : ''), costColor: L.budget && cost > L.budget ? '#E8A39E' : '#EAEAEA',
+      selMember: !!mi, mi: mi || { sizes: [] }, selNode: !!ni, ni: ni || { sups: [] }, selNone: !mi && !ni,
+      mats: Object.keys(MT).map((k) => ({ name: MT[k].name, sw: MT[k].sw, cls: 'chip' + (s.mat === k ? ' chip-on' : ''), pressed: s.mat === k ? 'true' : 'false', pick: () => this.setState({ mat: k }) })),
+      nJ, nM: s.members.length, massT: (r.mass / 1000).toFixed(1) + ' t',
+      canStarter: s.level === 'sandbox' && s.members.length === 0,
+      starter: () => {
+        this.push(); const nodes = [], mem = []; let k = 0; const id = () => 'J' + (++k);
+        const bot = [8, 16, 24, 32, 40, 48].map((x, i) => ({ id: id(), x, y: 0, sup: i === 0 ? 'pin' : (i === 5 ? 'roller' : null), locked: false }));
+        const top = [16, 24, 32, 40].map((x) => ({ id: id(), x, y: 6, sup: null, locked: false }));
+        nodes.push.apply(nodes, bot.concat(top)); let mk = 0; const add = (a, b) => mem.push({ id: 'M' + (++mk), a: a.id, b: b.id, size: 'M' });
+        for (let i = 0; i < 5; i++) add(bot[i], bot[i + 1]);
+        for (let i = 0; i < 3; i++) add(top[i], top[i + 1]);
+        add(bot[0], top[0]); add(top[3], bot[5]);
+        for (let i = 0; i < 4; i++) add(bot[i + 1], top[i]);
+        add(top[0], bot[2]); add(top[3], bot[3]);
+        this.setState({ nodes, members: mem, nN: k, nM: mk, loads: {} });
+      },
+      undo: () => { if (!this.building() || !this.hist.length) return; const h = JSON.parse(this.hist.pop()); this.setState(Object.assign(h, { sel: null, pending: null })); },
+      clearAll: () => { this.sim = null; this.hist = []; this.setState(this.levelState(this.state.level)); },
+      explain,
+      playing: s.phase === 'testing' || s.phase === 'collapse', notPlaying: !(s.phase === 'testing' || s.phase === 'collapse'),
+      toggleDrive: () => this.startOrStop(),
+      levelSlug: s.level === 'sandbox' ? 'sandbox' : s.level + '-level',
+      reset: () => { this.sim = null; this.hist = []; this.setState(this.levelState(this.state.level)); },
+      clock: s.phase === 'build' ? 'building' : (s.phase === 'testing' ? 'load ' + Math.round(s.lam * 100) + '%' : (s.phase === 'held' ? 'held' : 'collapse'))
+    });
+  }
+}
+</script>
+
+
+</body></html>

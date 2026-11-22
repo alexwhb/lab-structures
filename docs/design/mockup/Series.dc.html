@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Structures Playground — Series foundations</title>
+<script src="527f1ab8-f80f-4241-8240-9f75acd1d084"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style></style>
+<style>
+body{margin:0;background:#0A0A0A}
+.paper{background-color:#0A0A0A;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);background-size:60px 60px,60px 60px,12px 12px,12px 12px}
+a{color:#D6C7A1}a:hover{color:#E9DFC6}
+.seg{border:0;background:transparent;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;padding:0 14px;min-height:36px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none}
+.seg:hover{color:#EAEAEA}
+.seg-on{background:#2A2A2A;color:#F5F5F5}
+.ghost{border:1px solid #2E2E2E;background:#171717;color:#D9D9D9;font:500 13px Inter,system-ui,sans-serif;min-height:36px;padding:0 12px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.ghost:hover{background:#1F1F1F;color:#F5F5F5}
+.prim{border:1px solid #4D4636;background:#24221C;color:#E9DFC6;font:600 13px Inter,system-ui,sans-serif;min-height:36px;padding:0 14px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.prim:hover{background:#2E2B23;color:#E9DFC6}
+.sw{width:36px;height:36px;border:0;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.sw:hover{background:#1C1C1C}
+.sw-on{background:#2A2A2A}
+.lbl{margin:0;font:600 11px Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#A3A3A3}
+.ptile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:84px;border:1px solid #242424;border-radius:12px;background:rgba(18,18,18,.92);color:#EAEAEA;font:600 12px/1.25 Inter,system-ui,sans-serif;cursor:pointer;padding:10px 6px;text-align:center}
+.ptile:hover{border-color:#4D4636;background:#1E1C17}
+.ptile-on{border-color:#D6C7A1;background:#1E1C17}
+.tab{display:flex;align-items:center;min-height:44px;padding:0 4px;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;text-decoration:none;border-bottom:2px solid transparent;box-sizing:border-box}
+.tab:hover{color:#F5F5F5}
+.tab-on{color:#F5F5F5;border-bottom-color:#D6C7A1}
+.panel{background:rgba(17,17,17,.88);border:1px solid #242424;border-radius:12px}
+.h{margin:0;font:600 15px 'Space Grotesk',Inter,sans-serif;letter-spacing:-.01em}
+.mono{font-family:'JetBrains Mono',monospace}
+.mut{color:#A3A3A3}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid #2E2E2E;background:#141414;font:600 12px Inter,system-ui,sans-serif}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:5px;font:500 11px 'JetBrains Mono',monospace;border:1px solid #2E2E2E;color:#D9D9D9;background:#121212}
+.bar{height:8px;border-radius:4px;background:#1E1E1E;overflow:hidden}
+.well{background:#0D0D0D;border:1px solid #242424;border-radius:8px}
+input[type=range]{accent-color:#D6C7A1;width:100%;margin:0;height:28px}
+input[type=checkbox]{accent-color:#D6C7A1;width:18px;height:18px;margin:0}
+.graph{background-color:#0B0C0E;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:120px 120px,120px 120px,24px 24px,24px 24px}
+.chip{position:absolute;transform:translate(-50%,-130%);padding:3px 8px;border-radius:6px;background:rgba(11,12,14,.92);border:1px solid #2A2D33;font:400 12px 'JetBrains Mono',monospace;color:#ECEAE6;white-space:nowrap;pointer-events:none}
+@keyframes flow{to{stroke-dashoffset:-48}}
+.flow{animation:flow 1.6s linear infinite}
+.still .flow{animation-play-state:paused}
+</style>
+</helmet>
+<div class="paper" style="width: 1440px; height: 1400px; box-sizing: border-box; padding: 56px 64px; display: flex; flex-direction: column; gap: 28px; color: #EAEAEA; font-family: Inter, system-ui, sans-serif; overflow: hidden">
+
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <p class="lbl">Series foundations · app 5 of 5</p>
+      <h1 style="margin: 0; font: 700 44px/1.05 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.02em">What Structures adds to the series</h1>
+      <p style="margin: 0; font-size: 16px; color: #C9C9C9; max-width: 820px; line-height: 1.5">Same shell, same engines, one new accent. A bridge, a tower, the ground under it and the material it is made of, each with a Playground and an Advanced form of the same project.</p>
+    </div>
+    <span class="badge" style="color: #E8A39E; border-color: #5C2A25">Educational. Not for real structural design.</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px">
+    <div class="panel" style="padding: 14px; display: flex; flex-direction: column; gap: 8px; border-top: 3px solid #F2A33A"><span style="font: 600 15px 'Space Grotesk', Inter, sans-serif">Breadbox</span><span class="mut" style="font-size: 12px; line-height: 1.45">Circuits. Breadboard playground, SPICE schematic.</span></div>
+    <div class="panel" style="padding: 14px; display: flex; flex-direction: column; gap: 8px; border-top: 3px solid #86A2FF"><span style="font: 600 15px 'Space Grotesk', Inter, sans-serif">Chem Playground</span><span class="mut" style="font-size: 12px; line-height: 1.45">Reactions. 2.5D bench, kinetics netlist, mechanisms.</span></div>
+    <div class="panel" style="padding: 14px; display: flex; flex-direction: column; gap: 8px; border-top: 3px solid #4BE3A0"><span style="font: 600 15px 'Space Grotesk', Inter, sans-serif">Bio Playground</span><span class="mut" style="font-size: 12px; line-height: 1.45">Living systems. 2.5D lab, pathway models.</span></div>
+    <div class="panel" style="padding: 14px; display: flex; flex-direction: column; gap: 8px; border-top: 3px solid #EE84E0"><span style="font: 600 15px 'Space Grotesk', Inter, sans-serif">Weather Playground</span><span class="mut" style="font-size: 12px; line-height: 1.45">The sky. Air parcels, skew-T, grid atmosphere.</span></div>
+    <div class="panel" style="padding: 14px; display: flex; flex-direction: column; gap: 8px; border-top: 3px solid #D6C7A1; background: #1C1B17; border-color: #3A372E"><span style="font: 600 15px 'Space Grotesk', Inter, sans-serif; color: #E9DFC6">Structures Playground</span><span style="font-size: 12px; line-height: 1.45; color: #D9D3C2">Things that stand up. Bridge, tower, ground, materials.</span></div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 20px">
+
+    <section class="panel" style="grid-column: span 7; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+      <h2 class="h" style="font-size: 18px">Shared engines, and who uses them</h2>
+      <sc-raw-table style="width: 100%; border-collapse: collapse; font-size: 13px">
+        <sc-raw-thead><sc-raw-tr style="color: #A3A3A3"><sc-raw-th scope="col" style="text-align: left; padding: 6px 8px; font-weight: 600">Engine</sc-raw-th><sc-raw-th scope="col" style="padding: 6px; font-weight: 600; color: #F2A33A">Circuit</sc-raw-th><sc-raw-th scope="col" style="padding: 6px; font-weight: 600; color: #86A2FF">Chem</sc-raw-th><sc-raw-th scope="col" style="padding: 6px; font-weight: 600; color: #4BE3A0">Bio</sc-raw-th><sc-raw-th scope="col" style="padding: 6px; font-weight: 600; color: #EE84E0">Weather</sc-raw-th><sc-raw-th scope="col" style="padding: 6px; font-weight: 600; color: #D6C7A1">Structures</sc-raw-th></sc-raw-tr></sc-raw-thead>
+        <sc-raw-tbody class="mono" style="text-align: center">
+          <sc-raw-tr style="border-top: 1px solid #222"><sc-raw-td style="text-align: left; padding: 8px; font-family: Inter, sans-serif">Playground ⇄ Advanced toggle</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td style="color: #D6C7A1">●</sc-raw-td></sc-raw-tr>
+          <sc-raw-tr style="border-top: 1px solid #222"><sc-raw-td style="text-align: left; padding: 8px; font-family: Inter, sans-serif">Netlist parser (.directives)</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td style="color: #D6C7A1">●</sc-raw-td></sc-raw-tr>
+          <sc-raw-tr style="border-top: 1px solid #222"><sc-raw-td style="text-align: left; padding: 8px; font-family: Inter, sans-serif">Sparse linear solve A·x = b</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td class="mut">○</sc-raw-td><sc-raw-td class="mut">○</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td style="color: #D6C7A1">● new: K·u = F</sc-raw-td></sc-raw-tr>
+          <sc-raw-tr style="border-top: 1px solid #222"><sc-raw-td style="text-align: left; padding: 8px; font-family: Inter, sans-serif">ODE integrator (stiff)</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td style="color: #D6C7A1">● sway, quakes</sc-raw-td></sc-raw-tr>
+          <sc-raw-tr style="border-top: 1px solid #222"><sc-raw-td style="text-align: left; padding: 8px; font-family: Inter, sans-serif">Eigen solver</sc-raw-td><sc-raw-td class="mut">○</sc-raw-td><sc-raw-td class="mut">○</sc-raw-td><sc-raw-td class="mut">○</sc-raw-td><sc-raw-td class="mut">○</sc-raw-td><sc-raw-td style="color: #D6C7A1">● new: modes, buckling</sc-raw-td></sc-raw-tr>
+          <sc-raw-tr style="border-top: 1px solid #222"><sc-raw-td style="text-align: left; padding: 8px; font-family: Inter, sans-serif">Grid fluid engine</sc-raw-td><sc-raw-td class="mut">○</sc-raw-td><sc-raw-td class="mut">○</sc-raw-td><sc-raw-td class="mut">○</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td style="color: #D6C7A1">● wind tunnel</sc-raw-td></sc-raw-tr>
+          <sc-raw-tr style="border-top: 1px solid #222"><sc-raw-td style="text-align: left; padding: 8px; font-family: Inter, sans-serif">Plot kit + provenance badges</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td style="color: #D6C7A1">●</sc-raw-td></sc-raw-tr>
+          <sc-raw-tr style="border-top: 1px solid #222"><sc-raw-td style="text-align: left; padding: 8px; font-family: Inter, sans-serif">Challenge framework</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td>●</sc-raw-td><sc-raw-td style="color: #D6C7A1">● budgets, scores</sc-raw-td></sc-raw-tr>
+        </sc-raw-tbody>
+      </sc-raw-table>
+      <p class="mut" style="margin: 0; font-size: 12px; line-height: 1.5">● uses it · ○ not yet. The stiffness method is nodal analysis with springs instead of resistors, so Breadbox’s DC solver and the truss solver can be one module.</p>
+    </section>
+
+    <section class="panel" style="grid-column: span 5; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+      <h2 class="h" style="font-size: 18px">Bridges to the other apps</h2>
+      <div class="well" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 13px; font-weight: 600; color: #F2A33A">Breadbox · vibration is an RLC circuit</span>
+        <span class="mono" style="font-size: 13px">m·ẍ + c·ẋ + k·x = F(t)</span>
+        <span class="mono" style="font-size: 13px; color: #C9C9C9">L·q̈ + R·q̇ + q/C = V(t)</span>
+        <span class="mut" style="font-size: 12px">Open a tower’s sway as a circuit. A tuned mass damper is a notch filter.</span>
+      </div>
+      <div class="well" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 13px; font-weight: 600; color: #EE84E0">Weather · hurricane in, wind load out</span>
+        <span class="mut" style="font-size: 12px">Export a storm from the grid sandbox as a <span class="mono">.wind</span> profile and point it at any tower.</span>
+      </div>
+      <div class="well" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 13px; font-weight: 600; color: #86A2FF">Chem · diffusion in metals</span>
+        <span class="mut" style="font-size: 12px">Carbon diffusing into steel (case hardening) reuses the chem diffusion kernel.</span>
+      </div>
+      <div class="well" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 13px; font-weight: 600; color: #D9D9D9">Automata explorer · grain growth</span>
+        <span class="mut" style="font-size: 12px">Metal grains coarsening under heat is a cellular automaton on the shared grid.</span>
+      </div>
+    </section>
+
+    <section class="panel" style="grid-column: span 5; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+      <h2 class="h" style="font-size: 18px">Netlist directives</h2>
+      <div class="mono" style="display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 7px 12px; font-size: 12px; line-height: 1.4">
+        <span style="color: #D6C7A1">.node</span><span style="color: #C9C9C9">name x y [fix=xy|y]</span>
+        <span style="color: #D6C7A1">.member</span><span style="color: #C9C9C9">id a b section</span>
+        <span style="color: #D6C7A1">.material</span><span style="color: #C9C9C9">name E fy rho [curve=…]</span>
+        <span style="color: #D6C7A1">.section</span><span style="color: #C9C9C9">name A I</span>
+        <span style="color: #D6C7A1">.load</span><span style="color: #C9C9C9">case nodes Fx Fy | moving lane</span>
+        <span style="color: #D6C7A1">.static</span><span style="color: #C9C9C9">linear | nonlinear</span>
+        <span style="color: #D6C7A1">.buckle</span><span style="color: #C9C9C9">euler K | eigen n</span>
+        <span style="color: #D6C7A1">.story</span><span style="color: #C9C9C9">n height mass system</span>
+        <span style="color: #D6C7A1">.wind</span><span style="color: #C9C9C9">V10 alpha | file=storm.wx</span>
+        <span style="color: #D6C7A1">.soil</span><span style="color: #C9C9C9">layer depth type</span>
+        <span style="color: #D6C7A1">.foundation</span><span style="color: #C9C9C9">footing | mat | piles L n | caisson</span>
+        <span style="color: #D6C7A1">.dynamic</span><span style="color: #C9C9C9">quake|gust t_end dt damping</span>
+        <span style="color: #D6C7A1">.plot</span><span style="color: #C9C9C9">expr vs var range</span>
+      </div>
+    </section>
+
+    <section class="panel" style="grid-column: span 4; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+      <h2 class="h" style="font-size: 18px">Challenge ladder</h2>
+      <ol style="margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 5px; font-size: 13px; line-height: 1.4; color: #D9D9D9">
+        <li><span style="color: #E9DFC6">River crossing</span>: 20 t, under $30k</li>
+        <li>Overhang: hold 5 t out over the water</li>
+        <li>Heavy haul: two 25 t loads, piers allowed</li>
+        <li>Snap test: survive losing any one member</li>
+        <li>Lightest bridge duel (vs a friend or the optimizer)</li>
+        <li>Material roulette</li>
+        <li>Shake table: find the resonance</li>
+        <li>100 floors, under budget</li>
+        <li>Tame the sway: tune the mass damper</li>
+        <li>The lean of Pisa, and the fix</li>
+        <li>Liquefaction: keep it upright</li>
+        <li><span style="color: #E8A39E">Boss</span>: quake + hurricane on soft clay</li>
+      </ol>
+    </section>
+
+    <section class="panel" style="grid-column: span 3; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+      <h2 class="h" style="font-size: 18px">Next layers</h2>
+      <ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.4; color: #D9D9D9">
+        <li>2D/3D finite element sandbox with stress heat maps</li>
+        <li>Topology optimization: watch material melt away</li>
+        <li>Rigid joints and beams, not just pin-jointed trusses</li>
+        <li>Fatigue, creep, temperature</li>
+        <li>Phase diagrams, alloys, grain growth</li>
+        <li>Scour around bridge piers</li>
+        <li>Vortex shedding in the wind tunnel</li>
+      </ul>
+    </section>
+
+    <section class="panel" style="grid-column: span 12; padding: 16px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px">
+      <h2 class="h">Provenance</h2>
+      <span class="badge"><span class="dot" style="background: #4BE3A0"></span>Exact for the model: truss statics, Euler buckling</span>
+      <span class="badge"><span class="dot" style="background: #D6C7A1"></span>Simplified: wind profile, sway, soil bearing and settlement, collapse physics</span>
+      <span class="badge"><span class="dot" style="background: #A3A3A3"></span>Illustrative: soil presets, comfort bands, game costs</span>
+      <span style="font-size: 12px; color: #A3A3A3">Data: Materials Project is open (credit it); MatWeb’s terms are restrictive, so don’t bundle it. Check every source’s license first.</span>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1400}}">
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+
+
+</body></html>

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Structures Playground — Ground</title>
+<script src="b4a66575-fe87-4474-9f13-07e210546961"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style></style>
+<style>
+body{margin:0;background:#0A0A0A}
+.paper{background-color:#0A0A0A;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);background-size:60px 60px,60px 60px,12px 12px,12px 12px}
+a{color:#D6C7A1}a:hover{color:#E9DFC6}
+.seg{border:0;background:transparent;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;padding:0 14px;min-height:36px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none}
+.seg:hover{color:#EAEAEA}
+.seg-on{background:#2A2A2A;color:#F5F5F5}
+.ghost{border:1px solid #2E2E2E;background:#171717;color:#D9D9D9;font:500 13px Inter,system-ui,sans-serif;min-height:36px;padding:0 12px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.ghost:hover{background:#1F1F1F;color:#F5F5F5}
+.prim{border:1px solid #4D4636;background:#24221C;color:#E9DFC6;font:600 13px Inter,system-ui,sans-serif;min-height:36px;padding:0 14px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.prim:hover{background:#2E2B23;color:#E9DFC6}
+.sw{width:36px;height:36px;border:0;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.sw:hover{background:#1C1C1C}
+.sw-on{background:#2A2A2A}
+.lbl{margin:0;font:600 11px Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#A3A3A3}
+.ptile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:84px;border:1px solid #242424;border-radius:12px;background:rgba(18,18,18,.92);color:#EAEAEA;font:600 12px/1.25 Inter,system-ui,sans-serif;cursor:pointer;padding:10px 6px;text-align:center}
+.ptile:hover{border-color:#4D4636;background:#1E1C17}
+.ptile-on{border-color:#D6C7A1;background:#1E1C17}
+.tab{display:flex;align-items:center;min-height:44px;padding:0 4px;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;text-decoration:none;border-bottom:2px solid transparent;box-sizing:border-box}
+.tab:hover{color:#F5F5F5}
+.tab-on{color:#F5F5F5;border-bottom-color:#D6C7A1}
+.panel{background:rgba(17,17,17,.88);border:1px solid #242424;border-radius:12px}
+.h{margin:0;font:600 15px 'Space Grotesk',Inter,sans-serif;letter-spacing:-.01em}
+.mono{font-family:'JetBrains Mono',monospace}
+.mut{color:#A3A3A3}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid #2E2E2E;background:#141414;font:600 12px Inter,system-ui,sans-serif}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:5px;font:500 11px 'JetBrains Mono',monospace;border:1px solid #2E2E2E;color:#D9D9D9;background:#121212}
+.bar{height:8px;border-radius:4px;background:#1E1E1E;overflow:hidden}
+.well{background:#0D0D0D;border:1px solid #242424;border-radius:8px}
+input[type=range]{accent-color:#D6C7A1;width:100%;margin:0;height:28px}
+input[type=checkbox]{accent-color:#D6C7A1;width:18px;height:18px;margin:0}
+.graph{background-color:#0B0C0E;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:120px 120px,120px 120px,24px 24px,24px 24px}
+.chip{position:absolute;transform:translate(-50%,-130%);padding:3px 8px;border-radius:6px;background:rgba(11,12,14,.92);border:1px solid #2A2D33;font:400 12px 'JetBrains Mono',monospace;color:#ECEAE6;white-space:nowrap;pointer-events:none}
+@keyframes flow{to{stroke-dashoffset:-48}}
+.flow{animation:flow 1.6s linear infinite}
+.still .flow{animation-play-state:paused}
+@keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-4px,1px)}40%{transform:translate(4px,-1px)}60%{transform:translate(-3px,0)}80%{transform:translate(3px,1px)}}
+.shake{animation:shake .18s linear infinite}
+</style>
+</helmet>
+<div class="paper" style="min-height: 900px; display: flex; flex-direction: column; color: #EAEAEA; font-family: Inter, system-ui, sans-serif">
+  <header style="min-height: 56px; display: flex; align-items: center; gap: 12px 16px; padding: 8px 16px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.85); flex-wrap: wrap; box-sizing: border-box">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <svg width="26" height="26" sc-camel-view-box="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="6" fill="#171717" stroke="#D6C7A1" stroke-width="1.5"></rect><path d="M5 18h16M5 18l4-9h8l4 9M9 9l4 9 4-9" fill="none" stroke="#D6C7A1" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></path><circle cx="13" cy="18" r="1.8" fill="#7FB0E0"></circle></svg>
+      <span style="font: 600 16px 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.01em">Structures Playground</span>
+      <span style="color: #4A4A4A">/</span>
+      <span style="font-size: 13px; color: #D9D9D9">foundation-pit</span>
+    </div>
+
+    <nav aria-label="Mode" style="display: flex; gap: 2px; padding: 3px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px">
+      <a class="seg seg-on" href="Main.dc.html" aria-current="page"><svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 11h12M1 11l3-6h6l3 6M4 5l3 6 3-6"></path></svg>Playground</a>
+      <a class="seg" href="Advanced.dc.html"><svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5v11h11"></path><path d="M3.5 4h4M3.5 6.5h6M3.5 9h3"></path></svg>Advanced</a>
+    </nav>
+
+
+    <div style="display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap">
+      <button type="button" class="prim" sc-camel-on-click="{{toggleDrive}}">
+        <sc-if value="{{playing}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><rect x="2" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect><rect x="7.4" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect></svg>Pause</sc-if>
+        <sc-if value="{{notPlaying}}" hint-placeholder-val="{{ true }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><path d="M3 1.5l7 4.5-7 4.5z" fill="currentColor"></path></svg>Play years</sc-if>
+      </button>
+      <button type="button" class="ghost" sc-camel-on-click="{{reset}}"><svg width="12" height="12" sc-camel-view-box="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 1 0 1.7-4"></path><path d="M2.5 2.5V6H6"></path></svg>Reset</button>
+      <span class="mono" style="font-size: 12px; color: #A3A3A3; padding: 0 8px">{{clock}}</span>
+      <button type="button" class="ghost">Share</button>
+    </div>
+  </header>
+  <nav aria-label="Playground worlds" style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; padding: 0 16px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.85)">
+    <a class="tab" href="Main.dc.html">Bridge</a>
+    <a class="tab" href="Tower.dc.html">Tower</a>
+    <a class="tab tab-on" href="Ground.dc.html" aria-current="page">Ground</a>
+    <a class="tab" href="Materials.dc.html">Materials</a>
+    <span style="margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 0">
+      <span class="badge"><span class="dot" style="background: #D6C7A1"></span>Bearing + settlement: simplified</span>
+      <span class="badge"><span class="dot" style="background: #A3A3A3"></span>Soil presets: illustrative</span>
+      <span class="badge"><span class="dot" style="background: #A3A3A3"></span>Game costs</span>
+    </span>
+  </nav>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto; min-height: 0">
+
+    <aside aria-label="Parts" style="flex: 1 1 250px; max-width: 300px; min-width: 220px; border-right: 1px solid #242424; background: rgba(17,17,17,0.84); padding: 14px 12px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <h2 class="lbl">Soil</h2>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{soils}}" as="t" hint-placeholder-count="4">
+            <button type="button" class="{{t.cls}}" aria-pressed="{{t.pressed}}" sc-camel-on-click="{{t.pick}}">
+              <span style="width: 52px; height: 22px; border-radius: 4px; background: {{t.color}}; box-shadow: inset 0 -3px 0 rgba(0,0,0,.25), 0 4px 0 {{t.side}}, 0 8px 10px rgba(0,0,0,.6)"></span>
+              <span>{{t.name}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <h2 class="lbl">Foundation</h2>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{founds}}" as="t" hint-placeholder-count="4">
+            <button type="button" class="{{t.cls}}" aria-pressed="{{t.pressed}}" sc-camel-on-click="{{t.pick}}">
+              <svg width="44" height="34" sc-camel-view-box="0 0 44 34" aria-hidden="true" fill="none" stroke="#D9D9D9" stroke-width="1.5" stroke-linejoin="round"><path d="M2 8H42" stroke="#6A6A6A"></path><path d="{{t.d}}"></path></svg>
+              <span>{{t.name}}</span>
+            </button>
+          </sc-for>
+        </div>
+        <sc-if value="{{isPiles}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 2px">
+            <div style="display: flex; justify-content: space-between; align-items: baseline"><label for="pl" style="font-size: 13px">Pile length</label><output for="pl" class="mono" style="font-size: 12px; color: #D6C7A1">{{pileLabel}}</output></div>
+            <input id="pl" type="range" min="8" max="40" step="1" value="{{pileL}}" sc-camel-on-change="{{setPile}}">
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><label for="gf" class="lbl">Building</label><output for="gf" class="mono" style="font-size: 12px; color: #D6C7A1">{{floors}} floors</output></div>
+        <input id="gf" type="range" min="2" max="80" step="1" value="{{floors}}" sc-camel-on-change="{{setFloors}}">
+      </div>
+
+      <label style="display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 13px; cursor: pointer"><input type="checkbox" checked="{{quake}}" sc-camel-on-change="{{toggleQuake}}">Earthquake shaking</label>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <h2 class="lbl">Try a scenario</h2>
+        <sc-for list="{{scen}}" as="c" hint-placeholder-count="4">
+          <button type="button" class="ghost" sc-camel-on-click="{{c.go}}" style="justify-content: flex-start; min-height: 40px">{{c.name}}</button>
+        </sc-for>
+      </div>
+    </aside>
+
+    <main style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px">
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <h1 style="margin: 0; font: 600 22px 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.01em">What’s holding it up</h1>
+          <p class="mut" style="margin: 0; font-size: 13px">40 m footprint. Bedrock at 30 m. Settlement and tilt drawn exaggerated.</p>
+        </div>
+        <span class="pill" style="color: {{statusColor}}"><span class="dot" style="background: {{statusColor}}"></span>{{statusLabel}}</span>
+      </div>
+
+      <div class="{{stageCls}}" role="img" aria-label="{{stageLabel}}" style="position: relative; width: 100%; aspect-ratio: 900 / 600; border: 1px solid #242424; border-radius: 12px; overflow: hidden">
+        <svg sc-camel-view-box="0 0 900 600" width="100%" height="100%" aria-hidden="true" style="position: absolute; inset: 0; display: block">
+          <path d="M0 260 H900 V232 H60 Z" fill="{{soilTop}}"></path>
+          <path d="M0 260 H900 V530 H0 Z" fill="{{soilColor}}"></path>
+          <path d="M0 260 H900 V278 H0 Z" fill="#3A3226" fill-opacity="0.8"></path>
+          <path d="{{grainD}}" fill="#000000" fill-opacity="0.18"></path>
+          <path d="M0 530 H900 V600 H0 Z" fill="#2A2C30"></path>
+          <path d="M0 530 H900 M80 548 L120 560 L150 552 M300 570 L340 556 L380 574 M620 552 L660 566 L700 556" stroke="#45484E" stroke-width="1.5" fill="none"></path>
+          <sc-if value="{{wet}}" hint-placeholder-val="{{ false }}"><path class="flow" d="M0 287 H900" stroke="#4CC3F0" stroke-width="1.5" stroke-dasharray="10 8" fill="none"></path></sc-if>
+          <path d="{{boilD}}" fill="#C9B98A"></path>
+          <g transform="{{bldXf}}">
+            <path d="{{foundD}}" fill="#6E7178" stroke="#9A9DA4" stroke-width="1"></path>
+            <path d="{{sideD}}" fill="#1B1D21"></path>
+            <path d="{{frontD}}" fill="#2E323A" stroke="#15171A" stroke-width="0.8"></path>
+            <path d="{{winD}}" stroke="#D6C7A1" stroke-opacity="0.35" stroke-width="2" fill="none"></path>
+            <path d="{{roofD}}" fill="#3C414A"></path>
+          </g>
+          <path d="M450 236 V40" stroke="#D6C7A1" stroke-width="1" stroke-dasharray="3 5"></path>
+          <path d="{{bulbD}}" fill="none" stroke="#E0905E" stroke-opacity="0.7" stroke-width="1.5" stroke-dasharray="4 4"></path>
+        </svg>
+        <span class="chip" style="left: 74%; top: 10%">tilt {{tiltNow}} · sank {{settleNow}}</span>
+        <span class="mono" style="position: absolute; right: 12px; top: 84%; font-size: 11px; color: #A3A3A3">bedrock</span>
+        <span class="mono" style="position: absolute; left: 12px; top: 64%; font-size: 11px; color: #E5E0D0">{{soilName}}</span>
+        <div style="position: absolute; left: 12px; bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 6px 10px; border-radius: 8px; background: rgba(10,10,10,.82); border: 1px solid #242424; font-size: 12px; color: #D9D9D9">
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 0; border-top: 2px dashed #E0905E"></span>Pressure bulb under the foundation</span>
+          <sc-if value="{{wet}}" hint-placeholder-val="{{ false }}"><span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 0; border-top: 2px dashed #4CC3F0"></span>Water table</span></sc-if>
+        </div>
+      </div>
+
+      <div class="panel" style="display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 12px 16px; align-items: center">
+        <div style="flex: 1 1 320px; display: flex; flex-direction: column; gap: 2px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline"><label for="yr" style="font-size: 13px; font-weight: 600">Years after construction</label><output for="yr" class="mono" style="font-size: 12px; color: #D6C7A1">{{yearLabel}}</output></div>
+          <input id="yr" type="range" min="0" max="30" step="0.5" value="{{t}}" sc-camel-on-change="{{setT}}">
+        </div>
+        <a class="ghost" href="Tower.dc.html">‹ Back to the Tower</a>
+      </div>
+    </main>
+
+    <aside aria-label="Readouts" style="flex: 1 1 300px; max-width: 360px; min-width: 260px; border-left: 1px solid #242424; background: rgba(17,17,17,0.84); padding: 14px 12px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box">
+      <section style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{tiles}}" as="t" hint-placeholder-count="6">
+          <div class="well" style="padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><span class="lbl">{{t.k}}</span><span class="mono" style="font-size: 17px; color: {{t.c}}">{{t.v}}</span><span class="mut" style="font-size: 11px">{{t.n}}</span></div>
+        </sc-for>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="lbl">Safety factor</h2><span class="mono" style="font-size: 12px; color: {{fsColor}}">{{fsText}}</span></div>
+        <div style="position: relative; height: 14px; border-radius: 7px; overflow: hidden; display: flex">
+          <span style="flex: 1; background: #5C2A25"></span><span style="flex: 2; background: #4A4320"></span><span style="flex: 2; background: #1F4A33"></span>
+          <span style="position: absolute; top: -2px; left: {{fsPos}}%; width: 4px; height: 18px; margin-left: -2px; border-radius: 2px; background: #F5F5F5"></span>
+        </div>
+        <div class="mono" style="display: flex; justify-content: space-between; font-size: 10px; color: #A3A3A3"><span>0</span><span>1 fails</span><span>3 target</span><span>5+</span></div>
+      </section>
+
+      <section class="panel" style="padding: 12px; display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><h2 class="h">Challenge · The lean of Pisa</h2><span class="mono" style="font-size: 11px; color: #A3A3A3">10 / 12</span></div>
+        <p class="mut" style="margin: 0; font-size: 13px; line-height: 1.5">Load the leaning-tower scenario, then fix it without removing floors: tilt under 0.5° after 30 years.</p>
+        <sc-for list="{{goals}}" as="g" hint-placeholder-count="3">
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 13px">
+            <span style="width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid {{g.c}}; background: {{g.bg}}; flex: 0 0 auto"></span>
+            <span style="color: {{g.tc}}">{{g.text}}</span>
+          </div>
+        </sc-for>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 6px">
+        <h2 class="lbl">What’s happening</h2>
+        <p style="margin: 0; font-size: 13px; line-height: 1.55; color: #D4D4D4; text-wrap: pretty">{{explain}}</p>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { soil: 'soft', found: 'mat', floors: 6, pileL: 34, quake: false, t: 10, playing: false, pisaTried: false };
+  }
+  componentDidMount() { this.timer = setInterval(() => { const s = this.state; if (!s.playing) return; if (s.t >= 30) { this.setState({ playing: false }); return; } this.setState({ t: Math.min(30, s.t + 0.25) }); }, 60); }
+  componentWillUnmount() { clearInterval(this.timer); }
+
+  defs() {
+    return {
+      soil: {
+        dense: { name: 'Dense sand', qa: 400, ks: 8, vr: 0.1, fric: 25, liq: false, tau: 0.3, color: '#8C7A55', top: '#A39066', side: '#4E4430' },
+        stiff: { name: 'Stiff clay', qa: 250, ks: 4, vr: 0.15, fric: 18, liq: false, tau: 3, color: '#7A5A48', top: '#8F6C58', side: '#463328' },
+        soft: { name: 'Soft clay', qa: 60, ks: 0.6, vr: 0.5, fric: 5, liq: false, tau: 9, color: '#5E5546', top: '#716654', side: '#332E26' },
+        loose: { name: 'Loose wet sand', qa: 100, ks: 1.5, vr: 0.3, fric: 8, liq: true, tau: 0.5, color: '#9A8A62', top: '#B0A074', side: '#564D36' }
+      },
+      found: {
+        footing: { name: 'Footings', d: 'M4 8H12V14H4ZM18 8H26V14H18ZM32 8H40V14H32Z' },
+        mat: { name: 'Mat slab', d: 'M3 8H41V15H3Z' },
+        piles: { name: 'Piles', d: 'M3 8H41V12H3ZM8 12V32M17 12V32M27 12V32M36 12V32' },
+        caisson: { name: 'Caissons', d: 'M3 8H41V12H3ZM9 12H16V32H9ZM28 12H35V32H28Z' }
+      }
+    };
+  }
+
+  calc(s) {
+    const D = this.defs(); const so = D.soil[s.soil];
+    const load = s.floors * 12;
+    const deep = s.found === 'piles' || s.found === 'caisson';
+    const toRock = s.found === 'caisson' || (s.found === 'piles' && s.pileL >= 30);
+    const q = s.found === 'footing' ? load / 0.35 : load;
+    let cap = so.qa;
+    if (s.found === 'piles') cap = so.fric * s.pileL + (toRock ? 900 : 0);
+    if (s.found === 'caisson') cap = 1800;
+    const liquefied = s.quake && so.liq && !toRock;
+    if (liquefied) cap = cap * 0.12;
+    const FS = cap / q;
+    let settle = q / so.ks * (toRock ? (s.found === 'caisson' ? 0.08 : 0.12) : (deep ? 0.5 : 1));
+    let diff = settle * so.vr * (deep ? 0.3 : 1);
+    let tiltF = Math.atan(diff / 1000 / 40) * 180 / Math.PI;
+    if (FS < 1.6) tiltF += Math.min(7, (1.6 - FS) * 4.5);
+    let tau = so.tau;
+    if (liquefied) { settle = Math.max(settle, 900); tiltF = Math.max(tiltF, 9); tau = 0.08; }
+    if (FS < 1 && !liquefied) settle = Math.max(settle, 400);
+    const k = 1 - Math.exp(-s.t / tau);
+    return { load, q, cap, FS, deep, toRock, liquefied, settleF: settle, tiltF, settle: settle * k, tilt: tiltF * k, so, tau };
+  }
+
+  renderVals() {
+    const s = this.state; const D = this.defs(); const r = this.calc(s);
+    const sinkPx = Math.min(130, r.settle * 0.18), tiltShow = Math.min(24, r.tilt * 3);
+    const bh = Math.min(200, s.floors * 6), bw = 200, dx = 46, dy = -28;
+    const frontD = 'M-100 0 H100 V' + (-bh) + ' H-100 Z';
+    const sideD = 'M100 0 L' + (100 + dx) + ' ' + dy + ' V' + (dy - bh) + ' L100 ' + (-bh) + ' Z';
+    const roofD = 'M-100 ' + (-bh) + ' L' + (-100 + dx) + ' ' + (dy - bh) + ' H' + (100 + dx) + ' L100 ' + (-bh) + ' Z';
+    let winD = ''; const rows = Math.min(s.floors, 33);
+    for (let i = 0; i < rows; i++) { const y = -(i + 0.5) * bh / rows; winD += 'M-86 ' + y.toFixed(1) + ' H86 '; }
+    winD = winD ? winD : 'M0 0';
+    let foundD = '';
+    if (s.found === 'footing') [-84, -42, 0, 42, 84].forEach((x) => { foundD += 'M' + (x - 14) + ' 0 H' + (x + 14) + ' V16 H' + (x - 14) + ' Z '; });
+    if (s.found === 'mat') foundD = 'M-112 0 H112 V18 H-112 Z';
+    if (s.found === 'piles') { foundD = 'M-108 0 H108 V14 H-108 Z '; const Lp = s.pileL * 9; [-90, -54, -18, 18, 54, 90].forEach((x) => { foundD += 'M' + (x - 4) + ' 14 H' + (x + 4) + ' V' + Lp + ' H' + (x - 4) + ' Z '; }); }
+    if (s.found === 'caisson') { foundD = 'M-108 0 H108 V14 H-108 Z '; [-62, 62].forEach((x) => { foundD += 'M' + (x - 15) + ' 14 H' + (x + 15) + ' V272 H' + (x - 15) + ' Z '; }); }
+    let grainD = ''; for (let i = 0; i < 140; i++) { const x = (i * 97.3) % 900, y = 284 + ((i * 53.7) % 240); grainD += 'M' + x.toFixed(1) + ' ' + y.toFixed(1) + 'h2v2h-2Z'; }
+    let boilD = '';
+    if (r.liquefied && s.t > 0) [140, 230, 650, 760, 330, 580].forEach((x, i) => { const rr = 6 + ((i * 7 + Math.round(s.t * 8)) % 6); boilD += 'M' + (x - rr) + ' 260 a' + rr + ' ' + (rr * 0.5) + ' 0 1 0 ' + (2 * rr) + ' 0 a' + rr + ' ' + (rr * 0.5) + ' 0 1 0 ' + (-2 * rr) + ' 0Z '; });
+    const bulbDepth = r.deep ? (r.toRock ? 0 : 150) : 130;
+    const bulbTop = 260 + sinkPx + (r.deep ? s.found === 'piles' ? s.pileL * 9 : 270 : 18);
+    const bulbD = bulbDepth && bulbTop < 520 ? 'M330 ' + bulbTop.toFixed(0) + ' C330 ' + (bulbTop + bulbDepth) + ' 570 ' + (bulbTop + bulbDepth) + ' 570 ' + bulbTop.toFixed(0) : '';
+
+    let statusLabel = 'Solid', statusColor = '#5FBF8A';
+    const target = r.deep ? 2 : 3;
+    if (r.FS < target) { statusLabel = 'Marginal'; statusColor = '#D6C7A1'; }
+    if (r.tilt > 0.5) { statusLabel = 'Leaning'; statusColor = '#E7A47C'; }
+    if (r.FS < 1) { statusLabel = 'Bearing failure'; statusColor = '#E5534B'; }
+    if (r.liquefied) { statusLabel = 'Liquefaction'; statusColor = '#E5534B'; }
+
+    let explain = 'The foundation’s job is to spread the building’s weight until the ground can take it. Pressure fans out under it in a bulb; soft soils squeeze slowly for years (consolidation), stiff ones barely move.';
+    if (r.liquefied) explain = 'Shaking makes the water between the loose sand grains push them apart. For a few seconds the sand behaves like a liquid, and the building sinks and tips into it. Sand boils spurt up at the surface. Fix: piles or caissons that reach bedrock, which ignore the sand.';
+    else if (r.FS < 1) explain = 'The pressure under the foundation is more than this soil can carry, so it shears and squeezes out sideways, and the weaker side gives first. That is the Pisa story: a heavy tower on a shallow foundation over soft clay. A wider mat or deep foundations fix it.';
+    else if (r.tilt > 0.5) explain = 'It stands, but the clay is not uniform, so one side settles more and the building tips a little more every year. Watch the years slider: clay consolidation takes decades.';
+    else if (r.toRock) explain = 'The load skips the soft layers and goes straight to bedrock. Settlement is tiny. This is how tall towers stand on bad ground, at the price of deep and expensive foundations.';
+    else if (s.found === 'piles') explain = 'These piles stop short of bedrock, so they hold the building up by skin friction alone, the soil gripping their sides. Longer piles grip more. Reach 30 m and they bear on rock too.';
+
+    const fsTxt = r.FS >= 10 ? '10+' : r.FS.toFixed(2);
+    const goals = [
+      { text: 'Start from the leaning-tower scenario', done: s.pisaTried },
+      { text: 'Still 6 floors on soft clay', done: s.pisaTried && s.soil === 'soft' && s.floors >= 6 },
+      { text: 'Tilt under 0.5° at 30 years', done: s.pisaTried && s.soil === 'soft' && s.floors >= 6 && this.calc(Object.assign({}, s, { t: 30 })).tilt < 0.5 }
+    ].map((g) => Object.assign(g, { c: g.done ? '#5FBF8A' : '#5A5A5A', bg: g.done ? '#5FBF8A' : 'transparent', tc: g.done ? '#EAEAEA' : '#A3A3A3' }));
+
+    const scen = [
+      { name: 'Leaning tower (soft clay, mat)', st: { soil: 'soft', found: 'mat', floors: 6, quake: false, t: 0, playing: true, pisaTried: true } },
+      { name: 'Liquefaction (wet sand + quake)', st: { soil: 'loose', found: 'mat', floors: 12, quake: true, t: 0, playing: true } },
+      { name: '60 floors on piles to rock', st: { soil: 'stiff', found: 'piles', pileL: 34, floors: 60, quake: false, t: 0, playing: true } },
+      { name: 'Friction piles in soft clay', st: { soil: 'soft', found: 'piles', pileL: 20, floors: 10, quake: false, t: 0, playing: true } }
+    ];
+    const mk = (obj, cur) => Object.keys(obj).map((k) => ({ key: k, name: obj[k].name, d: obj[k].d, color: obj[k].color, side: obj[k].side, cls: 'ptile' + (cur === k ? ' ptile-on' : ''), pressed: cur === k ? 'true' : 'false' }));
+    return {
+      frontD, sideD, roofD, winD, foundD, grainD, boilD, bulbD,
+      bldXf: 'translate(450 ' + (260 + sinkPx).toFixed(1) + ') rotate(' + tiltShow.toFixed(2) + ')',
+      soilColor: r.so.color, soilTop: r.so.top, soilName: r.so.name.toLowerCase(), wet: s.soil === 'loose',
+      stageCls: 'graph' + (s.playing ? '' : ' still') + (s.quake && s.playing ? ' shake' : ''),
+      stageLabel: s.floors + '-floor building on ' + D.found[s.found].name.toLowerCase() + ' in ' + r.so.name.toLowerCase() + '. ' + statusLabel + '. Tilt ' + r.tilt.toFixed(2) + ' degrees.',
+      statusLabel, statusColor, explain,
+      tiltNow: r.tilt.toFixed(2) + '°', settleNow: (r.settle).toFixed(0) + ' mm',
+      tiles: [
+        { k: 'Pressure', v: r.q.toFixed(0) + ' kPa', n: 'on the bearing area', c: '#EAEAEA' },
+        { k: 'Capacity', v: r.cap.toFixed(0) + ' kPa', n: r.liquefied ? 'liquefied!' : (r.deep ? (r.toRock ? 'friction + rock' : 'friction only') : 'allowable, illustrative'), c: r.liquefied ? '#E8A39E' : '#EAEAEA' },
+        { k: 'Settlement', v: r.settle.toFixed(0) + ' mm', n: 'heads to ' + r.settleF.toFixed(0) + ' mm', c: r.settleF > 100 ? '#E7A47C' : '#EAEAEA' },
+        { k: 'Tilt', v: r.tilt.toFixed(2) + '°', n: 'Pisa today ≈ 4°', c: r.tilt > 0.5 ? '#E7A47C' : '#EAEAEA' },
+        { k: 'Building load', v: (r.load * 1600 / 1000).toFixed(0) + ' MN', n: s.floors + ' floors × 12 kPa', c: '#EAEAEA' },
+        { k: 'Consolidation', v: r.tau >= 1 ? r.tau.toFixed(0) + ' yr' : 'fast', n: 'time to ~63%', c: '#EAEAEA' }
+      ],
+      fsText: fsTxt + ' · target ' + target, fsColor: r.FS < 1 ? '#E8A39E' : (r.FS < target ? '#D6C7A1' : '#5FBF8A'),
+      fsPos: Math.min(99, r.FS / 5 * 100).toFixed(1), goals,
+      soils: mk(D.soil, s.soil).map((t) => Object.assign(t, { pick: () => this.setState({ soil: t.key }) })),
+      founds: mk(D.found, s.found).map((t) => Object.assign(t, { pick: () => this.setState({ found: t.key }) })),
+      isPiles: s.found === 'piles', pileL: s.pileL, pileLabel: s.pileL + ' m' + (s.pileL >= 30 ? ' · on rock' : ''),
+      floors: s.floors, quake: s.quake, t: s.t, yearLabel: s.t.toFixed(1) + ' yr',
+      scen: scen.map((c) => ({ name: c.name, go: () => this.setState(c.st) })),
+      playing: s.playing, notPlaying: !s.playing, clock: 'year ' + s.t.toFixed(1),
+      setPile: (e) => this.setState({ pileL: Number(e.target.value) }),
+      setFloors: (e) => this.setState({ floors: Number(e.target.value) }),
+      setT: (e) => this.setState({ t: Number(e.target.value), playing: false }),
+      toggleQuake: () => this.setState({ quake: !this.state.quake }),
+      toggleDrive: () => { const st = this.state; this.setState({ playing: !st.playing, t: !st.playing && st.t >= 30 ? 0 : st.t }); },
+      reset: () => this.setState({ soil: 'soft', found: 'mat', floors: 6, pileL: 34, quake: false, t: 10, playing: false, pisaTried: false })
+    };
+  }
+}
+</script>
+
+
+</body></html>

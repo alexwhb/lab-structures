@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Structures Playground — Tower</title>
+<script src="e0f15ebf-fa3e-464e-96bc-b329ee8068fc"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style></style>
+<style>
+body{margin:0;background:#0A0A0A}
+.paper{background-color:#0A0A0A;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);background-size:60px 60px,60px 60px,12px 12px,12px 12px}
+a{color:#D6C7A1}a:hover{color:#E9DFC6}
+.seg{border:0;background:transparent;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;padding:0 14px;min-height:36px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none}
+.seg:hover{color:#EAEAEA}
+.seg-on{background:#2A2A2A;color:#F5F5F5}
+.ghost{border:1px solid #2E2E2E;background:#171717;color:#D9D9D9;font:500 13px Inter,system-ui,sans-serif;min-height:36px;padding:0 12px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.ghost:hover{background:#1F1F1F;color:#F5F5F5}
+.prim{border:1px solid #4D4636;background:#24221C;color:#E9DFC6;font:600 13px Inter,system-ui,sans-serif;min-height:36px;padding:0 14px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.prim:hover{background:#2E2B23;color:#E9DFC6}
+.sw{width:36px;height:36px;border:0;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.sw:hover{background:#1C1C1C}
+.sw-on{background:#2A2A2A}
+.lbl{margin:0;font:600 11px Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#A3A3A3}
+.ptile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:84px;border:1px solid #242424;border-radius:12px;background:rgba(18,18,18,.92);color:#EAEAEA;font:600 12px/1.25 Inter,system-ui,sans-serif;cursor:pointer;padding:10px 6px;text-align:center}
+.ptile:hover{border-color:#4D4636;background:#1E1C17}
+.ptile-on{border-color:#D6C7A1;background:#1E1C17}
+.tab{display:flex;align-items:center;min-height:44px;padding:0 4px;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;text-decoration:none;border-bottom:2px solid transparent;box-sizing:border-box}
+.tab:hover{color:#F5F5F5}
+.tab-on{color:#F5F5F5;border-bottom-color:#D6C7A1}
+.panel{background:rgba(17,17,17,.88);border:1px solid #242424;border-radius:12px}
+.h{margin:0;font:600 15px 'Space Grotesk',Inter,sans-serif;letter-spacing:-.01em}
+.mono{font-family:'JetBrains Mono',monospace}
+.mut{color:#A3A3A3}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid #2E2E2E;background:#141414;font:600 12px Inter,system-ui,sans-serif}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:5px;font:500 11px 'JetBrains Mono',monospace;border:1px solid #2E2E2E;color:#D9D9D9;background:#121212}
+.bar{height:8px;border-radius:4px;background:#1E1E1E;overflow:hidden}
+.well{background:#0D0D0D;border:1px solid #242424;border-radius:8px}
+input[type=range]{accent-color:#D6C7A1;width:100%;margin:0;height:28px}
+input[type=checkbox]{accent-color:#D6C7A1;width:18px;height:18px;margin:0}
+.graph{background-color:#0B0C0E;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:120px 120px,120px 120px,24px 24px,24px 24px}
+.chip{position:absolute;transform:translate(-50%,-130%);padding:3px 8px;border-radius:6px;background:rgba(11,12,14,.92);border:1px solid #2A2D33;font:400 12px 'JetBrains Mono',monospace;color:#ECEAE6;white-space:nowrap;pointer-events:none}
+@keyframes flow{to{stroke-dashoffset:-48}}
+.flow{animation:flow 1.6s linear infinite}
+.still .flow{animation-play-state:paused}
+</style>
+</helmet>
+<div class="paper" style="min-height: 900px; display: flex; flex-direction: column; color: #EAEAEA; font-family: Inter, system-ui, sans-serif">
+  <header style="min-height: 56px; display: flex; align-items: center; gap: 12px 16px; padding: 8px 16px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.85); flex-wrap: wrap; box-sizing: border-box">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <svg width="26" height="26" sc-camel-view-box="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="6" fill="#171717" stroke="#D6C7A1" stroke-width="1.5"></rect><path d="M5 18h16M5 18l4-9h8l4 9M9 9l4 9 4-9" fill="none" stroke="#D6C7A1" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></path><circle cx="13" cy="18" r="1.8" fill="#7FB0E0"></circle></svg>
+      <span style="font: 600 16px 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.01em">Structures Playground</span>
+      <span style="color: #4A4A4A">/</span>
+      <span style="font-size: 13px; color: #D9D9D9">tower-study</span>
+    </div>
+
+    <nav aria-label="Mode" style="display: flex; gap: 2px; padding: 3px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px">
+      <a class="seg seg-on" href="Main.dc.html" aria-current="page"><svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 11h12M1 11l3-6h6l3 6M4 5l3 6 3-6"></path></svg>Playground</a>
+      <a class="seg" href="Advanced.dc.html"><svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5v11h11"></path><path d="M3.5 4h4M3.5 6.5h6M3.5 9h3"></path></svg>Advanced</a>
+    </nav>
+
+
+    <div style="display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap">
+      <button type="button" class="prim" sc-camel-on-click="{{toggleDrive}}">
+        <sc-if value="{{playing}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><rect x="2" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect><rect x="7.4" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect></svg>Pause</sc-if>
+        <sc-if value="{{notPlaying}}" hint-placeholder-val="{{ true }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><path d="M3 1.5l7 4.5-7 4.5z" fill="currentColor"></path></svg>Play gusts</sc-if>
+      </button>
+      <button type="button" class="ghost" sc-camel-on-click="{{reset}}"><svg width="12" height="12" sc-camel-view-box="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 1 0 1.7-4"></path><path d="M2.5 2.5V6H6"></path></svg>Reset</button>
+      <span class="mono" style="font-size: 12px; color: #A3A3A3; padding: 0 8px">{{clock}}</span>
+      <button type="button" class="ghost">Share</button>
+    </div>
+  </header>
+  <nav aria-label="Playground worlds" style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; padding: 0 16px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.85)">
+    <a class="tab" href="Main.dc.html">Bridge</a>
+    <a class="tab tab-on" href="Tower.dc.html" aria-current="page">Tower</a>
+    <a class="tab" href="Ground.dc.html">Ground</a>
+    <a class="tab" href="Materials.dc.html">Materials</a>
+    <span style="margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 0">
+      <span class="badge"><span class="dot" style="background: #D6C7A1"></span>Wind + sway: simplified cantilever</span>
+      <span class="badge"><span class="dot" style="background: #A3A3A3"></span>Comfort bands: illustrative</span>
+      <span class="badge"><span class="dot" style="background: #A3A3A3"></span>Game costs</span>
+    </span>
+  </nav>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto; min-height: 0">
+
+    <aside aria-label="Parts" style="flex: 1 1 250px; max-width: 300px; min-width: 220px; border-right: 1px solid #242424; background: rgba(17,17,17,0.84); padding: 14px 12px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <h2 class="lbl">Floors</h2>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <button type="button" class="ghost" sc-camel-on-click="{{minus}}" aria-label="Remove a floor" style="width: 44px; min-height: 44px; font-size: 18px">−</button>
+          <div class="well" style="flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px"><span class="mono" style="font-size: 20px; color: #D6C7A1">{{floors}}</span><span class="mut" style="font-size: 12px">floors · {{height}} m</span></div>
+          <button type="button" class="ghost" sc-camel-on-click="{{plus}}" aria-label="Add a floor" style="width: 44px; min-height: 44px; font-size: 18px">+</button>
+        </div>
+        <input type="range" min="5" max="120" step="1" value="{{floors}}" sc-camel-on-change="{{setFloors}}" aria-label="Number of floors">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <h2 class="lbl">Structural system</h2>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{systems}}" as="t" hint-placeholder-count="4">
+            <button type="button" class="{{t.cls}}" aria-pressed="{{t.pressed}}" sc-camel-on-click="{{t.pick}}">
+              <svg width="40" height="40" sc-camel-view-box="0 0 40 40" aria-hidden="true" fill="none" stroke="#D9D9D9" stroke-width="1.5" stroke-linejoin="round"><path d="{{t.d}}"></path></svg>
+              <span>{{t.name}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <h2 class="lbl">Shape</h2>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{shapes}}" as="t" hint-placeholder-count="4">
+            <button type="button" class="{{t.cls}}" aria-pressed="{{t.pressed}}" sc-camel-on-click="{{t.pick}}">
+              <svg width="40" height="40" sc-camel-view-box="0 0 40 40" aria-hidden="true" fill="none" stroke="#D9D9D9" stroke-width="1.5" stroke-linejoin="round"><path d="{{t.d}}"></path></svg>
+              <span>{{t.name}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+      <label style="display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 13px; cursor: pointer"><input type="checkbox" checked="{{damper}}" sc-camel-on-change="{{toggleDamper}}">Tuned mass damper at the top</label>
+    </aside>
+
+    <main style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px">
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <h1 style="margin: 0; font: 600 22px 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.01em">Stack it up, then let the storm in</h1>
+          <p class="mut" style="margin: 0; font-size: 13px">40 m square plan, 4 m floors. Wind blows from the left and gets stronger with height.</p>
+        </div>
+        <span class="pill" style="color: {{statusColor}}"><span class="dot" style="background: {{statusColor}}"></span>{{statusLabel}}</span>
+      </div>
+
+      <div class="{{stageCls}}" role="img" aria-label="{{stageLabel}}" style="position: relative; width: 100%; aspect-ratio: 900 / 620; border: 1px solid #242424; border-radius: 12px; overflow: hidden">
+        <svg sc-camel-view-box="0 0 900 620" width="100%" height="100%" aria-hidden="true" style="position: absolute; inset: 0; display: block">
+          <path d="M0 580 H900 V620 H0 Z" fill="#17150F"></path>
+          <path d="M0 580 H900" stroke="#3A352A" stroke-width="2"></path>
+          <path d="M392 580 L400 600 H560 L552 580 Z" fill="#26231C"></path>
+          <path class="flow" d="{{streakD}}" stroke="#4CC3F0" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="26 34" fill="none"></path>
+          <path d="{{arrowD}}" stroke="#4CC3F0" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="{{sideD}}" fill="#1B1D21" stroke="#101114" stroke-width="0.6"></path>
+          <path d="{{frontD}}" fill="#2E323A" stroke="#15171A" stroke-width="0.7"></path>
+          <path d="{{holeD}}" fill="#0A0A0A"></path>
+          <path d="{{sysD}}" stroke="{{sysColor}}" stroke-width="1.3" fill="none" stroke-opacity="0.85"></path>
+          <path d="{{capD}}" fill="#3C414A"></path>
+          <path d="{{plumbD}}" stroke="#D6C7A1" stroke-width="1" stroke-dasharray="3 5" fill="none"></path>
+          <sc-if value="{{damper}}" hint-placeholder-val="{{ false }}">
+            <circle cx="{{tmdX}}" cy="{{tmdY}}" r="6" fill="#D6C7A1" stroke="#0A0A0A" stroke-width="1.5"></circle>
+          </sc-if>
+        </svg>
+        <span class="chip" style="left: {{swayChipX}}%; top: {{swayChipY}}%">{{swayChip}}</span>
+        <div style="position: absolute; left: 12px; top: 10px; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; background: rgba(10,10,10,.82); border: 1px solid #242424">
+          <span class="lbl">Wind at the top</span>
+          <span class="mono" style="font-size: 16px; color: #4CC3F0">{{vTop}}</span>
+        </div>
+        <span class="badge" style="position: absolute; right: 12px; bottom: 50px">sway drawn ×{{ex}}</span>
+      </div>
+
+      <div class="panel" style="display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 12px 16px; align-items: center">
+        <div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline"><label for="v10" style="font-size: 13px; font-weight: 600">Storm · wind at 10 m</label><output for="v10" class="mono" style="font-size: 12px; color: #4CC3F0">{{v10Label}}</output></div>
+          <input id="v10" type="range" min="5" max="50" step="1" value="{{v10}}" sc-camel-on-change="{{setV}}">
+        </div>
+        <div style="flex: 1 1 200px; display: flex; flex-direction: column; gap: 2px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline"><label for="tex" style="font-size: 13px; font-weight: 600">Show sway</label><output for="tex" class="mono" style="font-size: 12px; color: #D6C7A1">×{{ex}}</output></div>
+          <input id="tex" type="range" min="1" max="150" step="1" value="{{ex}}" sc-camel-on-change="{{setEx}}">
+        </div>
+        <a class="ghost" href="Ground.dc.html">Send base reactions to Ground ›</a>
+      </div>
+    </main>
+
+    <aside aria-label="Readouts" style="flex: 1 1 300px; max-width: 360px; min-width: 260px; border-left: 1px solid #242424; background: rgba(17,17,17,0.84); padding: 14px 12px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box">
+      <section style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{tiles}}" as="t" hint-placeholder-count="6">
+          <div class="well" style="padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><span class="lbl">{{t.k}}</span><span class="mono" style="font-size: 17px; color: {{t.c}}">{{t.v}}</span><span class="mut" style="font-size: 11px">{{t.n}}</span></div>
+        </sc-for>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="lbl">Occupant comfort</h2><span class="mono" style="font-size: 12px; color: {{comfortColor}}">{{accel}}</span></div>
+        <div style="position: relative; height: 14px; border-radius: 7px; overflow: hidden; display: flex">
+          <span style="flex: 5; background: #1F4A33"></span><span style="flex: 5; background: #4A4320"></span><span style="flex: 10; background: #5A3A1C"></span><span style="flex: 10; background: #5C2A25"></span>
+          <span style="position: absolute; top: -2px; left: {{comfortPos}}%; width: 4px; height: 18px; margin-left: -2px; border-radius: 2px; background: #F5F5F5"></span>
+        </div>
+        <div class="mono" style="display: flex; justify-content: space-between; font-size: 10px; color: #A3A3A3"><span>0</span><span>5</span><span>10</span><span>20</span><span>30+ milli-g</span></div>
+        <p style="margin: 0; font-size: 13px; color: {{comfortColor}}">{{comfortText}}</p>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 8px">
+        <h2 class="lbl">Same storm, four shapes</h2>
+        <sc-for list="{{compare}}" as="c" hint-placeholder-count="4">
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 12px">
+            <span style="width: 74px; color: {{c.tc}}; font-weight: {{c.fw}}">{{c.name}}</span>
+            <div class="bar" style="flex: 1"><div style="width: {{c.w}}%; height: 8px; background: {{c.color}}"></div></div>
+            <span class="mono" style="min-width: 64px; text-align: right">{{c.v}}</span>
+          </div>
+        </sc-for>
+        <p class="mut" style="margin: 0; font-size: 11px">Peak acceleration at the top floor, same floors, system and wind.</p>
+      </section>
+
+      <section class="panel" style="padding: 12px; display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><h2 class="h">Challenge · 100 floors</h2><span class="mono" style="font-size: 11px; color: #A3A3A3">7 / 12</span></div>
+        <sc-for list="{{goals}}" as="g" hint-placeholder-count="4">
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 13px">
+            <span style="width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid {{g.c}}; background: {{g.bg}}; flex: 0 0 auto"></span>
+            <span style="color: {{g.tc}}">{{g.text}}</span>
+          </div>
+        </sc-for>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 6px">
+        <h2 class="lbl">What’s happening</h2>
+        <p style="margin: 0; font-size: 13px; line-height: 1.55; color: #D4D4D4; text-wrap: pretty">{{explain}}</p>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { floors: 60, sys: 'core', shape: 'straight', damper: false, v10: 30, ex: 40, playing: false, t: 0 };
+  }
+  componentDidMount() { this.timer = setInterval(() => { if (this.state.playing) this.setState({ t: this.state.t + 0.05 }); }, 50); }
+  componentWillUnmount() { clearInterval(this.timer); }
+
+  defs() {
+    return {
+      sys: {
+        core: { name: 'Core', k: 1.0, cost: 1.0, d: 'M10 36V4H30V36M16 36V10H24V36' },
+        tube: { name: 'Tube', k: 2.2, cost: 1.2, d: 'M10 36V4H30V36M14 36V4M18 36V4M22 36V4M26 36V4' },
+        outrigger: { name: 'Outriggers', k: 3.0, cost: 1.3, d: 'M10 36V4H30V36M17 36V4H23V36M10 14H30M10 26H30' },
+        braced: { name: 'Braced tube', k: 4.2, cost: 1.45, d: 'M10 36V4H30V36M10 4L30 20L10 36M30 4L10 20L30 36' }
+      },
+      shape: {
+        straight: { name: 'Straight', cd: 1.4, cross: 1.0, mass: 1.0, cost: 1.0, d: 'M12 36V4H28V36Z' },
+        tapered: { name: 'Tapered', cd: 1.25, cross: 0.6, mass: 0.75, cost: 0.95, d: 'M9 36L16 4H24L31 36Z' },
+        twisted: { name: 'Twisted', cd: 1.15, cross: 0.45, mass: 1.0, cost: 1.18, d: 'M12 36C12 24 28 16 28 4M28 36C28 24 12 16 12 4M12 36H28M12 4H28' },
+        hollow: { name: 'Hollow core', cd: 1.0, cross: 0.55, mass: 0.92, cost: 1.1, d: 'M12 36V4H28V36ZM16 14H24V18H16ZM16 26H24V30H16Z' }
+      }
+    };
+  }
+
+  calc(n, sysKey, shapeKey, v10, damper) {
+    const D = this.defs(); const sy = D.sys[sysKey], sh = D.shape[shapeKey];
+    const H = 4 * n, B = 40, alpha = 0.2;
+    const wOf = (z) => (shapeKey === 'tapered' ? 1 - 0.55 * z / H : 1);
+    const EI = 4.3e13 * sy.k;
+    let V = 0, M = 0, delta = 0;
+    for (let i = 1; i <= n; i++) {
+      const z = 4 * i - 2; const v = v10 * Math.pow(Math.max(z, 10) / 10, alpha);
+      const F = 0.613 * v * v * sh.cd * B * wOf(z) * 4;
+      V += F; M += F * z; delta += F * z * z * (3 * H - z) / (6 * EI);
+    }
+    const mu = 4e5 * sh.mass;
+    const f1 = 0.5596 * Math.sqrt(EI / (mu * Math.pow(H, 4)));
+    const zeta = damper ? 0.05 : 0.015;
+    const damp = Math.sqrt(0.015 / zeta);
+    let a = Math.pow(2 * Math.PI * f1, 2) * 0.25 * delta * damp;
+    const vH = v10 * Math.pow(H / 10, alpha);
+    const fs = 0.12 * vH / B; const ratio = fs / f1;
+    const near = Math.max(0, 1 - Math.abs(ratio - 1) / 0.25);
+    const lock = near > 0;
+    a = a * (1 + 3 * near * sh.cross * damp);
+    const mg = a / 9.81 * 1000;
+    const cost = n * sy.cost * sh.cost + (damper ? 6 : 0);
+    return { H, V, M, delta, f1, mg, vH, fs, ratio, lock, near, cost, wOf, dyn: a / Math.pow(2 * Math.PI * f1, 2) };
+  }
+
+  renderVals() {
+    const s = this.state; const D = this.defs();
+    const r = this.calc(s.floors, s.sys, s.shape, s.v10, s.damper);
+    const fp = 4.2, G = 580, CX = 470, W = 96;
+    const shapeZ = (z) => { const x = z / r.H; return x * x * (3 - x) / 2; };
+    const osc = s.playing ? Math.sin(2 * Math.PI * 0.55 * s.t) : 0;
+    const swayM = (z) => (r.delta * 0.85 + r.dyn * osc) * shapeZ(z);
+    const toPx = (m) => m * s.ex * 1.05;
+    let frontD = '', sideD = '', holeD = '', sysD = '', capD = '';
+    let topXL = 0, topXR = 0, topY = 0, topDX = 0, topDY = 0;
+    for (let i = 0; i < s.floors; i++) {
+      const z0 = 4 * i, z1 = 4 * i + 4, zm = z0 + 2;
+      const yb = G - i * fp, yt = yb - fp;
+      const w = W * r.wOf(zm);
+      let wf = w, off = 0;
+      if (s.shape === 'twisted') { const th = (zm / r.H) * Math.PI / 2; wf = w * (0.78 + 0.22 * Math.cos(4 * th)); off = w * 0.18 * Math.sin(2 * th); }
+      const cx = CX + toPx(swayM(zm)) + off;
+      const xl = cx - wf / 2, xr = cx + wf / 2, dx = w * 0.42, dy = -w * 0.26;
+      frontD += 'M' + xl.toFixed(1) + ' ' + yb.toFixed(1) + 'H' + xr.toFixed(1) + 'V' + yt.toFixed(1) + 'H' + xl.toFixed(1) + 'Z';
+      sideD += 'M' + xr.toFixed(1) + ' ' + yb.toFixed(1) + 'L' + (xr + dx).toFixed(1) + ' ' + (yb + dy).toFixed(1) + 'V' + (yt + dy).toFixed(1) + 'L' + xr.toFixed(1) + ' ' + yt.toFixed(1) + 'Z';
+      if (s.shape === 'hollow' && i % 20 >= 12 && i % 20 <= 14) holeD += 'M' + (cx - wf * 0.22).toFixed(1) + ' ' + yb.toFixed(1) + 'H' + (cx + wf * 0.22).toFixed(1) + 'V' + yt.toFixed(1) + 'H' + (cx - wf * 0.22).toFixed(1) + 'Z';
+      if (s.sys === 'tube') for (let k = 1; k < 6; k++) { const x = xl + wf * k / 6; sysD += 'M' + x.toFixed(1) + ' ' + yb.toFixed(1) + 'V' + yt.toFixed(1); }
+      if (s.sys === 'braced') { const mod = 10, p = (i % mod) / mod, q = (i % mod + 1) / mod; const xa = xl + wf * p, xb = xl + wf * q; sysD += 'M' + xa.toFixed(1) + ' ' + yb.toFixed(1) + 'L' + xb.toFixed(1) + ' ' + yt.toFixed(1) + 'M' + (xr - wf * p).toFixed(1) + ' ' + yb.toFixed(1) + 'L' + (xr - wf * q).toFixed(1) + ' ' + yt.toFixed(1); }
+      if (s.sys === 'outrigger' && (i === Math.round(s.floors / 3) || i === Math.round(2 * s.floors / 3))) sysD += 'M' + xl.toFixed(1) + ' ' + (yt + 1).toFixed(1) + 'H' + xr.toFixed(1) + 'M' + xl.toFixed(1) + ' ' + (yb - 1).toFixed(1) + 'H' + xr.toFixed(1);
+      if (s.sys === 'core' || s.sys === 'outrigger') sysD += 'M' + (cx - wf * 0.12).toFixed(1) + ' ' + yb.toFixed(1) + 'V' + yt.toFixed(1) + 'M' + (cx + wf * 0.12).toFixed(1) + ' ' + yb.toFixed(1) + 'V' + yt.toFixed(1);
+      if (i === s.floors - 1) { topXL = xl; topXR = xr; topY = yt; topDX = dx; topDY = dy; capD = 'M' + xl.toFixed(1) + ' ' + yt.toFixed(1) + 'L' + (xl + dx).toFixed(1) + ' ' + (yt + dy).toFixed(1) + 'H' + (xr + dx).toFixed(1) + 'L' + xr.toFixed(1) + ' ' + yt.toFixed(1) + 'Z'; }
+    }
+    const plumbD = 'M' + CX + ' ' + G + 'V' + (G - s.floors * fp - 16);
+    let arrowD = '', streakD = '';
+    for (let z = 20; z <= r.H + 1; z += Math.max(20, Math.round(r.H / 7 / 10) * 10)) {
+      const v = s.v10 * Math.pow(z / 10, 0.2); const len = Math.min(300, v * v / 9); const y = G - z / 4 * fp; const x2 = 380 - 10;
+      arrowD += 'M' + (x2 - len).toFixed(1) + ' ' + y.toFixed(1) + 'H' + x2 + 'M' + (x2 - 7) + ' ' + (y - 5).toFixed(1) + 'L' + x2 + ' ' + y.toFixed(1) + 'L' + (x2 - 7) + ' ' + (y + 5).toFixed(1);
+      streakD += 'M' + (560 + 30 * Math.sin(z)) + ' ' + (y - 6).toFixed(1) + 'C 640 ' + (y - 30).toFixed(1) + ' 760 ' + (y + 20).toFixed(1) + ' 900 ' + (y - 4).toFixed(1);
+    }
+
+    const driftR = r.H / r.delta;
+    const swayOk = driftR >= 500, comfOk = r.mg < 10;
+    let comfortText = 'Nobody can feel it.', comfortColor = '#5FBF8A';
+    if (r.mg >= 5) { comfortText = 'Some people on the top floors notice.'; comfortColor = '#D6C7A1'; }
+    if (r.mg >= 10) { comfortText = 'Hanging lamps swing. People get uneasy.'; comfortColor = '#E7A47C'; }
+    if (r.mg >= 20) { comfortText = 'Seasick. Nobody would rent this floor.'; comfortColor = '#E8A39E'; }
+
+    let statusLabel = 'Comfortable', statusColor = '#5FBF8A';
+    if (!swayOk || r.mg >= 10) { statusLabel = 'Too much sway'; statusColor = '#D6C7A1'; }
+    if (r.lock) { statusLabel = 'Vortex lock-in'; statusColor = '#E8A39E'; }
+    if (driftR < 200) { statusLabel = 'Dangerously flexible'; statusColor = '#E5534B'; }
+
+    let explain = 'Wind pressure grows with the square of wind speed, and wind is faster higher up, so the top floors catch most of the push. Sway grows roughly with height to the fourth power: add floors and watch the drift ratio fall apart.';
+    if (r.lock) explain = 'Wind peels off the corners in alternating swirls (vortex shedding) about ' + r.fs.toFixed(2) + ' times a second, almost exactly the tower’s own sway frequency of ' + r.f1.toFixed(2) + ' Hz. Each swirl pushes at the right moment, like pushing a swing. Twist or taper the tower to confuse the swirls, or add the damper.';
+    else if (!swayOk && s.sys === 'core') explain = 'A concrete core alone is a slender stick. Moving stiffness to the outside (a tube) or tying the core to the outer columns (outriggers) makes the whole footprint work in bending, which is how real supertall towers stay stiff.';
+    else if (s.damper) explain = 'The damper is a heavy weight hung near the top, tuned to the tower’s sway frequency. When the tower leans one way the weight lags behind and pulls it back, soaking up energy. It mainly cuts acceleration, not the static lean.';
+
+    const compare = Object.keys(D.shape).map((k) => { const c = this.calc(s.floors, s.sys, k, s.v10, s.damper); return { k, name: D.shape[k].name, mg: c.mg, lock: c.lock }; });
+    const maxMg = Math.max.apply(null, compare.map((c) => c.mg).concat([1]));
+    const goals = [
+      { text: 'Reach 100 floors', done: s.floors >= 100 },
+      { text: 'Drift better than H/500 at 30 m/s', done: s.v10 >= 30 && swayOk },
+      { text: 'Top floor under 10 milli-g', done: s.v10 >= 30 && comfOk },
+      { text: 'Under $160M (game money)', done: r.cost <= 160 }
+    ].map((g) => Object.assign(g, { c: g.done ? '#5FBF8A' : '#5A5A5A', bg: g.done ? '#5FBF8A' : 'transparent', tc: g.done ? '#EAEAEA' : '#A3A3A3' }));
+
+    const topPxX = (topXL + topXR) / 2 + topDX / 2;
+    const tmdSwing = s.damper ? -toPx(r.dyn * osc) * 0.6 : 0;
+    const mk = (obj, cur) => Object.keys(obj).map((k) => ({ name: obj[k].name, d: obj[k].d, cls: 'ptile' + (cur === k ? ' ptile-on' : ''), pressed: cur === k ? 'true' : 'false', key: k }));
+    return {
+      frontD, sideD, holeD, sysD, capD, plumbD, arrowD, streakD,
+      sysColor: s.sys === 'outrigger' ? '#D6C7A1' : '#8A93A0',
+      tmdX: (topPxX + tmdSwing).toFixed(1), tmdY: (topY + topDY / 2 - 10).toFixed(1),
+      swayChip: 'top ' + (r.delta * 1000).toFixed(0) + ' mm · H/' + Math.round(driftR),
+      swayChipX: ((topXR + topDX + 70) / 900 * 100).toFixed(2), swayChipY: ((topY + 30) / 620 * 100).toFixed(2),
+      vTop: r.vH.toFixed(0) + ' m/s · ' + (r.vH * 2.237).toFixed(0) + ' mph',
+      stageCls: 'graph' + (s.playing ? '' : ' still'),
+      stageLabel: s.floors + '-floor ' + D.shape[s.shape].name.toLowerCase() + ' tower with a ' + D.sys[s.sys].name.toLowerCase() + ' system in ' + s.v10 + ' m/s wind. ' + statusLabel + '.',
+      statusLabel, statusColor, explain,
+      floors: s.floors, height: r.H, damper: s.damper, v10: s.v10, ex: s.ex,
+      v10Label: s.v10 + ' m/s · ' + (s.v10 * 2.237).toFixed(0) + ' mph',
+      tiles: [
+        { k: 'Top sway', v: (r.delta * 1000).toFixed(0) + ' mm', n: 'drift H/' + Math.round(driftR) + ' · aim H/500', c: swayOk ? '#EAEAEA' : '#D6C7A1' },
+        { k: 'Sway period', v: (1 / r.f1).toFixed(1) + ' s', n: r.f1.toFixed(3) + ' Hz', c: '#EAEAEA' },
+        { k: 'Base shear', v: (r.V / 1e6).toFixed(1) + ' MN', n: 'total wind push', c: '#EAEAEA' },
+        { k: 'Overturning', v: (r.M / 1e9).toFixed(2) + ' GN·m', n: 'goes to the foundation', c: '#EAEAEA' },
+        { k: 'Vortex / sway', v: r.ratio.toFixed(2) + '×', n: r.lock ? 'lock-in zone 0.75–1.25' : 'clear of lock-in', c: r.lock ? '#E8A39E' : '#EAEAEA' },
+        { k: 'Cost', v: '$' + r.cost.toFixed(0) + 'M', n: 'game money', c: r.cost <= 160 ? '#EAEAEA' : '#E8A39E' }
+      ],
+      accel: r.mg.toFixed(1) + ' milli-g',
+      comfortPos: Math.min(99, r.mg / 30 * 100).toFixed(1), comfortText, comfortColor,
+      compare: compare.map((c) => ({ name: c.name, v: c.mg.toFixed(1) + ' mg', w: (c.mg / maxMg * 100).toFixed(0), color: c.lock ? '#E8A39E' : (c.mg < 10 ? '#5FBF8A' : '#E7A47C'), tc: c.k === s.shape ? '#F5F5F5' : '#A3A3A3', fw: c.k === s.shape ? '600' : '400' })),
+      goals,
+      systems: mk(D.sys, s.sys).map((t) => Object.assign(t, { pick: () => this.setState({ sys: t.key }) })),
+      shapes: mk(D.shape, s.shape).map((t) => Object.assign(t, { pick: () => this.setState({ shape: t.key }) })),
+      playing: s.playing, notPlaying: !s.playing, clock: 'T = ' + (1 / r.f1).toFixed(1) + ' s',
+      plus: () => this.setState({ floors: Math.min(120, this.state.floors + 1) }),
+      minus: () => this.setState({ floors: Math.max(5, this.state.floors - 1) }),
+      setFloors: (e) => this.setState({ floors: Number(e.target.value) }),
+      setV: (e) => this.setState({ v10: Number(e.target.value) }),
+      setEx: (e) => this.setState({ ex: Number(e.target.value) }),
+      toggleDamper: () => this.setState({ damper: !this.state.damper }),
+      toggleDrive: () => this.setState({ playing: !this.state.playing }),
+      reset: () => this.setState({ floors: 60, sys: 'core', shape: 'straight', damper: false, v10: 30, ex: 40, playing: false, t: 0 })
+    };
+  }
+}
+</script>
+
+
+</body></html>
