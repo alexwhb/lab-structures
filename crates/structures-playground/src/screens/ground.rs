@@ -15,7 +15,7 @@ use crate::ctx::{Carry, Ctx, Ticker};
 use crate::layout::{self, Column};
 use crate::router::Route;
 use crate::widgets::world::{self, Readout, RowLabel, TileArt};
-use crate::widgets::{Callout, Slider, ghost, lbl, text};
+use crate::widgets::{Callout, Checkbox, Slider, ghost, lbl, text};
 use eframe::egui::{Ui, vec2};
 use lab_ui::layout::{FlexItem, flex_lines};
 use sp_engine::ground::{
@@ -192,7 +192,10 @@ impl GroundScreen {
                 input.floors = f.round() as u32;
             }
         });
-        if world::checkbox(ui, "Earthquake shaking", input.quake).clicked() {
+        if Checkbox::new("Earthquake shaking", input.quake)
+            .show(ui)
+            .clicked()
+        {
             input.quake = !input.quake;
         }
         section(ui, |ui| {

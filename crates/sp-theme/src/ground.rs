@@ -1,5 +1,5 @@
 //! Ground stage colours — `Ground.dc.html` inline SVG, soil swatches and readouts. Owned by the
-//! `worlds` agent. (Checkbox, bar marker and goal-box tokens are in [`crate::tower`].)
+//! `worlds` agent. (Bar marker and goal-box tokens are in [`crate::tower`].)
 
 use crate::{hex, rgba};
 use egui::Color32;

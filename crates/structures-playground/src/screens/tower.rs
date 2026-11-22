@@ -16,7 +16,7 @@ use crate::ctx::{Carry, Ctx};
 use crate::layout::{self, Column};
 use crate::router::Route;
 use crate::widgets::world::{self, Readout, RowLabel, TileArt};
-use crate::widgets::{Callout, Slider, ghost, lbl, text};
+use crate::widgets::{Callout, Checkbox, Slider, ghost, lbl, text};
 use eframe::egui::{Color32, Ui, vec2};
 use lab_ui::layout::{FlexItem, flex_lines};
 use sp_engine::dynamics::{SwaySim, playback_speed};
@@ -199,7 +199,10 @@ impl TowerScreen {
                 input.shape = Shape::ALL[i];
             }
         });
-        if world::checkbox(ui, "Tuned mass damper at the top", input.damper).clicked() {
+        if Checkbox::new("Tuned mass damper at the top", input.damper)
+            .show(ui)
+            .clicked()
+        {
             input.damper = !input.damper;
         }
         self.set_input(input);

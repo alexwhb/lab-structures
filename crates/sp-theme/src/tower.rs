@@ -1,6 +1,6 @@
 //! Tower stage colours — `Tower.dc.html` inline SVG and readouts. Owned by the `worlds` agent.
-//! Also the controls the Tower and Ground columns share (Chrome's checkbox, the comfort /
-//! safety band colours, the challenge goal boxes).
+//! Also the readout colours the Tower and Ground columns share (the comfort bands, the bar
+//! marker, the challenge goal boxes).
 
 use crate::{hex, rgba};
 use egui::Color32;
@@ -48,28 +48,12 @@ pub const STAGE_BOX: Color32 = rgba(10, 10, 10, 0.82);
 // Readouts
 
 /// Occupant comfort bar bands (`flex: 5 5 10 10`): `#1F4A33` `#4A4320` `#5A3A1C` `#5C2A25`.
-pub const COMFORT_BANDS: [Color32; 4] = [
-    hex(0x1F4A33),
-    hex(0x4A4320),
-    hex(0x5A3A1C),
-    hex(0x5C2A25),
-];
+pub const COMFORT_BANDS: [Color32; 4] =
+    [hex(0x1F4A33), hex(0x4A4320), hex(0x5A3A1C), hex(0x5C2A25)];
 /// The comfort / safety bar marker `#F5F5F5` (4 × 18, radius 2).
 pub const BAR_MARKER: Color32 = hex(0xF5F5F5);
 /// Unchecked challenge goal box border `#5A5A5A` (18 × 18, radius 5, 1.5 px).
 pub const GOAL_OPEN: Color32 = hex(0x5A5A5A);
-
-// ============================================================================================
-// Chrome's `input[type=checkbox]` with `accent-color: #D6C7A1` (Tower damper, Ground quake)
-
-/// Unchecked fill `#FFFFFF` (sampled from the reference render).
-pub const CHECKBOX: Color32 = hex(0xFFFFFF);
-/// Unchecked border `#767676` (1 px, radius 2; sampled).
-pub const CHECKBOX_BORDER: Color32 = hex(0x767676);
-/// Checked: the accent fill with a dark tick (Chrome picks a dark tick on a light accent).
-pub const CHECKBOX_ON: Color32 = crate::ACCENT;
-/// See [`CHECKBOX_ON`].
-pub const CHECKBOX_TICK: Color32 = hex(0x161616);
 
 #[cfg(test)]
 mod tests {
@@ -84,7 +68,5 @@ mod tests {
         assert!(ratio(WIND, stage) >= 3.0);
         assert!(ratio(PLUMB, stage) >= 3.0);
         assert!(ratio(DAMPER, FRONT) >= 3.0);
-        assert!(ratio(CHECKBOX_TICK, CHECKBOX_ON) >= 3.0);
-        assert!(ratio(CHECKBOX_BORDER, CHECKBOX) >= 3.0);
     }
 }

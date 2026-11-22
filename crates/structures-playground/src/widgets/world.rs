@@ -7,7 +7,6 @@
 //! | [`status_pill`] | `.pill` with its `.dot` |
 //! | [`picture_tiles`] | `.ptile` grid (2 columns, gap 8): an SVG icon or a soil swatch over a label |
 //! | [`stepper`] | Floors: `−` · well (mono 20 accent + note) · `+` (44 px) |
-//! | [`checkbox`] | `<label>` row (44 px) with Chrome's 18 px `accent-color` checkbox |
 //! | [`value_row`] | a slider's label / value row (`display: flex; justify-content: space-between`) |
 //! | [`readout_grid`] | the aside's `.well` tiles: `.lbl` · mono 17 value · 11 px note |
 //! | [`band_bar`] | the comfort / safety bar: bands, a marker and the tick row |
@@ -320,7 +319,7 @@ pub fn picture_tiles(ui: &mut Ui, items: &[(&str, TileArt<'_>)], selected: usize
 }
 
 // ============================================================================================
-// Stepper, checkbox, value rows
+// Stepper, value rows
 
 fn square_button(ui: &Ui, rect: Rect, label: &str, name: &str, enabled: bool) -> Response {
     let id = ui.scope_id().with(("square", name));
@@ -412,51 +411,6 @@ pub fn stepper(
         minus: minus_clicked,
         plus: square_button(ui, plus, "+", plus_name, can.1).clicked(),
     }
-}
-
-/// `<label style="display: flex; align-items: center; gap: 10px; min-height: 44px; font-size:
-/// 13px"><input type="checkbox">…</label>`: Chrome's 18 px checkbox (white with a `#767676`
-/// border; checked: the accent with a dark tick). The whole row toggles. AccessKit: a
-/// `CheckBox` named `label` with its toggled state. `.clicked()` means "flip it".
-pub fn checkbox(ui: &mut Ui, label: &str, on: bool) -> Response {
-    let width = ui.available_width();
-    let g = wrapped(ui, label, font::body(13.0), t::TEXT, width - 28.0, None);
-    let h = t::size::MIN_TARGET.max(g.size().y + 8.0);
-    let (rect, _) = ui.allocate_exact_size(vec2(width, h), Sense::hover());
-    let id = ui.scope_id().with(("checkbox", label));
-    let resp = ui.interact(rect, id, Sense::click());
-    super::reveal_on_focus(&resp);
-    let name = label.to_string();
-    resp.widget_info(|| WidgetInfo::selected(Role::CheckBox, true, on, &name));
-    let p = ui.painter();
-    let bx = Rect::from_min_size(
-        pos2(rect.left(), rect.center().y - 9.0),
-        vec2(t::size::CHECKBOX, t::size::CHECKBOX),
-    );
-    if on {
-        p.rect_filled(bx, CornerRadius::same(2), t::tower::CHECKBOX_ON);
-        let tick = [
-            pos2(bx.left() + 4.0, bx.top() + 9.5),
-            pos2(bx.left() + 7.5, bx.top() + 13.0),
-            pos2(bx.left() + 14.0, bx.top() + 5.5),
-        ];
-        stroke_polyline(p, &tick, false, Stroke::new(2.0, t::tower::CHECKBOX_TICK));
-    } else {
-        p.rect(
-            bx,
-            CornerRadius::same(2),
-            t::tower::CHECKBOX,
-            Stroke::new(1.0, t::tower::CHECKBOX_BORDER),
-            StrokeKind::Inside,
-        );
-    }
-    p.galley(
-        pos2(bx.right() + 10.0, rect.center().y - g.size().y / 2.0),
-        g,
-        t::TEXT,
-    );
-    focus_ring_if(ui, &resp, bx.expand(2.0), CornerRadius::same(4));
-    resp.on_hover_cursor(eframe::egui::CursorIcon::PointingHand)
 }
 
 /// The label font of a [`value_row`].
