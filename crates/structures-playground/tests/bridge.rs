@@ -407,8 +407,18 @@ fn level_switching() {
     assert!(has_label(&h, "Cost $0.8k / $14k"));
     click_button(&mut h, "Sandbox");
     click_button(&mut h, "Drop in a starter truss");
-    assert_eq!(game(&h).design().members.len(), 16);
-    assert_eq!(status(&h), "Wobbly: not stable");
+    // MB-5: the starter truss is cross-braced and holds, also with 20 t at a middle joint
+    assert_eq!(game(&h).design().members.len(), 18);
+    assert_eq!(status(&h), "Holding");
+    click_button(&mut h, "Weight");
+    click_button(&mut h, "10 t");
+    click_joint(&mut h, "J3");
+    click_joint(&mut h, "J3");
+    assert!(has_label_containing(&h, "Joint J3, carrying 20 t"));
+    click_button(&mut h, "Test it: add the load");
+    assert!(run_until_result(&mut h, 600));
+    settle(&mut h);
+    assert!(has_label(&h, "It held!"));
 }
 
 /// NAV-6: Share copies the `.str` netlist; ⌘V loads one into the Sandbox. NAV-4: "Open in

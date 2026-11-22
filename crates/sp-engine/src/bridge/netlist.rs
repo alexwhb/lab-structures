@@ -111,7 +111,7 @@ mod tests {
         assert!(t.contains("fix=xy"));
         assert!(t.contains("fix=y"));
         assert_eq!(t.lines().filter(|l| l.starts_with(".node")).count(), 10);
-        assert_eq!(t.lines().filter(|l| l.starts_with(".member")).count(), 16);
+        assert_eq!(t.lines().filter(|l| l.starts_with(".member")).count(), 18);
     }
 
     #[test]
@@ -133,12 +133,6 @@ mod tests {
     #[test]
     fn advanced_solves_it_to_the_newton() {
         let mut d = Design::starter();
-        d.members.push(crate::bridge::Bar {
-            id: "M17".into(),
-            a: "J8".into(),
-            b: "J4".into(),
-            size: SizeKey::Medium,
-        });
         d.set_load("J3", 25.0);
         d.set_load("J4", 25.0);
         let text = write(&d, MaterialKey::Steel, LevelKey::Sandbox, "sandbox");

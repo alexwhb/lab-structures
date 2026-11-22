@@ -81,11 +81,13 @@ const SCENARIOS = {
     ['tool', 'weight'], ['weight', 25], ['joint', 'J3'], ['joint', 'J3'], ['snap'],
     ['test'], ['tick', 1], ['snap'], ['run'], ['snap'],
   ],
+  // MB-5: the starter truss is cross-braced (see `starterMB5` below), so it holds as dropped in
   'sandbox-starter': [
     ['level', 'sandbox'], ['starter'], ['snap'],
     ['test'], ['run'], ['snap'], ['back'],
     ['tool', 'member'], ['joint', 'J8'], ['joint', 'J4'], ['finish'], ['snap'],
-    ['tool', 'weight'], ['weight', 25], ['joint', 'J3'], ['joint', 'J4'], ['weight', 10], ['joint', 'J4'], ['snap'],
+    ['tool', 'weight'], ['weight', 20], ['joint', 'J3'], ['snap'], ['test'], ['run'], ['snap'], ['back'],
+    ['undo'], ['weight', 25], ['joint', 'J3'], ['joint', 'J4'], ['weight', 10], ['joint', 'J4'], ['snap'],
     ['mat', 'alu'], ['snap'], ['mat', 'cf'], ['snap'], ['mat', 'timber'], ['snap'],
     ['test'], ['tick', 20], ['snap'], ['run'], ['snap'],
     ['back'], ['mat', 'steel'], ['sag'], ['snap'], ['test'], ['run'], ['snap'],
@@ -171,6 +173,16 @@ function snapshot(c) {
   };
 }
 
+// SPEC MB-5 (lead decision): the mockup's starter truss leaves its middle panel open
+// (m + r − 2j = −1, a mechanism). The app cross-braces it with M17 J8–J4 and M18 J9–J3 in
+// the same step, so the goldens apply the same two members right after the mockup's own
+// `starter()` (one undo step, like the app). Everything else stays the mockup's verbatim.
+function starterMB5(c) {
+  const s = c.state;
+  s.members = s.members.concat([{ id: 'M17', a: 'J8', b: 'J4', size: 'M' }, { id: 'M18', a: 'J9', b: 'J3', size: 'M' }]);
+  s.nM = 18;
+}
+
 function run(actions) {
   const c = new Playground({});
   const snaps = [];
@@ -196,7 +208,7 @@ function run(actions) {
       case 'up': v().onUp(); break;
       case 'undo': v().undo(); break;
       case 'clear': v().clearAll(); break;
-      case 'starter': v().starter(); break;
+      case 'starter': v().starter(); starterMB5(c); break;
       case 'nums': v().toggleNums(); break;
       case 'sag': v().toggleSag(); break;
       case 'test': v().toggleTest(); break;

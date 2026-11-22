@@ -318,13 +318,10 @@ fn imports_refuse_what_the_stage_cannot_show() {
 
 #[test]
 fn huge_loads_and_empty_structures_finish() {
-    // every joint of the closed starter truss carries 200 t: it breaks fast and settles
+    // every joint of the (cross-braced, MB-5) starter truss carries 200 t: it breaks fast
     let mut g = Game::new();
     g.pick_level(LevelKey::Sandbox);
     g.starter();
-    g.pick_tool(Tool::Member);
-    g.click_joint("J8");
-    g.click_joint("J4");
     g.pick_tool(Tool::Weight);
     g.pick_weight(25);
     let ids: Vec<String> = g.design().nodes.iter().map(|n| n.id.clone()).collect();

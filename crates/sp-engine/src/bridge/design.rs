@@ -150,7 +150,10 @@ impl Design {
     }
 
     /// The Sandbox's "Drop in a starter truss": a 40 m Pratt-like truss, six bottom joints
-    /// (pin at x = 8, roller at x = 48), four top joints at y = 6, 16 Medium members, no loads.
+    /// (pin at x = 8, roller at x = 48), four top joints at y = 6, 18 Medium members, no loads.
+    ///
+    /// The mockup's 16 members leave the middle panel open (m + r − 2j = −1, a mechanism);
+    /// SPEC MB-5 cross-braces it (`M17` J8–J4, `M18` J9–J3), so the starter truss holds.
     pub fn starter() -> Design {
         let mut nodes = Vec::new();
         let mut k = 0;
@@ -208,6 +211,9 @@ impl Design {
         }
         add(&top[0], &bot[2]);
         add(&top[3], &bot[3]);
+        // MB-5: both diagonals of the middle panel
+        add(&top[1], &bot[3]);
+        add(&top[2], &bot[2]);
         Design {
             n_n: nodes.len() as u32,
             n_m: members.len() as u32,
@@ -650,14 +656,20 @@ mod tests {
     fn starter_truss_shape() {
         let d = Design::starter();
         assert_eq!(d.nodes.len(), 10);
-        assert_eq!(d.members.len(), 16);
-        assert_eq!(d.n_m, 16);
-        // m + r − 2j = 16 + 3 − 20 = −1: the middle panel has no diagonal, so the starter is
-        // a mechanism until the player closes it (the mockup's teaching moment).
+        assert_eq!(d.members.len(), 18);
+        assert_eq!(d.n_m, 18);
+        // MB-5: the mockup's 16 members (m + r − 2j = −1) are a mechanism; with the middle
+        // panel cross-braced it holds, also with 20 t at a middle joint
         let a = d.analyse(MaterialKey::Steel, 1.0, &[]);
-        assert!(!a.ok);
-        assert!(a.bad.is_some());
-        assert_eq!(a.n_act, 16);
+        assert!(a.ok, "the starter truss holds");
+        let mut loaded = d.clone();
+        for j in ["J3", "J4"] {
+            loaded.set_load(j, 20.0);
+            let a = loaded.analyse(MaterialKey::Steel, 1.0, &[]);
+            assert!(a.ok);
+            assert!(a.worst_state().unwrap().1.utilisation < 1.0);
+            loaded.set_load(j, 0.0);
+        }
     }
 
     #[test]
