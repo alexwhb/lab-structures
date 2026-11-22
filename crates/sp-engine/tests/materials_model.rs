@@ -1,6 +1,7 @@
 //! `sp_engine::materials` behaviour (SPEC MT-2, MT-5, MT-6, ENG-3, ENG-4): the default
 //! readouts, Pull to fracture for every sample and the challenge, the timing, zoom,
-//! temperature, the derived quantities, robustness on garbage input, and speed.
+//! temperature, the derived quantities and robustness on garbage input (speed:
+//! `materials_perf.rs`).
 
 use sp_engine::materials::bench::{CHALLENGE_RANK, MAX_TICKS_PER_ADVANCE};
 use sp_engine::materials::curves::{TEMP_MAX_C, TEMP_MIN_C, load_cell_kn};
@@ -406,32 +407,4 @@ fn garbage_input_never_panics_or_leaks_nan() {
     assert_eq!(Kind::parse(""), None);
     assert_eq!(Kind::parse("\u{0}\u{ffff}"), None);
     assert_eq!(Zoom::parse("NaN"), None);
-}
-
-#[test]
-fn fast_enough_to_recompute_every_frame() {
-    let mut b = Bench::default();
-    b.set_strain(17.3);
-    let t = Instant::now();
-    let mut n = 0;
-    for _ in 0..2000 {
-        n += b.view().plot.curve.len();
-    }
-    let per_view = t.elapsed().as_secs_f64() / 2000.0;
-    assert!(n > 0);
-    assert!(per_view < 200e-6, "view() took {:.1} µs", per_view * 1e6);
-    let t = Instant::now();
-    for _ in 0..100 {
-        let mut b = Bench::default();
-        b.toggle_drive();
-        while b.playing() {
-            b.tick();
-        }
-    }
-    let per_pull = t.elapsed().as_secs_f64() / 100.0;
-    assert!(
-        per_pull < 1e-3,
-        "a whole pull took {:.1} µs",
-        per_pull * 1e6
-    );
 }
