@@ -2,9 +2,9 @@
 //! three guide lines, an optional "stable" band (cyan, from the first repeat to the end) and
 //! an optional playhead (cyan, 1.5 px). Two mappings from the mockup:
 //!
-//! - [`Plot::sparkline`] (Tray, 84 px): the last `capacity` values right-aligned in
+//! - [`Plot::sparkline`] (84 px): the last `capacity` values right-aligned in
 //!   `capacity` slots; `y = h − 4 − v / max · (h − 12)`; fill closes at the bottom.
-//! - [`Plot::series`] (Rule lab, 120 px): values spread over the width;
+//! - [`Plot::series`] (120 px): values spread over the width;
 //!   `y = h − 6 − v / max · (h − 16)`.
 //!
 //! `max` is `max(10, values…)` like the mockup. The height is the `<svg height>` (its content
@@ -32,7 +32,7 @@ pub struct Plot<'a> {
 }
 
 impl<'a> Plot<'a> {
-    /// The Tray's sparkline: the last `capacity` values, right-aligned, 84 px tall.
+    /// A sparkline: the last `capacity` values, right-aligned, 84 px tall.
     pub fn sparkline(values: &'a [f32], capacity: usize) -> Self {
         Self {
             values,
@@ -42,11 +42,11 @@ impl<'a> Plot<'a> {
             top: 8.0,
             band_from: None,
             playhead: None,
-            label: "Population over the last generations",
+            label: "History",
         }
     }
 
-    /// The Rule lab's plot: every value across the width, 120 px tall.
+    /// A plot: every value across the width, 120 px tall.
     pub fn series(values: &'a [f32]) -> Self {
         Self {
             values,
@@ -65,7 +65,7 @@ impl<'a> Plot<'a> {
         self.height = h;
         self
     }
-    /// The stable band from index `from` to the end (Rule lab: the first repeat).
+    /// A shaded band from index `from` to the end.
     pub fn stable_from(mut self, from: Option<usize>) -> Self {
         self.band_from = from;
         self

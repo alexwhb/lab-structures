@@ -156,7 +156,7 @@ impl<'a> StatTile<'a> {
         self.color = c;
         self
     }
-    /// The Rule lab variant.
+    /// The compact variant (`padding: 9px 10px`, 16 px value).
     pub fn compact(mut self) -> Self {
         self.compact = true;
         self
@@ -255,7 +255,7 @@ impl<'a> Callout<'a> {
 
 /// `.chip` — a measurement chip pinned to the stage: `padding: 4px 9px`, radius 6,
 /// `rgba(11,12,14,.9)`, `1px solid #2A2D33`, JetBrains Mono 12 px `#ECEAE6`; parts may have
-/// their own colour ("gen 0030 · " + ink "90 alive").
+/// their own colour ("top 928 mm · " + accent "H/259").
 #[derive(Debug, Clone, Default)]
 #[must_use = "call .show_at(…)"]
 pub struct Chip {

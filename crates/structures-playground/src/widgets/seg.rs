@@ -1,5 +1,5 @@
-//! Segmented groups: the header's mode switcher and the Tray's tool group (`.seg` /
-//! `.seg-on` in a `rgba(6,6,6,.88)` well) and the `.mini` groups of the Loom and Rule lab
+//! Segmented groups: the header's mode switcher and Advanced's truss style (`.seg` /
+//! `.seg-on` in a `rgba(6,6,6,.88)` well), a compact tool group and `.mini` groups
 //! (`.mini-on`, `.mini-off` disabled), plus a lone [`MiniButton`].
 
 use super::icons::Icon;
@@ -26,7 +26,7 @@ pub enum SegStyle {
     /// `rgba(6,6,6,.88)` well with a `#242424` border (radius 8), 36 px
     /// `.seg` items (`padding: 0 14px`, Inter 500 13, radius 6, 14 px icons).
     Header,
-    /// The Tray tool group: 2 px padded well, 28 px items, 12 px text.
+    /// A compact tool group: 2 px padded well, 28 px items, 12 px text.
     Tool,
     /// `.mini` items (28 px, `padding: 0 10px`, Inter 500 12, radius 5) in a 2 px padded
     /// `#060606` well (radius 7). `fill`: items share the width equally (`flex: 1`; long
@@ -397,7 +397,7 @@ fn paint_centered_rows(
     }
 }
 
-/// A lone `.mini` button (no well): the Rule lab's neighbourhood presets ("Moore r1", "von
+/// A lone `.mini` button (no well): a compact preset button ("Moore r1", "von
 /// Neumann", …), text left-aligned, `.mini-on` when selected; `width` fixes its width
 /// (labels then wrap like the mockup's "von Neumann"). Always 28 px tall, as CSS's
 /// `height: 28px`: a wrapped label overflows it, centred, instead of growing the button.

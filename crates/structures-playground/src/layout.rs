@@ -411,7 +411,7 @@ fn paint_column(ui: &Ui, rect: Rect, c: &Column) {
 /// Passes a nested scroll area's scrolling on to the page. egui hands a scroll request
 /// (`scroll_to_me`, keyboard focus, AccessKit `ScrollIntoView`) to the innermost `ScrollArea`
 /// only; Chrome's `scrollIntoView` scrolls every ancestor. Call it after showing a scroll area
-/// that sits inside the page (the Terrarium's jar stage) with its id, offset and viewport:
+/// that sits inside the page (a scrolling stage or list) with its id, offset and viewport:
 /// when the area scrolled this frame without the user's wheel or drag, the page brings its
 /// viewport into view too.
 pub fn bubble_scroll(ui: &Ui, id: Id, offset: Vec2, viewport: Rect) {

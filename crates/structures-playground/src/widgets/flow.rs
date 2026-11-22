@@ -198,7 +198,7 @@ impl Remembered {
 mod tests {
     use super::*;
 
-    /// The Tray header at 1440: brand (≈ 311 × 26), modes (+12 margin), switcher (142 × 40)
+    /// A header at 1440: brand (≈ 311 × 26), modes (+12 margin), switcher (142 × 40)
     /// and the actions (≈ 417 × 32, pushed right) fit on one 56 px line.
     #[test]
     fn header_one_line_at_1440() {
@@ -241,7 +241,7 @@ mod tests {
         assert_eq!(f.rects[3].top(), 26.0 + 16.0 + 40.0 + 16.0 + 40.0 + 16.0);
     }
 
-    /// The Tray tab row at 390 (362 px inside, gap 18): tabs alone; the tool group (auto
+    /// A tab row at 390 (362 px inside, gap 18): tabs alone; the tool group (auto
     /// margin) and Random soup share a line, pushed right by the free space; Clear wraps.
     #[test]
     fn tab_row_wraps_like_the_mockup() {

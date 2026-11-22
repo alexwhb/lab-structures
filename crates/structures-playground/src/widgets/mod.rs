@@ -178,7 +178,7 @@ mod tests {
 
     #[test]
     fn tiled_targets_never_overlap() {
-        // a row of nine 28 × 30 bits, 4 px apart (Tray)
+        // a row of nine 28 × 30 controls, 4 px apart
         let bits: Vec<Rect> = (0..9)
             .map(|i| Rect::from_min_size(pos2(i as f32 * 32.0, 0.0), vec2(28.0, 30.0)))
             .collect();

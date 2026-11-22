@@ -1,4 +1,4 @@
-//! A small popup menu under a header button (the Rule lab's Export: Copy RLE, Copy script,
+//! A small popup menu under a button (e.g. an Export: Copy netlist, Save .str…,
 //! Save .rle…, Save .rule…). The mockup leaves Export as a bare button (SPEC DONE-3), so the
 //! look follows its other surfaces: a `#111111` card with a `#2E2E2E` border (radius 8,
 //! padding 4) and a soft shadow, 36 px items in Inter 500 13 px `#D9D9D9` that light up
