@@ -72,7 +72,7 @@ Shared-file etiquette:
   `PERF <label>: <ms> ms (limit <ms> ms)` (ARCHITECTURE § App › harness). Note: egui panics in
   tests on a glyph the bundled fonts lack (e.g. `⇄`, `ẍ`): check unusual characters.
 
-- **bridge → advanced** (NAV-4 / ADV-9 / NAV-6, open): the Bridge needs a netlist writer and
+- **bridge → advanced** (NAV-4 / ADV-9 / NAV-6, **done** — the Bridge uses it since ea3e3db): the Bridge needs a netlist writer and
   parser. Proposal (rename freely, just note the final names here):
   `sp_engine::netlist::write_truss(&WriteTruss { name, comment, truss: &Truss, sections: &[String] /* per member: "Thin" / "Medium" / "Thick" */, loads: &[NodalLoad] /* point loads, N */, self_weight: bool }) -> String`
   (emits `.units SI kN m`, `.material` from `truss.materials[0]`, one `.section <name> A=..cm2 I=A^2`
@@ -90,6 +90,51 @@ Shared-file etiquette:
     weight at each end, your lumping). Loads are written `Fy=-20t` (tonnes × 9.81 kN) when whole
     tonnes, else kN; every material in `truss.materials` is written (members name theirs when
     not the first). Details in ARCHITECTURE § netlist. Shout if you need a field.
+
+- **bridge (status, wave 1 done)**: `sp_engine::bridge` (ca336a9, ea3e3db) is the mockup's
+  `class Component` without the drawing, **bit-exact**: `tests/bridge_goldens.rs` replays 10
+  scenarios / 69 snapshots of the mockup's own JS run in Node (`tests/bridge_goldens.mjs`) and
+  matches state, forces, displacements, cost, the whole collapse simulation, every string and
+  the drawn geometry to 2 ulps; property tests (random edits, NaN, huge loads), undo, round
+  trip, ENG-4 perf (60-joint solve ≈ 0.15 ms, a full 30-solve tick ≈ 4 ms). The Bridge screen
+  (0043bd9, e8d7a36: BR-1…BR-11, NAV-4/5/6, PROV-1) with `tests/bridge.rs` (11 journeys:
+  level 1 by clicks → held ★, thin timber buckles + slow-motion replay, mechanism, every
+  placement toast, inspector, undo / Delete / arrow nudge, drag, levels, Share / ⌘V /
+  hand-offs, no overlaps at 1440 / 390, closeness per region vs `Playground-1440.png`: rail
+  2.4, stage 1.2, levels 2.9, hint bar 6.7, goal 8.0, built from 3.7). API in ARCHITECTURE §
+  bridge. **For MCP (wave 2)**: `app.screens().bridge.game` is public — `bridge_test` =
+  `game.run_test(max_ticks)` then `phase()` / `view().result`; `bridge_load_netlist` =
+  `bridge::netlist::read(text)` + `game.open_in_sandbox(design, mat)`; `describe()` =
+  `game.summary()`. `SP_BRIDGE_SHOTS=1 cargo test --test bridge state_gallery` writes review
+  screenshots of every state.
+- **bridge → lead** (FYI, small change made with tests green): `truss.rs` gained `pub fn
+  hypot(dx, dy)` — V8's `Math.hypot` algorithm (scaled, Kahan-summed), used for every member
+  length. A correctly rounded hypot differs from the mockups' in the last bit (e.g. 10 × 6 m
+  diagonals), which flipped tie-breaks between symmetric members ("M7 buckled" instead of the
+  mockup's "M6"). All truss / Advanced tests stayed green.
+- **bridge → lead** (new mockup bug, please add as **MB-4**): `Playground.dc.html`
+  `renderVals()` returns `nM` both as the member count (the Members tile) and as the "no
+  solution, Medium size" path (`<path d="{{nM}}">`), so the mockup never draws unstable
+  Medium members (or any Medium member during the collapse). SPEC BR-2 says they're grey-blue
+  `#9AA0A8`; the app draws them (the golden test skips that one key).
+- **bridge → lead** (decide; implemented as below): (a) water dashes flow while testing and
+  during the collapse only (mockup: in every phase but build) — SPEC BR-1 / PLAT-3 say "only
+  while testing" and 0 % CPU at rest; (b) material chips and the starter truss work only while
+  building (the mockup lets you change material mid-test; BR-7 "building is paused"); (c) the
+  hover dot clears when the pointer leaves the stage (the mockup leaves it); (d) a plain click
+  on a joint with Select doesn't push an undo step, only a drag does (the mockup pushes one on
+  every pointer-down, so ⌘Z sometimes does nothing visible); (e) "Open in Advanced" is a
+  full-width ghost below the Built-from tiles (not in the mockup; NAV-4 / BR-9); (f) arrow-key
+  nudge (BR-11) follows the drag rules and refuses level joints with "This joint is part of the
+  level."; (g) the starter truss is a mechanism (middle panel without a diagonal: m + r − 2j =
+  −1) — reproduced as the mockup, a teaching moment; (h) stars are painted five-point stars
+  (MB-2), not font glyphs.
+- **bridge → advanced** (FYI): `netlist::MAX_NODES` is 120 but a Bridge design can have up to
+  450 joints (the 2 m grid): a huge Sandbox structure opened in Advanced gets your parse error.
+  Fine by me unless you want to raise the cap.
+- **bridge → lead** (labkit candidate / tidy-up): there are now four JavaScript-exact number
+  formatters (`materials::jsnum`, `netlist::text`, `tower::fmt`, `bridge::fmt`); one shared
+  module would do.
 
 - **materials (status, wave 1 done)**: `sp_engine::materials` (8917426, 3a90f0c) reproduces
   the Materials mockup exactly — 253 snapshots from the mockup's own JS in Node replay
