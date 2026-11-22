@@ -23,6 +23,34 @@ use serde::{Deserialize, Serialize};
 /// Standard gravity used by every screen, m/s² (the mockups' `9.81`).
 pub const G: f64 = 9.81;
 
+/// `Math.hypot(dx, dy)` exactly as JavaScript engines (V8) compute it: both values scaled by
+/// the larger magnitude, squared and Kahan-summed, then `sqrt · max`. It can differ from a
+/// correctly rounded hypot in the last bit; member lengths use it so solves match the mockups
+/// bit for bit (symmetric members then tie-break the same way: "M6 buckled", not "M7").
+pub fn hypot(dx: f64, dy: f64) -> f64 {
+    if dx.is_infinite() || dy.is_infinite() {
+        return f64::INFINITY;
+    }
+    if dx.is_nan() || dy.is_nan() {
+        return f64::NAN;
+    }
+    let (ax, ay) = (dx.abs(), dy.abs());
+    let max = ax.max(ay);
+    if max == 0.0 {
+        return 0.0;
+    }
+    let mut sum = 0.0f64;
+    let mut comp = 0.0f64;
+    for v in [ax, ay] {
+        let n = v / max;
+        let summand = n * n - comp;
+        let prelim = sum + summand;
+        comp = (prelim - sum) - summand;
+        sum = prelim;
+    }
+    sum.sqrt() * max
+}
+
 /// Members whose axial force is below this (newtons) count as "carrying almost nothing"
 /// (`Math.abs(q.N) < 500` in the Playground).
 pub const ZERO_FORCE_N: f64 = 500.0;
@@ -329,7 +357,7 @@ impl Truss {
             return 0.0;
         };
         match (self.nodes.get(mem.a), self.nodes.get(mem.b)) {
-            (Some(a), Some(b)) => (b.x - a.x).hypot(b.y - a.y),
+            (Some(a), Some(b)) => hypot(b.x - a.x, b.y - a.y),
             _ => 0.0,
         }
     }
@@ -468,7 +496,7 @@ impl Truss {
             .map(|i| {
                 let m = &self.members[i];
                 let (a, b) = (&self.nodes[m.a], &self.nodes[m.b]);
-                let l = (b.x - a.x).hypot(b.y - a.y);
+                let l = hypot(b.x - a.x, b.y - a.y);
                 (l, (b.x - a.x) / l, (b.y - a.y) / l)
             })
             .collect();
@@ -718,6 +746,21 @@ mod tests {
         assert!(sol.stable, "an unused joint is not a mechanism");
         assert_eq!(sol.loose_loads, vec![2]);
         assert!(!sol.active[2]);
+    }
+
+    /// `hypot` reproduces V8's `Math.hypot` (values from Node 22), including where it differs
+    /// from the correctly rounded result.
+    #[test]
+    fn hypot_matches_javascript() {
+        assert_eq!(hypot(10.0, 6.0), 11.6619037896906);
+        assert_ne!(hypot(10.0, 6.0), 136f64.sqrt());
+        assert_eq!(hypot(6.0, 6.0), 8.485281374238571);
+        assert_eq!(hypot(10.0, 12.0), 15.620499351813312);
+        assert_eq!(hypot(8.0, 6.0), 10.0);
+        assert_eq!(hypot(-3.0, 0.0), 3.0);
+        assert_eq!(hypot(0.0, 0.0), 0.0);
+        assert!(hypot(f64::NAN, 1.0).is_nan());
+        assert_eq!(hypot(f64::NAN, f64::INFINITY), f64::INFINITY);
     }
 
     #[test]

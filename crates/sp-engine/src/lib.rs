@@ -12,6 +12,7 @@
 //! non-finite numbers) is reported as an error or treated as a mechanism.
 #![warn(missing_docs)]
 
+pub mod bridge;
 pub mod dynamics;
 pub mod generate;
 pub mod ground;
