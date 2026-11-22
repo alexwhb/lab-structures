@@ -8,13 +8,14 @@
 #   test        cargo test --workspace: engine unit, golden and property tests, GUI tests with
 #               egui_kittest, end-to-end journeys, MCP tests that spawn the real server; counted
 #               per crate and by kind. A test running longer than 60 s fails the step.
-#   perf        release perf gates (ENG-4, PLAT-1): the ignored tests in every crate's
-#               tests/perf.rs, run with --ignored --nocapture; each line they print as
+#   perf        release perf gates (ENG-4, PLAT-1): every test target named `perf` or
+#               `*_perf` (e.g. crates/sp-engine/tests/advanced_perf.rs), run in release with
+#               --include-ignored --nocapture: the target must pass (its own asserts: 60-joint
+#               Bridge solve < 1 ms, one Test tick < 8 ms, the influence line < 5 ms, …), and
+#               each line it prints as
 #                   PERF <label>: <value> ms (limit <limit> ms)
-#               is a gate (60-joint Bridge solve < 1 ms, one Test tick < 8 ms, the influence
-#               line < 5 ms, …), and start-up → first frame of `--smoke 3` < 2 s. A gate whose
-#               test does not exist yet is SKIP, never FAIL; a perf test that printed no PERF
-#               line is FAIL.
+#               is also listed as a gate; then start-up → first frame of `--smoke 3` < 2 s.
+#               A gate whose test does not exist yet is SKIP, never FAIL.
 #   bundle      macOS only: scripts/bundle-macos.sh --check — builds "dist/Structures
 #               Playground.app" (PLAT-2) and runs scripts/check-bundle.sh (signature, Info.plist,
 #               icon, no machine paths, document types, sandboxed smoke runs)
@@ -182,21 +183,30 @@ fi
 
 # ------------------------------------------------------------------ perf (release)
 if skipped perf; then skip_step "perf (release)" "SKIP / --quick"; else
-  perf_crates=$(has_target perf test)
-  if [ -z "$perf_crates" ]; then
-    skip_step "perf: tests/perf.rs" "no crate has a perf test yet"
-    perf_skip "engine perf (ENG-4)" "<" "-" ms "no tests/perf.rs yet"
+  # test targets named perf / *_perf, as "package:target"
+  perf_targets=$(python3 -c '
+import json, sys
+for p in json.load(sys.stdin)["packages"]:
+    for t in p["targets"]:
+        if "test" in t["kind"] and (t["name"] == "perf" or t["name"].endswith("_perf")):
+            print(p["name"] + ":" + t["name"])' <<<"$META")
+  if [ -z "$perf_targets" ]; then
+    skip_step "perf: tests/*perf.rs" "no crate has a perf test yet"
+    perf_skip "engine perf (ENG-4)" "<" "-" ms "no perf test yet"
   else
-    run_step "perf: ignored tests in tests/perf.rs of $perf_crates (release)" perf \
-      cargo test --release --workspace --test perf -- --ignored --nocapture --test-threads=1
-    P="$LOGS/perf.log"
-    n=0
-    while IFS='|' read -r label value limit; do
-      [ -z "$label" ] && continue
-      n=$((n + 1))
-      perf_gate "$label" "$value" "<" "$limit" "ms"
-    done < <(sed -n 's/^PERF \(.*\): \([0-9.][0-9.]*\) ms (limit \([0-9.][0-9.]*\) ms).*/\1|\2|\3/p' "$P")
-    [ "$n" -eq 0 ] && perf_gate "perf tests printed no PERF lines" "" "<" 0 "ms"
+    for pt in $perf_targets; do
+      pkg="${pt%%:*}"; tgt="${pt#*:}"
+      if run_step "perf: $pkg --test $tgt (release, incl. ignored)" "perf-$tgt" \
+          cargo test --release -p "$pkg" --test "$tgt" -- --include-ignored --nocapture --test-threads=1; then
+        PERF+=("$pkg $tgt (its asserts)|passed|asserts|PASS")
+      else
+        PERF+=("$pkg $tgt (its asserts)|failed|asserts|FAIL")
+      fi
+      while IFS='|' read -r label value limit; do
+        [ -z "$label" ] && continue
+        perf_gate "$label" "$value" "<" "$limit" "ms"
+      done < <(sed -n 's/^PERF \(.*\): \([0-9.][0-9.]*\) ms (limit \([0-9.][0-9.]*\) ms).*/\1|\2|\3/p' "$LOGS/perf-$tgt.log")
+    done
   fi
 
   if run_step "perf: build the release app" build-release \
