@@ -5,8 +5,8 @@
 //! with the mockup's `class Component`); this module only draws [`Game::view`] and forwards
 //! clicks, drags and keys:
 //!
-//! - the row (`Tools` rail 76 px · `Stage` · `Level and inspector` aside), side by side at
-//!   1440 and stacked in the mockup's order, each line as tall as its content, at 390;
+//! - the row (`Tools` rail 76 px · `Stage` · `Level and inspector` aside) on
+//!   [`layout::columns`]: side by side at 1440, stacked in the mockup's order at 390;
 //! - [`rail`] — the tools rail; [`stage`] — the stage painter and its buttons and overlays;
 //!   [`aside`] — levels, goal, inspector / Built from, What's happening; [`bits`] — chips,
 //!   pill, level rows, tool buttons, tiles, stars;
@@ -22,14 +22,14 @@ pub mod stage;
 
 use super::{Badge, Drive, Screen, Share};
 use crate::ctx::{Carry, Command, Ctx, Ticker};
-use crate::layout::{Column, MIN_PANEL_H, resolve};
+use crate::layout::{self, Column};
 use crate::router::Route;
 use crate::widgets::text::{galley, lbl_galley, text_top, wrapped};
 use crate::widgets::{ghost, set_bounds};
 use bits::{CHIP_GAP, ChipLook, ChipSpec, chips_layout, chips_show, label_node};
 use eframe::egui::{
-    Align, CornerRadius, Id, Key, Layout, Modifiers, Rect, ScrollArea, Stroke, StrokeKind, Ui,
-    UiBuilder, accesskit::Role, pos2, vec2,
+    CornerRadius, Id, Key, Modifiers, Rect, Stroke, StrokeKind, Ui, UiBuilder, accesskit::Role,
+    pos2, vec2,
 };
 use sp_engine::bridge::game::TICK_SECONDS;
 use sp_engine::bridge::{
@@ -113,8 +113,6 @@ pub struct BridgeScreen {
     ticker: Ticker,
     /// Water dash offset, stage px.
     flow: f32,
-    /// Content heights of the three columns, measured the frame before (stacked layout).
-    heights: [f32; 3],
 }
 
 impl Default for BridgeScreen {
@@ -130,7 +128,6 @@ impl BridgeScreen {
             game: Game::new(),
             ticker: Ticker::default(),
             flow: 0.0,
-            heights: [rail::content_height(), 600.0, 900.0],
         }
     }
 
@@ -417,117 +414,6 @@ impl BridgeScreen {
         ui.advance_cursor_after_rect(rect);
     }
 
-    /// The row, laid out like the mockup's wrapping flex row. Side by side the columns fill
-    /// the body and the aside scrolls on its own; stacked, each line is as tall as its
-    /// content (the 390 reference) and only the page scrolls.
-    fn row(&mut self, ui: &mut Ui, ctx: &mut Ctx, v: &View, actions: &mut Vec<Action>) {
-        let origin = ui.cursor().min;
-        let width = ui.available_width();
-        let lines = resolve(width, &COLS);
-        let stacked = lines.len() > 1;
-        let body_h = ctx.body_height().max(MIN_PANEL_H);
-        let mut y = origin.y;
-        let mut measured = self.heights;
-        for line in &lines {
-            let height = if stacked {
-                line.iter()
-                    .map(|p| self.heights[p.index] + 2.0 * COLS[p.index].pad_y)
-                    .fold(0.0, f32::max)
-            } else {
-                body_h
-            };
-            for p in line {
-                let c = &COLS[p.index];
-                let rect = Rect::from_min_size(pos2(origin.x + p.x, y), vec2(p.width, height));
-                let mut col = ui.new_child(
-                    UiBuilder::new()
-                        .id_salt(("bridge-column", p.index))
-                        .max_rect(rect)
-                        .layout(Layout::top_down(Align::Min))
-                        .accessibility_role(Role::Region)
-                        .accessibility_label(c.label),
-                );
-                col.set_clip_rect(rect.intersect(ui.clip_rect()));
-                set_bounds(&col, rect);
-                if let Some(fill) = c.fill {
-                    col.painter().rect_filled(rect, CornerRadius::ZERO, fill);
-                }
-                let stroke = Stroke::new(1.0, t::BORDER);
-                if c.border_left {
-                    col.painter()
-                        .vline(rect.left() + 0.5, rect.y_range(), stroke);
-                }
-                if c.border_right {
-                    col.painter()
-                        .vline(rect.right() - 0.5, rect.y_range(), stroke);
-                }
-                let bl = c.border_left as u8 as f32;
-                let br = c.border_right as u8 as f32;
-                let inner = Rect::from_min_max(
-                    pos2(rect.left() + c.pad_x + bl, rect.top() + c.pad_y),
-                    pos2(rect.right() - c.pad_x - br, rect.bottom() - c.pad_y),
-                );
-                let mut draw = |ui: &mut Ui, me: &mut Self| -> f32 {
-                    let top = ui.cursor().top();
-                    match p.index {
-                        0 => rail::show(ui, me.game.tool(), actions),
-                        1 => me.main_column(ui, v, actions),
-                        _ => aside::show(ui, v, actions),
-                    }
-                    ui.min_rect().bottom() - top
-                };
-                let h = if c.scroll && !stacked && p.index == 2 {
-                    let mut area_ui = col.new_child(
-                        UiBuilder::new()
-                            .max_rect(Rect::from_min_max(
-                                pos2(rect.left() + bl, rect.top()),
-                                pos2(rect.right() - br, rect.bottom()),
-                            ))
-                            .layout(Layout::top_down(Align::Min)),
-                    );
-                    let mut h = 0.0;
-                    ScrollArea::vertical()
-                        .id_salt(("bridge-aside-scroll", p.index))
-                        .auto_shrink([false, false])
-                        .show(&mut area_ui, |ui| {
-                            eframe::egui::Frame::new()
-                                .inner_margin(eframe::egui::Margin::symmetric(
-                                    c.pad_x.round() as i8,
-                                    c.pad_y.round() as i8,
-                                ))
-                                .show(ui, |ui| {
-                                    ui.set_width(inner.width());
-                                    ui.spacing_mut().item_spacing = vec2(c.gap, c.gap);
-                                    h = draw(ui, self);
-                                });
-                        });
-                    h
-                } else {
-                    let mut inner_ui = col.new_child(
-                        UiBuilder::new()
-                            .max_rect(inner)
-                            .layout(Layout::top_down(Align::Min)),
-                    );
-                    inner_ui.spacing_mut().item_spacing = vec2(c.gap, c.gap);
-                    draw(&mut inner_ui, self)
-                };
-                measured[p.index] = h;
-            }
-            y += height;
-        }
-        if stacked
-            && measured
-                .iter()
-                .zip(self.heights)
-                .any(|(a, b)| (a - b).abs() > 0.5)
-        {
-            ui.ctx().request_discard("bridge column heights changed");
-        }
-        self.heights = measured;
-        let used = Rect::from_min_max(origin, pos2(origin.x + width, y));
-        lab_ui::paint::advance_block(ui, used);
-    }
-
     /// Arrow keys nudge the selected joint by 2 m (BR-11).
     fn keys(&mut self, ui: &Ui, ctx: &Ctx, actions: &mut Vec<Action>) {
         let _ = actions;
@@ -556,7 +442,15 @@ impl Screen for BridgeScreen {
         let mut actions = Vec::new();
         self.keys(ui, ctx, &mut actions);
         let v = self.game.view();
-        self.row(ui, ctx, &v, &mut actions);
+        // the row: side by side at 1440 (the aside scrolls on its own), stacked with
+        // content-height lines at 390 (`layout::columns`)
+        let tool = self.game.tool();
+        let me = &*self;
+        layout::columns(ui, ctx, &COLS, |ui, _ctx, i| match i {
+            0 => rail::show(ui, tool, &mut actions),
+            1 => me.main_column(ui, &v, &mut actions),
+            _ => aside::show(ui, &v, &mut actions),
+        });
         for a in actions {
             self.apply(a, ctx);
         }

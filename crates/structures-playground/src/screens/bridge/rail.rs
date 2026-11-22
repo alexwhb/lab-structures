@@ -19,12 +19,6 @@ fn icon(tool: Tool) -> Icon {
     }
 }
 
-/// Height of the rail's content (6 tools, divider, Undo, Clear; `gap: 6px`).
-pub fn content_height() -> f32 {
-    let n = 8.0;
-    n * t::size::TOOL_H + 8.0 * 6.0 + 13.0
-}
-
 /// Draws the rail into `ui` (the column's content box) and returns the clicked action.
 pub fn show(ui: &mut Ui, active: Tool, actions: &mut Vec<Action>) {
     let left = ui.max_rect().left();
