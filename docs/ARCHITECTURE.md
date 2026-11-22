@@ -120,6 +120,14 @@ The Playground › Bridge game: `Playground.dc.html`'s `class Component` without
 - **`bridge::fmt`** — JavaScript-exact `to_fixed` (ties up), `js_round`, `num`, `stars`.
 - `truss::hypot` (added for the Bridge, used for every member length): V8's `Math.hypot`, so
   symmetric members tie-break like the mockup.
+- **Screen** (`structures-playground/src/screens/bridge.rs` + `bridge/{stage,rail,aside,bits}.rs`,
+  scene colours in `sp_theme::bridge`): draws `Game::view()` each frame, collects clicks /
+  drags as `Action`s and applies them after drawing; `BridgeScreen { pub game: Game }` (MCP:
+  `bridge_test` = `game.run_test(n)`, `bridge_load_netlist` = `bridge::netlist::read` +
+  `game.open_in_sandbox`, `describe()` = `game.summary()`); `stage::Xf` maps grid metres to
+  points. Header: drive "Test" / "Pause" → `start_or_stop`, Reset → `clear`, clock, document =
+  level slug, Share = `bridge::netlist::write`. `Command::{Undo, Delete, Paste}`; arrow keys
+  nudge; `Carry::Netlist` in (Sandbox) and out ("Open in Advanced").
 - Tests: `tests/bridge_goldens.rs` replays `tests/bridge_goldens.json` (10 scenarios, 69
   snapshots written by `node crates/sp-engine/tests/bridge_goldens.mjs`, which runs the
   mockup's `Component` verbatim) and matches state, forces, displacements, cost, the collapse
