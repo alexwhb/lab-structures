@@ -13,9 +13,12 @@
 #![warn(missing_docs)]
 
 pub mod dynamics;
+pub mod generate;
 pub mod ground;
+pub mod influence;
 pub mod linalg;
 pub mod materials;
+pub mod netlist;
 pub mod tower;
 pub mod truss;
 
