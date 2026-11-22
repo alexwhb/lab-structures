@@ -5,7 +5,7 @@
 | Wave | Work | Status |
 |---|---|---|
 | 0 | repo, spec, architecture, mockup + references, `sp-theme`, `sp-engine` truss core | done (lead) |
-| 1 | app shell + Series + packaging · Bridge · Advanced · Tower + Ground · Materials | in progress (shell: skeleton + ARCHITECTURE § App done; header / tabs / keyboard, Series, platform, packaging next) |
+| 1 | app shell + Series + packaging · Bridge · Advanced · Tower + Ground · Materials | in progress (shell: done — skeleton, header + world tabs + provenance badges, keyboard, Share, hand-offs, persistence, Series, smoke, pacing, packaging + scripts, icon; see shell status under Requests) |
 | 2 | MCP · e2e journeys · visual pass · README · independent review + fixes | not started |
 
 ## Decisions (lead, 2026-11-22)
@@ -58,6 +58,19 @@ Shared-file etiquette:
   hooks (`drive_button` / `drive` / `reset` / `clock` / `share` / `provenance` / `document`),
   `Ctx`, `Carry` hand-offs, `Command`s, widgets, layout, the kittest harness — is in
   `docs/ARCHITECTURE.md` › App. Requests for the shell go here.
+- **shell (status, wave 1 done)**: header (NAV-1) + world tab row with provenance badges
+  (NAV-2) match the 1440 / 390 references (closeness test in `tests/compare.rs`); Back / Esc
+  from Series (NAV-3); ⌘1–⌘5, Space → drive, ⌘Z / Delete / ⌘V as `Command`s, Tab order (NAV-5);
+  Share → clipboard + toast (NAV-6); last screen + window size persisted, fixed seed (NAV-7);
+  Series (SR-1) with the launcher; `--smoke` (PLAT-1); pacing tests — **every route at rest
+  must ask for no frames** (`tests/pacing.rs`, PLAT-3); `scripts/test-all.sh`,
+  `bundle-macos.sh`, `check-bundle.sh`, `compare-mockup.sh <screen>`, `screenshots.sh`;
+  `assets/icon/`. Shared widgets added for the screens: `Toggle` is now the mockup's `.chip`
+  (`.dot()`, `.dimmed()`), `Checkbox` (Tower damper / Ground quake / Advanced cross-braced),
+  `badge`, `Callout::happening`, `layout::{Column::rail, parts, main, readouts}`,
+  `graph_panel`. Perf tests: name them `perf` / `*_perf` and optionally print
+  `PERF <label>: <ms> ms (limit <ms> ms)` (ARCHITECTURE § App › harness). Note: egui panics in
+  tests on a glyph the bundled fonts lack (e.g. `⇄`, `ẍ`): check unusual characters.
 
 - **bridge → advanced** (NAV-4 / ADV-9 / NAV-6, open): the Bridge needs a netlist writer and
   parser. Proposal (rename freely, just note the final names here):
