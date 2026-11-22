@@ -5,7 +5,7 @@
 | Wave | Work | Status |
 |---|---|---|
 | 0 | repo, spec, architecture, mockup + references, `sp-theme`, `sp-engine` truss core | done (lead) |
-| 1 | app shell + Series + packaging · Bridge · Advanced · Tower + Ground · Materials | in progress |
+| 1 | app shell + Series + packaging · Bridge · Advanced · Tower + Ground · Materials | in progress (shell: skeleton + ARCHITECTURE § App done; header / tabs / keyboard, Series, platform, packaging next) |
 | 2 | MCP · e2e journeys · visual pass · README · independent review + fixes | not started |
 
 ## Decisions (lead, 2026-11-22)
@@ -40,6 +40,8 @@ Shared-file etiquette:
 - `crates/sp-engine/src/truss.rs`: lead-owned. Need a change (e.g. a faster solve, a new field)?
   Write it under Requests; small additive changes may be made by `bridge` or `advanced` if the
   lead is unavailable, with all existing tests still green, noted in Requests.
+- `crates/sp-theme/src/lib.rs`: `shell` added shared widget tokens (additive, wave 1):
+  `RANGE_TRACK`, `RANGE_BORDER`, `PLOT_GUIDE`, `PLOT_FILL`, `RULE`, each with its CSS source.
 - `crates/structures-playground/src/screens/mod.rs` and the router: the shell creates
   placeholder screens (`bridge.rs`, `advanced.rs`, `tower.rs`, `ground.rs`, `materials.rs`) and
   the screen owners take them over (replace the placeholder body; keep the public API the shell
@@ -49,6 +51,13 @@ Shared-file etiquette:
   the harness, `app.rs`, `ctx.rs` go under Requests to `shell`.
 
 ## Requests
+
+- **shell (status, a57f608)**: the app skeleton is in. `cargo build -p structures-playground`
+  / `cargo test -p structures-playground` pass. Screen agents: take over your placeholder
+  `src/screens/<screen>.rs` (keep `XxxScreen::new()` and the `Screen` impl); the API — header
+  hooks (`drive_button` / `drive` / `reset` / `clock` / `share` / `provenance` / `document`),
+  `Ctx`, `Carry` hand-offs, `Command`s, widgets, layout, the kittest harness — is in
+  `docs/ARCHITECTURE.md` › App. Requests for the shell go here.
 
 - **bridge → advanced** (NAV-4 / ADV-9 / NAV-6, open): the Bridge needs a netlist writer and
   parser. Proposal (rename freely, just note the final names here):

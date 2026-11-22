@@ -71,9 +71,192 @@ TODO (owner fills in).
 
 ## App (`crates/structures-playground`) — agent `shell`
 
-TODO (shell fills in): the Screen trait / screen context API, router (`Route`), header and tab
-row, widgets, layout helpers, harness for tests (`tests/common`), how a screen registers its
-drive button / clock / Reset / Share, toasts, hand-offs between screens (NAV-4), smoke mode.
+Forked from Automata Playground's app crate and renamed. `lib.rs` re-exports the API screens
+use: `Screen`, `Ctx`, `Carry`, `Command`, `Drive`, `Share`, `Badge`, `Provenance`, `Route`,
+`Mode`, `Ticker`, `AppId`, `Launcher`.
+
+### Files
+
+| file | what |
+|---|---|
+| `src/app.rs` | `StructuresApp`: the frame (paper ground → header → world tab row → screen body → toasts), shortcuts, Share, navigation + hand-offs, persistence; `AppOptions` (`::default()` real, `::test()` / `::at(route)` deterministic); `AppEvent` log |
+| `src/ctx.rs` | `Ctx` (per-frame screen context), `Carry`, `Command`, `Ticker`, frame pacing |
+| `src/router.rs` | `Route` (`Bridge`, `Tower`, `Ground`, `Materials`, `Advanced`, `Series`), `Mode`; per route: tab label, default document, mockup, board size, chrome / panel height, ⌘-digit, id |
+| `src/screens/mod.rs` | the `Screen` trait, `Drive`, `Share`, `Badge`, `Provenance`, `Screens` (all six kept alive) |
+| `src/screens/{bridge,advanced,tower,ground,materials}.rs` | **owned by the screen agents** (placeholders from the shell: keep `XxxScreen::new()` + the `Screen` impl) |
+| `src/screens/series.rs` | SCR-6 (shell) |
+| `src/layout.rs` | `Column` + `columns` (the mockup's wrapping flex rows), `stage`, `graph_panel` |
+| `src/widgets/*` | the widget kit (below); `header.rs`, `tabs.rs` are the chrome |
+| `src/launcher.rs` | the lab-series apps (`AppId`) and the injectable launcher (Series cards) |
+| `src/platform.rs` | `.str` files from Finder / the command line → Advanced (`Carry::Netlist`) |
+| `src/smoke.rs` | `--smoke <s> [--headless]` (PLAT-1) |
+| `tests/common/mod.rs` | the egui_kittest harness |
+
+### How a screen plugs in
+
+Each screen is `pub struct XxxScreen` with `pub fn new() -> Self` and `impl Screen`. The app
+owns one of each in `Screens` (`app.screens().bridge`, …) for the whole run, so state survives
+navigation. Only `ui` is required; everything else has a default.
+
+```rust
+impl Screen for TowerScreen {
+    fn ui(&mut self, ctx: &mut Ctx, ui: &mut Ui) { /* the body under the chrome */ }
+    fn document(&self) -> Option<String> { None }                 // header doc name; None = Route::document()
+    fn drive_button(&self) -> Option<Drive> {                       // the .prim drive button
+        Some(Drive::new("Play gusts").running(self.playing))        // "Pause" + pause icon while running
+    }
+    fn drive(&mut self, ctx: &mut Ctx) { self.playing = !self.playing; } // click or Space
+    fn has_reset(&self) -> bool { true }                            // show Reset (default true)
+    fn reset(&mut self, ctx: &mut Ctx) { *self = Self::new(); }
+    fn clock(&self) -> String { format!("T = {:.1} s", self.period) } // mono clock; "" = none
+    fn share(&mut self, ctx: &mut Ctx) -> Option<Share> {           // NAV-6; None = "Nothing to share yet"
+        Some(Share::new(self.story_line()).toast("Copied the tower as a .story line"))
+    }
+    fn provenance(&self) -> Vec<Badge> {                            // PROV-1, right of the world tabs
+        vec![Badge::simplified("Wind + sway: simplified cantilever"),
+             Badge::illustrative("Comfort bands: illustrative"), Badge::illustrative("Game costs")]
+    }
+    fn tick(&mut self, ctx: &mut Ctx) { /* advance by ctx.dt(); ctx.animate() / ctx.wake_in(s) while moving */ }
+    fn command(&mut self, cmd: Command, ctx: &mut Ctx) -> bool { false } // ⌘Z, Delete, ⌘V
+    fn enter(&mut self, ctx: &mut Ctx) {}                           // route became active (may repeat)
+    fn receive(&mut self, carry: Carry, ctx: &mut Ctx) {}           // NAV-4 hand-off, right after enter
+    fn describe(&self) -> String { String::new() }                  // one-line summary (MCP describe)
+}
+```
+
+Per frame, for the active route: `enter` (first frame on the route) → `receive` (if a hand-off
+is pending) → shortcuts / `command`s / Space → `drive` → `tick` (once per frame, not again in a
+discarded layout pass) → the header reads `document`, `drive_button`, `has_reset`, `clock` and
+calls `drive` / `reset` / `share` on a click → the world tab row reads `provenance` → `ui`.
+
+- **Header (NAV-1)** — drawn by the app (`widgets/header.rs`): logo mark + "Structures
+  Playground" (an AccessKit `Link` → Series), `/`, the document name (a `Label`), the mode
+  switcher (`Navigation` "Mode": `Link`s Playground → last world, Advanced → Advanced; the
+  current one `selected`), then the drive button (`Button` named "Test" / "Pause" …), Reset,
+  the clock (`Label`), Share. Not on Series (it has its own Back).
+- **World tab row (NAV-2)** — `widgets/tabs.rs`, on the four worlds: `TabList` "Playground
+  worlds" with `Tab`s (current `selected`), and a `Group` "Provenance" with the screen's
+  badges (each a `Label`). Badges: `Badge::exact / simplified / illustrative(text)`,
+  `Badge::dot(text, colour)`, `Badge::plain(text)`; draw one anywhere with
+  `widgets::badge(ui, &b)` (or `badge_with(ui, &b, BadgeLook::DANGER)`).
+- **Share (NAV-6)** — the app copies `Share::text` to the clipboard (`Ctx::copy`, readable in
+  tests as `app.last_copied()`) and toasts `Share::toast` (default "Copied <document> to the
+  clipboard").
+- **Keys (NAV-5)** — the app handles ⌘1–⌘4 (worlds), ⌘5 (Advanced), Esc on Series (Back), and
+  Space with nothing focused (a focused button takes Space itself) → `drive` (only if
+  `drive_button()` is enabled). With no text field focused it sends `Command::Undo` (⌘Z),
+  `Command::Delete` (Delete / Backspace) and `Command::Paste(text)` (⌘V; the paste event is
+  consumed). Screens handle other keys themselves (`ui.input`), e.g. arrow keys on a selected
+  joint. Tab order is egui's: widgets in the order they are drawn (reading order).
+
+### `Ctx` (per frame)
+
+`route()`, `last_world()`, `previous()`; `go(route)`, `go_with(route, carry)`, `back()` (to
+`previous`, else the last world); `pending()`; `toast(text)`; `copy(text)`; `save_text(name,
+contents) -> Result<Option<PathBuf>>` (native dialog in the app, the output folder in tests);
+`launch(AppId) -> Launch`; `rng_seed()` (fixed: `AppOptions::DEFAULT_SEED`, 7 in tests, NAV-7);
+`autoplay()` (off in tests); `dt()`; `text_focus()`; `body_height()` (the window under the
+chrome: what side-by-side columns fill); `egui()`; `animate()`; `wake_in(secs)`.
+
+**Frame pacing (PLAT-3).** Nothing repaints unless asked. While something moves call
+`ctx.animate()` every frame (display rate; at most 240 fps, 10 fps while the window is hidden),
+or `ctx.wake_in(secs)` when only the next step matters (a 30 ticks/s test ramp:
+`ctx.wake_in(ticker.due_in(30.0))`). `ctx.dt()` is the real time since the previous frame
+(capped at 0.1 s; after idling it's ≤ 1/60 s, so pressing Play doesn't jump). Turn
+`dt` into fixed steps with `Ticker::steps(dt, rate)` (≤ 8 per frame). Idle = no `animate` /
+`wake_in` = 0 % CPU.
+
+### Hand-offs (NAV-4) — `Carry`
+
+```rust
+pub enum Carry {
+    Netlist { text: String, name: Option<String>, from: Option<Route> }, // .str text
+    Building { floors: u32, base_shear_n: f64, overturning_nm: f64 },    // Tower → Ground
+    Tower { floors: u32 },                                               // Ground → Tower
+}
+Carry::netlist(text, Some("my-bridge"), Route::Bridge)   // builder; carry.from()
+```
+
+| from → to | button | call | the target does |
+|---|---|---|---|
+| Tower → Ground | "Send base reactions to Ground ›" | `ctx.go_with(Route::Ground, Carry::Building { .. })` | floors → building load; the moment as a note |
+| Ground → Tower | "‹ Back to the Tower" | `ctx.go_with(Route::Tower, Carry::Tower { floors })` | keeps its settings, takes the floors |
+| Bridge → Advanced | "Open in Advanced" | `ctx.go_with(Route::Advanced, Carry::netlist(text, Some(name), Route::Bridge))` | parses + solves it (ADV-9); `name` → document |
+| Advanced → Bridge | "Open in Playground" | `ctx.go_with(Route::Bridge, Carry::netlist(text, None, Route::Advanced))` | loads it into the Sandbox if it fits the grid |
+| Finder / CLI `.str` → Advanced | — | the app (`platform.rs`) | as Bridge → Advanced, `from: None` |
+
+The carry is delivered at the start of the next frame, after the target's `enter`; if the
+user navigates on before that, it still reaches its target. Delivered carries are logged
+(`AppEvent::Carried`).
+
+### Widget kit (`src/widgets`, colours from `sp_theme`, every control an AccessKit node)
+
+| widget | CSS | use |
+|---|---|---|
+| `prim(label)`, `ghost(label)` → `Button` | `.prim`, `.ghost` 36 px; `.big()` 44 px | `.icon(Icon::Play)`, `.enabled(b)`, `.pressed(b)` (toggle look + `aria-pressed`), `.full_width()`, `.centered()`, `.height(h)`, `.accessible_name(s)`, `.link()`; `.show(ui)` / `.show_at(ui, rect)` |
+| `SegGroup::new(name, &items, selected)` + `SegItem::new(label).icon(..)` | `.seg` in a well (`.style(SegStyle::Header)`), compact `.mini` | `.show(ui).clicked: Option<usize>`; items report pressed |
+| `Toggle::new(label, on)` | pill toggle | `.show(ui).clicked()` |
+| `Slider::new(label, &mut v, range)` | `input[type=range]` (sand) with its label / value row | `.step(s)`, `.value_text(s)`, `.width(w)` |
+| `lbl(ui, text)`, `lbl_colored` | `.lbl` eyebrow | |
+| `Card::panel()`, `Card::well()` | `.panel`, `.well` | `.padding()`, `.gap()`, `.fill()`, `.border()`, `.label(name)` (a `Group`); `.show(ui, \|ui\| ..)` |
+| `StatTile::new(label, value)` | stat tile (a `.well`) | `.color(c)`, `.compact()` |
+| `Callout::happening(text)` | "What’s happening" section | |
+| `badge(ui, &Badge)`, `badge_with(.., BadgeLook)` | `.badge` + `.dot` | |
+| `Chip::new(text).part(text, colour)` | the floating measurement `.chip` | `.show_at(ui, pos, Align2)` |
+| `CodeBlock::new(text)` | mono block | |
+| `Plot::series(&values)` | line + fill + guides + playhead | `.height()`, `.playhead(Some(i))`, `.label()` |
+| `Icon::*` | every mockup icon (play, pause, restart, truss, chart, back, the Bridge's tools rail, logo) | `icon.paint(painter, rect, colour)` |
+| `Toasts` | app toasts (2.6 s, bottom centre) | `ctx.toast(text)` |
+| `text::{galley, wrapped, text_top, lbl_galley, …}` | text helpers | |
+| `widgets::hit::{target, tile}`, `interact`, `set_bounds` | 44 px hit areas, AccessKit plumbing | |
+
+`widgets::gallery::Gallery` draws all of them (the widget tests). Screen agents may add
+widget files for their own screen (one `pub mod` line in `widgets/mod.rs`); changes to the
+shared widgets go to `shell` via PROGRESS Requests.
+
+### Layout helpers (`src/layout.rs`)
+
+`Column` is one flex column of a body row: `Column::rail("Tools")` (76 px, the Bridge),
+`Column::parts("Parts")` (1 1 250, 220–300, border-right), `Column::main("Stage")` (999 1 560,
+padding 14 16, gap 10; `.flex(999.0, 1.0, 520.0).pad(16.0, 16.0).gap(12.0)` for Tower / Ground /
+Materials), `Column::readouts("Readouts")` (1 1 300, 260–360, border-left), plus `.flex()`,
+`.min()`, `.max()`, `.pad(y, x)`, `.gap()`, `.border_left()`, `.border_right()`, `.scroll(b)`.
+`layout::columns(ui, ctx, &COLS, |ui, ctx, i| ..)` lays the row out (CSS flex-wrap with min /
+max widths): side by side the columns fill `ctx.body_height()` and asides scroll on their own;
+stacked (narrow windows) each line is at least the route's `panel_height()` and only the page
+scrolls. `layout::resolve(width, &cols)` is the pure maths. `layout::stage(ui)` paints the
+`.graph` ground over the rest of `ui`; `layout::graph_panel(ui, rect, fill)` returns a clipped
+child `Ui` for a rounded stage panel, `graph_panel_border(ui, rect)` draws its border on top.
+
+### Test harness (`tests/common/mod.rs`, `mod common; use common::*;`)
+
+Building: `harness(route)` (1440 × 900), `harness_at(route, w, h)`, `app().at(r).phone()`
+(390 × 1000) / `.board()` / `.size(w, h)` / `.launcher(l)` / `.autoplay()` / `.options(o)`
+`.build()`; `settle(&mut h)` (4 frames). State: `route(&h)`, `goto(&mut h, r)`,
+`hand_off(&mut h, r, carry)`, `events(&h)` / `carried(&h)` (`AppEvent`s), `last_copied(&h)`,
+`document(&h)`, `drive_label(&h)`, `toasts(&h)`, `step_until(&mut h, n, |h| ..)`,
+`h.state().screens().tower` (the screen's own state). Acting by AccessKit label:
+`click(&mut h, label)`, `click_button`, `click_link`, `click_tab`, `click_role(.., Role)`,
+`click_drive(&mut h)`, `click_header(&mut h, "Reset")`, `header_button(&h, label)`,
+`type_into(&mut h, label, text)`, `press(&mut h, Key)`, `press_cmd(&mut h, Key)`,
+`reveal(..)` (scrolls into view). Reading: `has_label`, `has_label_containing`, `get(&h, label,
+Role)`, `pressed(&h, label)`, `selected(&h, label, Role)`, `disabled(&h, label)`,
+`focused_label(&h)`, `nodes_with_roles(&h, &[Role])`, `child_labels(..)`, `text_of(&node)`.
+Rendering: `render(&mut h)`, `screenshot(&mut h, name)` (into the test's tmp dir),
+`render_full(route, w, min_h)`, `mockup_png(route, 1440)`, `load`, `mean_diff(a, b,
+region)`.
+
+`AppOptions::test()` is deterministic: seed 7, no autoplay, no persistence, no save dialog, a
+recording launcher with nothing installed, a fresh temp output folder.
+
+### Persistence (NAV-7), platform, smoke
+
+eframe keeps the window size (`persist_window`) and `Persisted { route, last_world }` (Series
+restores to the last world). A fresh start is reproducible: the seed is fixed
+(`AppOptions::DEFAULT_SEED`). `structures-playground --smoke <seconds> [--headless]` opens
+the Bridge, presses its drive button, runs and prints `SMOKE route=bridge mode=… first_frame_ms=…
+frames=… frame_ms_avg=… frame_ms_max=… status=ok`. `STRUCTURES_BUNDLE=1` at build time
+(`scripts/bundle-macos.sh`) leaves the checkout path out of the binary (`MANIFEST_DIR`).
 
 ## MCP — wave 2
 
