@@ -18,7 +18,7 @@
 //! | [`paint_path`] | SVG path data painted into a rect (tile icons) |
 
 use super::icons::{fill_polygon, parse_path, stroke_polyline};
-use super::text::{css_line_height, galley, lbl_galley, text_top, wrapped};
+use super::text::{css_line_height, galley, galley_spaced, lbl_galley, text_top, wrapped};
 use super::{hit, interact};
 use eframe::egui::{
     Align2, Color32, CornerRadius, Painter, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui,
@@ -27,6 +27,12 @@ use eframe::egui::{
 use lab_theme::font;
 use lab_ui::paint::focus_ring_if;
 use sp_theme as t;
+
+/// Chrome's `line-height: normal` box for Inter at `size` px: `round(0.96875·size) +
+/// round(0.2421875·size)` (the font's ascender / descender), e.g. 13 px → 16, 11 px → 14.
+pub fn inter_line(size: f32) -> f32 {
+    (0.96875 * size).round() + (0.2421875 * size).round()
+}
 
 /// Paints SVG path data `d` (in a `viewbox`-sized box) into `rect`, stroked and/or filled.
 pub fn paint_path(
@@ -95,7 +101,8 @@ pub fn title_block(ui: &mut Ui, title: &str, sub: &str, status: &str, color: Col
     let width = ui.available_width();
     let pill = pill_size(ui, status);
     let hf = font::heading(22.0);
-    let h = galley(ui, title, hf.clone(), t::TEXT);
+    // `letter-spacing: -0.01em`
+    let h = galley_spaced(ui, title, hf.clone(), t::TEXT, -0.22);
     let text_w = (width - pill.x - 12.0).max(120.0);
     // CSS: the text block's width is its content (the sub-line can be long); it wraps only
     // when the line is full.
@@ -484,13 +491,15 @@ pub fn value_row(ui: &mut Ui, label: &str, style: RowLabel, value: &str, color: 
         })
     };
     let lh = match style {
-        RowLabel::Eyebrow => css_line_height(ui, &font::semibold(11.0)),
-        RowLabel::Strong => css_line_height(ui, &font::semibold(13.0)),
-        RowLabel::Plain => css_line_height(ui, &font::body(13.0)),
+        RowLabel::Eyebrow => css_line_height(ui, &font::semibold(11.0)).max(inter_line(11.0)),
+        RowLabel::Strong => css_line_height(ui, &font::semibold(13.0)).max(inter_line(13.0)),
+        RowLabel::Plain => css_line_height(ui, &font::body(13.0)).max(inter_line(13.0)),
     };
     let h = lh.max(vg.size().y);
     let (rect, _) = ui.allocate_exact_size(vec2(width, h), Sense::hover());
-    let baseline = rect.top() + base(&lg).max(base(&vg));
+    // the label's baseline sits where Chrome puts it in its line box (half-leading)
+    let lg_top = rect.top() + (lh - lg.size().y) / 2.0;
+    let baseline = (lg_top + base(&lg)).max(rect.top() + base(&vg));
     let p = ui.painter();
     p.galley(pos2(rect.left(), baseline - base(&lg)), lg, lcolor);
     p.galley(
@@ -748,7 +757,7 @@ pub fn challenge(ui: &mut Ui, title: &'static str, rung: &str, body: impl FnOnce
         .show(ui, |ui| {
             let width = ui.available_width();
             let tf = font::heading(15.0);
-            let tg = galley(ui, title, tf.clone(), t::TEXT);
+            let tg = galley_spaced(ui, title, tf.clone(), t::TEXT, -0.15);
             let rg = galley(ui, rung, font::mono(11.0), t::TEXT_MUTED);
             let h = css_line_height(ui, &tf);
             let (rect, _) = ui.allocate_exact_size(vec2(width, h), Sense::hover());
