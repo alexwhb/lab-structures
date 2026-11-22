@@ -190,7 +190,76 @@ All UI-free; numbers in SI inside, text exactly as the Advanced mockup prints it
 
 ### `tower`, `dynamics`, `ground` (agent `worlds`)
 
-TODO (owner fills in).
+Both worlds reproduce their mockup's `calc()` operation for operation, and also own the copy
+the screens print (tiles, statuses, sentences, goals), so every on-screen string comes from
+the engine (DONE-2). Golden data: `tests/tower_ground_goldens.mjs` runs the mockups' own
+`class Component` in Node and writes `tests/{tower,ground}_goldens.json` (110 + 130 states;
+`tower_goldens.rs` / `ground_goldens.rs` match every number and string exactly). Inputs are
+clamped (`sanitized()`); nothing panics. Colour roles are `tower::Tone` (`Plain`, `Ok`,
+`Marginal`, `Caution`, `Alert`, `Danger`; `css()` names the mockup colour) — screens map them
+to `sp_theme`.
+
+- `tower::fmt::{fixed, js_round, round_str, num}` — JavaScript's `toFixed` / `Math.round` /
+  number printing exactly (ties up, unlike Rust's `{:.N}`); used by both worlds.
+- **`tower`**: `System` (`Core`, `Tube`, `Outriggers`, `Braced`) / `Shape` (`Straight`,
+  `Tapered`, `Twisted`, `Hollow`) with `def()` → `SystemDef { key, name, k, cost, icon }` /
+  `ShapeDef { key, name, cd, cross, mass, cost, icon }` (icons: the mockup's SVG paths, 40 ×
+  40), `from_key`. `TowerInput { floors 5–120, system, shape, v10 5–50, damper }` (serde;
+  `Default` = the mockup's start). `calc(&input) -> TowerResult { height, base_shear,
+  overturning, delta, f1, zeta, mg, v_top, fs, ratio, lock, near, cost, dyn_amp }` (+
+  `period()`, `drift_ratio()`, `sway_ok()`, `comfort_ok()`, `within_budget()`). Readouts:
+  `tiles(&r) -> [Tile { key, value, note, tone }; 6]`, `Comfort::of(mg)` (`sentence()`,
+  `tone()`), `comfort_pos`, `Status::of(&r)` (`label()`, `tone()`), `explain`, `compare(&input)
+  -> [ShapeBar { shape, mg, lock, width }; 4]` (`label()`, `tone()`), `goals(&input, &r) ->
+  [Goal { text, done }; 4]`, labels `accel_label`, `sway_chip`, `v_top_label`, `v10_label`,
+  `clock`, `floors_note`, `stage_label`, `share_line` (NAV-6 `.story … .wind …` line).
+  Stage helpers: `mode_shape(z/H)`, `floor_plan(shape, i, n)` (taper / twist factors),
+  `is_sky_slot`, `is_outrigger_floor`, `arrow_heights(H)`, `arrow_len(v10, z)`. Play gusts:
+  `sway_params(&input, &r, seed) -> dynamics::SwayParams` (modal mass `μH·33/140`, 2 % Den
+  Hartog damper, mean lean `0.85·δ`, turbulence 8 %, vortex force locked onto f1 inside the
+  lock-in band). Constants (`FLOOR_H`, `EI_CORE`, `ZETA`, `COMFORT_BANDS`, `BUDGET`,
+  `CHALLENGE_RUNG`, …) are public and listed in `docs/DATA-SOURCES.md`.
+- **`dynamics`**: `rk4_step` / `rk4_step2` (fixed-step RK4, const-generic `[f64; N]`, no
+  allocation); `Linear<N> { m, c, k }` (`sdof(m, f, ζ)`, `with_absorber(m, f, ζ, μ, fd, ζd)`,
+  `accel`, `statics`), `den_hartog(f, μ)`, `invert`; `Newmark<N>` (average acceleration:
+  implicit, unconditionally stable, energy-conserving undamped; `new(sys, h, x0, v0, f0) ->
+  Result<_, DynamicsError>`, `step(f_next)`, public `x`, `v`, `a`, `t`); `SplitMix64`,
+  `Gusts::new(seed, tau, dt).at(t)` (seeded Ornstein–Uhlenbeck series, unit variance);
+  `SwaySim::new(SwayParams)` — `advance(dt)` (48 steps per period, Newmark), `retune(params)`
+  (keeps the swing), `top()`, `swing()`, `velocity()`, `accel()`, `damper_stroke()`,
+  `has_damper()`, `time()`; `playback_speed(f1)` (the default tower sways at the mockup's 0.55
+  Hz on screen; taller slower, 0.25–1.2 Hz). Tests (`tests/dynamics.rs`): RK4 order 4, free
+  decay frequency and log decrement, statics, resonance `F₀/(2ζk)`, the absorber notch, Den
+  Hartog's ≈ 3× peak cut, Newmark stability where RK4 diverges, gust statistics, TMD calms the
+  gust response, lock-in swings harder, determinism, garbage in → finite out, per-frame cost.
+- **`ground`**: `Soil` (`Dense`, `Stiff`, `Soft`, `Loose`) → `SoilDef { key, name, qa, ks, vr,
+  fric, liquefiable, tau }`, `wet()`; `Foundation` (`Footing`, `Mat`, `Piles`, `Caisson`) →
+  `FoundationDef { key, name, icon }` (44 × 34 icons under `ICON_GROUND_LINE`), `deep()`.
+  Soil swatch colours are `sp_theme::ground::SOILS[soil as usize]`. `GroundInput { soil,
+  foundation, floors 2–80, pile_len 8–40, quake, years 0–30, pisa_tried }` (serde).
+  `calc(&input) -> GroundResult { load, pressure, capacity, fs, deep, to_rock, liquefied,
+  settle_final, tilt_final, settle, tilt, tau }` (+ `target()`, `building_load_mn()`).
+  `Status::of(&r)` (Solid / Marginal / Leaning / Bearing failure / Liquefaction), `explain`,
+  `tiles(&input, &r)`, `fs_text`, `fs_tone`, `fs_pos`, `stage_chip`, `year_label`, `clock`,
+  `pile_label`, `stage_label`, `goals(&input) -> [Goal; 3]` (the third looks 30 years ahead),
+  `CHALLENGE_TEXT`, `SCENARIOS: [Scenario; 4]` (`apply(&input)`), Play years `play_tick(years)
+  -> Option<f64>` / `play_start(years)`, `share_line` (`.soil … .foundation …`), and the NAV-4
+  hand-off `FromTower { floors, overturning }` (`ground_floors()` clamps to 80,
+  `edge_pressure()` = `M/(B³/6)` kPa, `note()`).
+
+Screens (`src/screens/{tower,ground}.rs` + `stage.rs` each): `TowerScreen { input, ex,
+playing, sim, flow }` / `GroundScreen { input, playing, from_tower, anim }`, both with
+`result()` and `set_input()` (what MCP `set_tower` / `set_ground` should call). Tower Play
+gusts: `tick` advances the `SwaySim` by `dt × playback_speed(f1)` and calls `ctx.animate()`;
+Pause freezes the sway; changing the tower while playing retunes it, while paused drops it
+(the tower rests at its lean). Ground Play years: 0.25 yr per 60 ms (`Ticker`, `wake_in`;
+`animate` only while shaking or the water table flows). Hand-offs: Tower → `Carry::Building`;
+Ground shows `FromTower::note()` until its floors change and sends `Carry::Tower` back with
+the tower's own floors while the building is unchanged. Widgets only these worlds need are in
+`src/widgets/world.rs` (picture tiles with SVG icons or soil swatches, the floors stepper,
+value rows, the `.lbl` readout grid, band bars, comparison rows, goal rows, the challenge
+card, wrapping scenario buttons, the stage info box, title + status pill) — reusable by any
+world.
 
 ### `materials` (agent `materials`)
 
