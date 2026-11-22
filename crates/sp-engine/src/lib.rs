@@ -12,8 +12,11 @@
 //! non-finite numbers) is reported as an error or treated as a mechanism.
 #![warn(missing_docs)]
 
+pub mod dynamics;
+pub mod ground;
 pub mod linalg;
 pub mod materials;
+pub mod tower;
 pub mod truss;
 
 pub use truss::{
