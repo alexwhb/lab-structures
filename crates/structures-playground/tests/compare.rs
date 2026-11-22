@@ -8,7 +8,8 @@
 //! `target/compare/<Screen>-1440.png` / `<Screen>-390.png` (+ `-1440-app.png`, the app alone).
 //! `SP_COMPARE_ONLY=series,tower` limits it to some routes.
 //!
-//! `chrome_stays_close_to_the_mockup` always runs: the header and the world tab row (the
+//! `readme_screenshots` writes `docs/screenshots/*.png` with `SP_SCREENSHOTS=1`
+//! (`scripts/screenshots.sh`). `chrome_stays_close_to_the_mockup` always runs: the header and the world tab row (the
 //! shell's) must stay within a mean channel difference of the references.
 
 mod common;
@@ -86,6 +87,22 @@ fn side_by_side_with_mockup() {
             "compare: {name}-390 mean |Δ| {:.1}",
             mean_diff(&img, &phone, None)
         );
+    }
+}
+
+/// `scripts/screenshots.sh` (`SP_SCREENSHOTS=1`): every screen at its board size into
+/// `docs/screenshots/<route id>.png` (the README's).
+#[test]
+fn readme_screenshots() {
+    if std::env::var_os("SP_SCREENSHOTS").is_none() {
+        return;
+    }
+    for route in Route::ALL.into_iter().filter(|r| wanted(*r)) {
+        let (w, h) = route.board_size();
+        let (_, img) = app_render(route, w, h);
+        let path = repo().join(format!("docs/screenshots/{}.png", route.id()));
+        save(&img, &path);
+        println!("screenshot: {}", path.display());
     }
 }
 
