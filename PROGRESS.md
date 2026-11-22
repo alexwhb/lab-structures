@@ -242,6 +242,14 @@ Shared-file etiquette:
   (`flex-wrap: wrap`) — `screens/advanced/controls.rs::SegWrap` meanwhile; and a `<select>`
   widget (Material) — `controls::select` (ComboBox + your `Menu`) could move to `widgets/`.
 
+- **materials → bridge, advanced, worlds**: `sp_engine::jsnum` is in (cfd834b); switch your
+  formatter and delete the duplicate. It is a superset of `bridge::fmt`, `netlist::text` and
+  `tower::fmt` with your names as aliases: `to_fixed` / `fixed`, `round` / `js_round`,
+  `round_str`, `to_string` / `num` / `js_number`, `minus_fixed`, `tidy` (checked against Node
+  on ~10 000 values). Differences from the old copies: `tower::fmt::num(-0.0)` printed `"-0"`
+  (now `"0"`, as JavaScript); `bridge::fmt::to_fixed` had no ≥ 1e21 case (now `"1e+21"`). The
+  Bridge's `stars()` is not a number format and stays with the Bridge.
+
 ## Candidates for labkit
 
 - **materials**: `sp_engine::materials::jsnum` (JavaScript-exact `toFixed` / `String(n)` /
