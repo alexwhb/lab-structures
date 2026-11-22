@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Structures Playground app icon: the header logo mark of docs/design/mockup/*.dc.html (a
+       #171717 rounded square with a 1.5 px #D6C7A1 sand border holding the truss glyph
+       M5 18h16M5 18l4-9h8l4 9M9 9l4 9 4-9 and a tension-blue #7FB0E0 joint) on the macOS icon
+       grid (824 px body, 100 px margin), like the siblings' icons. Rendered to
+       "Structures Playground.icns" by assets/icon/render-icon.mjs. -->
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#242424"/>
+      <stop offset="1" stop-color="#101010"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.07"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="glow-joint" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#7FB0E0" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#7FB0E0" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-15%" y="-10%" width="130%" height="135%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    <clipPath id="tile">
+      <rect x="100" y="100" width="824" height="824" rx="186"/>
+    </clipPath>
+  </defs>
+
+  <!-- the tile -->
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#body)" filter="url(#shadow)"/>
+  <g clip-path="url(#tile)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#sheen)"/>
+  </g>
+  <!-- the border runs flush with the tile edge (outer radius = the tile's 186) -->
+  <rect x="118" y="118" width="788" height="788" rx="168" fill="none" stroke="#D6C7A1" stroke-width="36"/>
+
+  <!-- the mark, in the logo's 26-unit space: its rect (1..25) maps onto the tile (100..924) -->
+  <g transform="translate(65.6667 65.6667) scale(34.3333)">
+    <!-- the deck's shadow under the truss -->
+    <path d="M5 18.9h16" fill="none" stroke="#000000" stroke-opacity="0.35" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M5 18h16M5 18l4-9h8l4 9M9 9l4 9 4-9" fill="none" stroke="#D6C7A1" stroke-width="1.6"
+          stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="13" cy="18" r="4" fill="url(#glow-joint)"/>
+    <circle cx="13" cy="18" r="1.8" fill="#7FB0E0"/>
+  </g>
+</svg>

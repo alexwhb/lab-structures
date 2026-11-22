@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Info.plist template for "Structures Playground.app"; scripts/bundle-macos.sh fills in
+     @VERSION@ (the structures-playground crate version), @BUILD@ (a build number: commits on
+     this branch, so newer builds compare higher); scripts/check-bundle.sh checks the keys. -->
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>Structures Playground</string>
+  <key>CFBundleDisplayName</key><string>Structures Playground</string>
+  <key>CFBundleIdentifier</key><string>dev.labseries.StructuresPlayground</string>
+  <key>CFBundleExecutable</key><string>structures-playground</string>
+  <key>CFBundleIconFile</key><string>Structures Playground</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleSignature</key><string>????</string>
+  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+  <key>CFBundleShortVersionString</key><string>@VERSION@</string>
+  <key>CFBundleVersion</key><string>@BUILD@</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.education</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSSupportsAutomaticGraphicsSwitching</key><true/>
+  <key>NSRequiresAquaSystemAppearance</key><false/>
+  <key>NSHumanReadableCopyright</key><string>Structures Playground @VERSION@ — a structural-engineering playground and truss netlist workbench. Educational, not for real structural design.</string>
+
+  <!-- The truss netlist (.str, SPEC NAV-6 / ADV-3) is this app's own plain-text format. -->
+  <key>UTExportedTypeDeclarations</key>
+  <array>
+    <dict>
+      <key>UTTypeIdentifier</key><string>dev.labseries.structures.netlist</string>
+      <key>UTTypeDescription</key><string>Truss Netlist</string>
+      <key>UTTypeConformsTo</key><array><string>public.plain-text</string></array>
+      <key>UTTypeIconFile</key><string>Structures Playground</string>
+      <key>UTTypeTagSpecification</key>
+      <dict><key>public.filename-extension</key><array><string>str</string></array></dict>
+    </dict>
+  </array>
+
+  <!-- Finder "Open With", a drop on the Dock icon and `open -a` hand these to the app, which
+       opens the netlist in Advanced (src/platform.rs). Viewer + Default: the app imports the
+       file rather than editing it in place. -->
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key><string>Truss Netlist</string>
+      <key>CFBundleTypeRole</key><string>Viewer</string>
+      <key>LSHandlerRank</key><string>Default</string>
+      <key>LSItemContentTypes</key><array><string>dev.labseries.structures.netlist</string></array>
+    </dict>
+  </array>
+</dict>
+</plist>
