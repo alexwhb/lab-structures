@@ -228,23 +228,33 @@ impl<'a> Button<'a> {
     }
 }
 
-/// `.tog` — a pill toggle: 28 px, `padding: 0 10px`, Inter 500 12 px, `#141414` with a
-/// `#2E2E2E` border and muted text; on: edge border, tint fill, ink text. AccessKit: a toggle
-/// `Button` with its pressed state.
+/// `.chip` — a pill toggle (Size chips, "Exaggerate sag", "Show forces", the "Built from"
+/// materials, Weight chips): `min-height: 34px; padding: 0 12px; gap: 6px; border: 1px solid
+/// #2E2E2E; border-radius: 999px; background: #141414; color: #C9C9C9; font: 500 12px Inter`;
+/// hover `#F5F5F5` text with a `#3A3A3A` border; on (`.chip-on`): tint `#24221C`, `#6A604A`
+/// border, ink text; `.chip-dim` draws it at 45 % (e.g. a support the level doesn't allow).
+/// An optional 8 px colour dot leads the label (material chips). AccessKit: a toggle `Button`
+/// with its pressed state (`aria-pressed`).
 #[must_use = "call .show(ui)"]
 pub struct Toggle<'a> {
     label: &'a str,
     on: bool,
     name: Option<&'a str>,
+    dot: Option<Color32>,
+    dim: bool,
+    enabled: bool,
 }
 
 impl<'a> Toggle<'a> {
-    /// A toggle showing `label`, currently `on`.
+    /// A chip showing `label`, currently `on`.
     pub fn new(label: &'a str, on: bool) -> Self {
         Self {
             label,
             on,
             name: None,
+            dot: None,
+            dim: false,
+            enabled: true,
         }
     }
 
@@ -254,41 +264,176 @@ impl<'a> Toggle<'a> {
         self
     }
 
-    /// Draws it; `.clicked()` means "flip it".
+    /// A leading 8 px dot in `color` (the material chips' swatches).
+    pub fn dot(mut self, color: Color32) -> Self {
+        self.dot = Some(color);
+        self
+    }
+
+    /// `.chip-dim`: drawn at 45 % opacity (still clickable; the screen explains why).
+    pub fn dimmed(mut self, dim: bool) -> Self {
+        self.dim = dim;
+        self
+    }
+
+    /// Disabled: drawn dimmed, reported disabled, not clickable.
+    pub fn enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
+        self
+    }
+
+    fn font() -> eframe::egui::FontId {
+        lab_theme::font::medium(12.0)
+    }
+
+    /// The drawn size.
+    pub fn desired_size(&self, ui: &Ui) -> eframe::egui::Vec2 {
+        let g = galley(ui, self.label, Self::font(), t::TEXT_CHIP);
+        let dot = if self.dot.is_some() { 8.0 + 6.0 } else { 0.0 };
+        vec2(1.0 + 12.0 + dot + g.size().x + 12.0 + 1.0, t::size::CHIP)
+    }
+
+    /// Draws it at the cursor; `.clicked()` means "flip it".
     pub fn show(self, ui: &mut Ui) -> Response {
-        let font = lab_theme::font::medium(12.0);
-        let fg = if self.on { t::INK } else { t::TEXT_MUTED };
-        let g = galley(ui, self.label, font, fg);
-        let size = vec2(g.size().x + 22.0, super::seg::MINI_H);
+        let size = self.desired_size(ui);
         let (id, rect) = ui.allocate_space(size);
+        self.paint(ui, id, rect)
+    }
+
+    /// Draws it into `rect` (for custom layouts).
+    pub fn show_at(self, ui: &mut Ui, rect: Rect) -> Response {
+        let id = ui.next_auto_id();
+        ui.skip_ahead_auto_ids(1);
+        self.paint(ui, id, rect)
+    }
+
+    fn paint(self, ui: &Ui, id: eframe::egui::Id, rect: Rect) -> Response {
         let resp = interact(
             ui,
             id,
             hit::target(rect),
-            true,
+            self.enabled,
             Role::Button,
             self.name.unwrap_or(self.label),
             Some(self.on),
         );
-        let (fill, border) = if self.on {
-            (t::TINT, t::EDGE)
+        let hovered = resp.hovered() && self.enabled;
+        let (fill, border, mut fg) = if self.on {
+            (t::TINT, t::EDGE_ON, t::INK)
+        } else if hovered {
+            (t::CONTROL, t::BORDER_OVERLAY, t::TEXT_STRONG)
         } else {
-            (t::CONTROL, t::BORDER_STRONG)
+            (t::CONTROL, t::BORDER_STRONG, t::TEXT_CHIP)
         };
+        let alpha = if self.dim || !self.enabled { 0.45 } else { 1.0 };
+        let fade = |c: Color32| c.gamma_multiply(alpha);
+        fg = fade(fg);
         let painter = ui.painter();
         painter.rect(
             rect,
             CornerRadius::same(t::radius::PILL),
-            fill,
-            Stroke::new(1.0, border),
+            fade(fill),
+            Stroke::new(1.0, fade(border)),
             StrokeKind::Inside,
         );
-        painter.galley(
-            pos2(rect.left() + 11.0, text_top(rect.center().y, &g)),
-            g,
-            fg,
-        );
+        let mut x = rect.left() + 13.0;
+        let cy = rect.center().y;
+        if let Some(c) = self.dot {
+            painter.circle_filled(pos2(x + 4.0, cy), 4.0, fade(c));
+            x += 8.0 + 6.0;
+        }
+        let g = galley(ui, self.label, Self::font(), fg);
+        painter.galley(pos2(x, text_top(cy, &g)), g, fg);
         focus_ring_if(ui, &resp, rect, CornerRadius::same(t::radius::PILL));
+        resp
+    }
+}
+
+/// `input[type=checkbox]` in a `<label>` row (Tower "Tuned mass damper at the top", Ground
+/// "Earthquake shaking", Advanced "Cross-braced"): an 18 px box as Chrome draws it with
+/// `accent-color: #D6C7A1` — white with a 1 px `#767676` border when off, the accent with a
+/// dark check when on (radius 2) — then the 13 px label, `gap: 10px`, `min-height: 44px`
+/// (Advanced: `.gap(8.0).height(40.0)`). The whole row is the target. AccessKit: a `CheckBox`
+/// named by the label with its checked state.
+#[must_use = "call .show(ui)"]
+pub struct Checkbox<'a> {
+    label: &'a str,
+    checked: bool,
+    gap: f32,
+    height: f32,
+    enabled: bool,
+}
+
+impl<'a> Checkbox<'a> {
+    /// A checkbox row.
+    pub fn new(label: &'a str, checked: bool) -> Self {
+        Self {
+            label,
+            checked,
+            gap: 10.0,
+            height: t::size::MIN_TARGET,
+            enabled: true,
+        }
+    }
+
+    /// The gap between box and label.
+    pub fn gap(mut self, gap: f32) -> Self {
+        self.gap = gap;
+        self
+    }
+
+    /// The row's min-height.
+    pub fn height(mut self, h: f32) -> Self {
+        self.height = h;
+        self
+    }
+
+    /// Disabled.
+    pub fn enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
+        self
+    }
+
+    /// Draws it at the cursor; `.clicked()` means "flip it".
+    pub fn show(self, ui: &mut Ui) -> Response {
+        let font = lab_theme::font::body(13.0);
+        let g = galley(ui, self.label, font, t::TEXT);
+        let b = t::size::CHECKBOX;
+        let size = vec2(b + self.gap + g.size().x, self.height);
+        let (id, rect) = ui.allocate_space(size);
+        let resp = ui.interact(hit::target(rect), id, super::sense(self.enabled));
+        super::reveal_on_focus(&resp);
+        let (label, enabled, checked) = (self.label.to_string(), self.enabled, self.checked);
+        resp.widget_info(|| {
+            eframe::egui::WidgetInfo::selected(Role::CheckBox, enabled, checked, &label)
+        });
+        let resp = if self.enabled {
+            resp.on_hover_cursor(eframe::egui::CursorIcon::PointingHand)
+        } else {
+            resp
+        };
+        let alpha = if self.enabled { 1.0 } else { 0.45 };
+        let cy = rect.center().y;
+        let boxr = Rect::from_min_size(pos2(rect.left(), cy - b / 2.0), vec2(b, b));
+        let painter = ui.painter();
+        if self.checked {
+            painter.rect_filled(boxr, CornerRadius::same(2), t::ACCENT.gamma_multiply(alpha));
+            let s = Stroke::new(2.0, t::PAPER.base.gamma_multiply(alpha));
+            let p = |x: f32, y: f32| pos2(boxr.left() + x, boxr.top() + y);
+            painter.line_segment([p(4.5, 9.5), p(7.5, 12.5)], s);
+            painter.line_segment([p(7.5, 12.5), p(13.5, 5.5)], s);
+        } else {
+            painter.rect(
+                boxr,
+                CornerRadius::same(2),
+                t::CHECK_BOX.gamma_multiply(alpha),
+                Stroke::new(1.0, t::CHECK_BORDER.gamma_multiply(alpha)),
+                StrokeKind::Inside,
+            );
+        }
+        let fg = t::TEXT.gamma_multiply(alpha);
+        painter.galley(pos2(boxr.right() + self.gap, text_top(cy, &g)), g, fg);
+        focus_ring_if(ui, &resp, boxr.expand(2.0), CornerRadius::same(4));
         resp
     }
 }

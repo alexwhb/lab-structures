@@ -22,6 +22,10 @@ pub struct Gallery {
     pub forces: bool,
     /// A slider value.
     pub floors: f32,
+    /// A checkbox.
+    pub damper: bool,
+    /// The material chip picked.
+    pub material: usize,
     /// Whether the drive button reads Pause.
     pub running: bool,
 }
@@ -35,6 +39,8 @@ impl Default for Gallery {
             sag: true,
             forces: false,
             floors: 60.0,
+            damper: false,
+            material: 0,
             running: false,
         }
     }
@@ -151,6 +157,28 @@ impl Gallery {
                 self.forces = !self.forces;
             }
         });
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 6.0;
+            for (i, (name, dot)) in [("Steel", t::STEEL.fill), ("Timber", t::TIMBER.fill)]
+                .into_iter()
+                .enumerate()
+            {
+                if Toggle::new(name, self.material == i)
+                    .dot(dot)
+                    .show(ui)
+                    .clicked()
+                {
+                    self.material = i;
+                }
+            }
+            Toggle::new("Roller", false).dimmed(true).show(ui);
+        });
+        if Checkbox::new("Tuned mass damper at the top", self.damper)
+            .show(ui)
+            .clicked()
+        {
+            self.damper = !self.damper;
+        }
         let text = format!("{:.0} floors", self.floors);
         Slider::new("Floors", &mut self.floors, 5.0..=120.0)
             .step(1.0)

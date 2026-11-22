@@ -250,7 +250,8 @@ user navigates on before that, it still reaches its target. Delivered carries ar
 |---|---|---|
 | `prim(label)`, `ghost(label)` → `Button` | `.prim`, `.ghost` 36 px; `.big()` 44 px | `.icon(Icon::Play)`, `.enabled(b)`, `.pressed(b)` (toggle look + `aria-pressed`), `.full_width()`, `.centered()`, `.height(h)`, `.accessible_name(s)`, `.link()`; `.show(ui)` / `.show_at(ui, rect)` |
 | `SegGroup::new(name, &items, selected)` + `SegItem::new(label).icon(..)` | `.seg` in a well (`.style(SegStyle::Header)`), compact `.mini` | `.show(ui).clicked: Option<usize>`; items report pressed |
-| `Toggle::new(label, on)` | pill toggle | `.show(ui).clicked()` |
+| `Toggle::new(label, on)` | `.chip` toggle (34 px pill; `.chip-on`) | `.dot(colour)` (material swatch), `.dimmed(b)` (`.chip-dim`), `.enabled(b)`, `.accessible_name(s)`; `.show(ui)` / `.show_at(ui, rect)`, `.clicked()` = flip; reports pressed |
+| `Checkbox::new(label, checked)` | `input[type=checkbox]` row (18 px, accent; 44 px row, gap 10) | `.gap(8.0).height(40.0)` (Advanced), `.enabled(b)`; `.clicked()` = flip; an AccessKit `CheckBox` |
 | `Slider::new(label, &mut v, range)` | `input[type=range]` (sand) with its label / value row | `.step(s)`, `.value_text(s)`, `.width(w)` |
 | `lbl(ui, text)`, `lbl_colored` | `.lbl` eyebrow | |
 | `Card::panel()`, `Card::well()` | `.panel`, `.well` | `.padding()`, `.gap()`, `.fill()`, `.border()`, `.label(name)` (a `Group`); `.show(ui, \|ui\| ..)` |

@@ -95,6 +95,25 @@ fn toggles_flip() {
     assert_eq!(pressed(&h, "Show forces"), Some(true));
 }
 
+/// Chips (`.chip`): 34 px drawn, 44 px target, pressed state, dot; the checkbox row reports
+/// its checked state and flips on click.
+#[test]
+fn chips_and_checkbox() {
+    let mut h = gallery();
+    assert_eq!(pressed(&h, "Steel"), Some(true));
+    click(&mut h, "Timber", Role::Button);
+    assert_eq!(h.state().material, 1);
+    assert_eq!(pressed(&h, "Timber"), Some(true));
+    assert!(rect(&h, "Steel").height() >= 44.0);
+    let cb = h.get_by_role_and_label(Role::CheckBox, "Tuned mass damper at the top");
+    assert_eq!(cb.accesskit_node().toggled(), Some(Toggled::False));
+    click(&mut h, "Tuned mass damper at the top", Role::CheckBox);
+    assert!(h.state().damper);
+    let cb = h.get_by_role_and_label(Role::CheckBox, "Tuned mass damper at the top");
+    assert_eq!(cb.accesskit_node().toggled(), Some(Toggled::True));
+    assert!(cb.rect().height() >= 44.0);
+}
+
 /// Badges and readouts are labelled text (PROV-1, readouts).
 #[test]
 fn badges_and_readouts_are_labels() {

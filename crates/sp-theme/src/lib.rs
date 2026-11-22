@@ -340,6 +340,12 @@ pub const PLOT_GUIDE: Color32 = rgba(255, 255, 255, 0.05);
 pub const PLOT_FILL: Color32 = rgba(214, 199, 161, 0.14);
 /// Table rule lines on the Series screen `border-top: 1px solid #222`.
 pub const RULE: Color32 = hex(0x222222);
+/// `input[type=checkbox]` unchecked, as Chrome draws it (Tower / Ground / Advanced): white
+/// `#FFFFFF` with a 1 px `#767676` border (measured from `screenshots/Tower-1440.png`); checked
+/// it is filled with [`ACCENT`].
+pub const CHECK_BOX: Color32 = hex(0xFFFFFF);
+/// The unchecked checkbox's border `#767676`.
+pub const CHECK_BORDER: Color32 = hex(0x767676);
 
 // ============================================================================================
 // The palette installed into egui (generic roles for labkit helpers and egui widgets)

@@ -7,7 +7,8 @@
 //! |---|---|---|
 //! | [`Button`] ([`ghost`], [`prim`]) | `.ghost`, `.prim` (36 px), big (44 px) | actions |
 //! | [`SegGroup`] / [`SegItem`] | `.seg` (mode switcher, 36 px), `.mini` groups | choices |
-//! | [`Toggle`] | pill toggle | |
+//! | [`Toggle`] | `.chip` toggle (34 px pill, `.chip-on`, `.chip-dim`, optional dot) | |
+//! | [`Checkbox`] | `input[type=checkbox]` row (18 px, accent) | |
 //! | [`lbl`] | `.lbl` eyebrow | text |
 //! | [`Card`] | `.panel` / `.well` frames | frames |
 //! | [`StatTile`] | stat tiles (label + mono value) | readouts |
@@ -41,7 +42,7 @@ pub mod toast;
 pub mod world;
 
 pub use badge::{BadgeLook, badge, badge_with};
-pub use buttons::{Button, ButtonKind, Toggle, ghost, prim};
+pub use buttons::{Button, ButtonKind, Checkbox, Toggle, ghost, prim};
 pub use cards::{Callout, Card, Chip, CodeBlock, StatTile};
 pub use icons::Icon;
 pub use plot::Plot;
