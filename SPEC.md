@@ -40,6 +40,21 @@ code to copy. `scripts/render-mockup.mjs` re-renders the references.
   row's mono 12 px.
 - **MB-3** Tower: the mockup's `minus` floors button clamps at 5 but the slider's `min` may
   differ; floors are 5–120 everywhere.
+- **MB-4** Playground: `renderVals()` returns `nM` both as the member count and as the "no
+  solution, Medium" path, so the mockup never draws unstable Medium members. Draw them
+  `#9AA0A8` (BR-2).
+- **MB-5** Playground: the Sandbox "starter truss" is a mechanism (its middle panel has no
+  diagonal: m + r − 2j = −1). Cross-brace the middle panel so the starter truss holds.
+- **MB-6** Tower: "Challenge · 100 floors" can never complete — no 100-floor tower in the model
+  reaches H/500 at 30 m/s (best: braced tapered tube ≈ H/367). The drift goal reads "Drift
+  better than H/350 at 30 m/s" (the drift tile keeps "aim H/500"), provided a design meets all
+  four goals at once; otherwise the lowest round threshold that does.
+- **MB-7** Ground: the stage's soil label `#E5E0D0` is ~2:1 on the light soils; LOOK-4 wins
+  (keep the look, reach 4.5:1, e.g. a chip behind it).
+- **MB-8** Materials: toughness uses the heat-scaled curve (the drawn one), concrete gets
+  compression wording (crushes / cracks, not "tore" / "atoms slipping"), and the explain text
+  says "Press Pull" (the button's name). Advanced: the weight check is "<Material> weight"
+  (Steel / Aluminum / Glulam / Carbon fiber), not "Steel weight" for every material.
 
 ## Navigation and header (NAV)
 
@@ -156,7 +171,7 @@ Mockup `Advanced.dc.html`. The netlist text is the source of truth; the toolbar 
 
 - **ADV-1 Toolbar row**: the file name `river-crossing.str`; style segmented Pratt / Howe /
   Warren (none lit for a custom netlist); "Cross-braced" checkbox; Material select (Steel,
-  Aluminum, Glulam, Carbon fiber); Size 1–10 slider (default 4); Truck 0–60 t (default 40);
+  Aluminum, Glulam, Carbon fiber); Size 1–20 slider (default 4); Truck 0–120 t (default 40);
   x 0–48 m (default 24). Changing a generator control regenerates the netlist (undoable).
 - **ADV-2 Netlist panel**: line-numbered mono editor, directives in the accent, comments
   `#7E8A7E`, an "example: 48 m truss" badge while it's the generated example. Editable: every
@@ -250,7 +265,7 @@ Mockup `Ground.dc.html` (`calc()` is the model; "simplified").
 Mockup `Materials.dc.html` (`defs()`, `tempFactor()`, `stressAt()`).
 
 - **MT-1 Controls (left)**: Sample tiles Steel, Aluminum, Concrete, Timber, Carbon fiber with
-  swatches and the note; Temperature 20–600 °C slider with its note; Strain axis 0–25 % / 0–2 %
+  swatches and the note; Temperature −40–600 °C slider with its note; Strain axis 0–25 % / 0–2 %
   segmented; "Coming to this bench" chips (Fatigue, Creep, Phase diagrams, Grain growth).
 - **MT-2 Model** (`sp_engine::materials`): piecewise-linear representative curves, temperature
   strength factors (illustrative), fracture at the last point, necking after ultimate,
