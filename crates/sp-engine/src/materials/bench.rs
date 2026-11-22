@@ -439,6 +439,11 @@ impl Bench {
         )
     }
 
+    /// The header clock, "ε = 0.00 %" (also [`super::View::clock`]).
+    pub fn clock(&self) -> String {
+        format!("\u{3b5} = {} %", jsnum::to_fixed(self.strain, 2))
+    }
+
     /// A one-line description for accessibility and the MCP `describe_screen` tool.
     pub fn describe(&self) -> String {
         format!(

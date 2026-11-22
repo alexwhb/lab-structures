@@ -122,7 +122,45 @@ TODO (owner fills in).
 
 ### `materials` (agent `materials`)
 
-TODO (owner fills in).
+The Materials mockup's model, number for number (`Materials.dc.html` `defs()`, `tempFactor()`,
+`stressAt()`, `tick()`, `renderVals()`). Strain in %, stress in MPa.
+
+- `materials::curves` — `Kind::{Steel, Aluminum, Concrete, Timber, CarbonFiber}` (`ALL`,
+  `key()` `steel`…`carbon-fiber`, `mockup_key()`, `parse(s)`, `name()`, `curve()`);
+  `CURVES: [Curve; 5]` (`points: [[strain %, MPa]]`, `e_gpa`, `rho`, `ultimate_strain`,
+  `yield_mpa: Option`, `note`) with `stress_at(e, T) -> Stress { mpa, broken, break_strain }`
+  (fracture past the last corner; NaN / negative strain = 0, NaN temperature = 20 °C),
+  `break_strain`, `elastic_limit`, `has_plastic_range`, `is_ductile`, `necks`, `necking(e)`
+  (0 → 0.55), `peak_mpa(T)`, `yield_at(T)`, `toughness()` (room temperature, as the mockup
+  shows) / `toughness_at(T)`, `specific_strength(T)` (kN·m/kg). Free functions
+  `temp_factor(kind, T)`, `stress_at(kind, e, T)`, `load_cell_kn(MPa)` (50 mm² section).
+  Constants `TEMP_MIN_C` −40, `TEMP_MAX_C` 600, `TEMP_STEP_C` 10, `HOT_C` 200, `SECTION_MM2`.
+- `materials::bench` — `Bench` (the screen's whole state; serde): `kind`, `strain`, `temp`,
+  `zoom`, `playing`, `broke(kind)`, `broke_count`, `all_broken`, `now()`, `force_kn`;
+  actions `pick`, `set_temp` (clamped), `set_zoom` (clips the stretch), `set_strain` (pauses),
+  `fresh_sample`, `toggle_drive` (restarts a broken / maxed sample), `reset`; `tick()` (one
+  Pull step: 0.08 % on `Zoom::Wide`, 0.006 % on `Zoom::Close`; returns the kind that broke),
+  `advance(dt)` (20 steps/s, `TICK_SECONDS` 0.05, capped), `next_tick_in()` (for
+  `Ctx::wake_in`); `status() -> Status::{Ready, Elastic, Plastic, Necking, Fractured { at }}`
+  (`label()`, `tone() -> Tone::{Muted, Ok, Accent, Caution, Danger}`), `explain()`, `clock()`
+  (`ε = 0.00 %`), `share()` (NAV-6: `.material steel E=200GPa fy=275MPa rho=7850
+  curve=steel ; tensile test at 20 °C, ε = 0.00 %, Ready`), `describe()`. `Zoom::{Wide,
+  Close}` (`max`, `pull_step`, `slider_step`, `decimals`, `label`, `ticks`, `fitting(kind)`,
+  `parse`). `CHALLENGE_RANK` (5, 12).
+- `materials::view` — `Bench::view() -> View`: every displayed string formatted like the
+  mockup's JS (tiles, spec bars with `fill`, challenge chips, status, explain, notes, labels,
+  clock, load cell, accessible labels) and the drawing model in the mockup's viewBox units:
+  `PlotGeometry` (`0 0 560 400`: axes, grid, ghosts, curve, done trace, marker, ticks, curve
+  labels) and `RigGeometry` (`0 0 420 560`: crosshead, specimen polygon(s), extensometer,
+  crack, necking). `curve_path`, `plot_x`, `plot_y`.
+- `materials::jsnum` — JavaScript-exact `to_fixed` (`toFixed`), `to_string` (`String(n)`),
+  `round` (`Math.round`); usable by any module.
+
+Tests: `tests/materials_goldens.rs` replays 27 scenarios / 253 snapshots produced by running
+the mockup's own `Component` in Node (`tests/materials_goldens.mjs` →
+`materials_goldens.json`; strings exact, geometry ≤ 0.05 px, strain bit-exact; a freshness test
+re-runs the script when Node is present); `tests/materials_model.rs` (defaults, Pull to
+fracture, timing, zoom, temperature, derived values, share, garbage input, perf).
 
 ## App (`crates/structures-playground`) — agent `shell`
 

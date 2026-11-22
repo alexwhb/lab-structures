@@ -505,7 +505,7 @@ impl Bench {
                 to_fixed(e, zoom.decimals()),
                 to_fixed(now.mpa, 0)
             ),
-            clock: format!("\u{3b5} = {} %", to_fixed(e, 2)),
+            clock: self.clock(),
             force_label: format!("{} kN", to_fixed(load_cell_kn(now.mpa), 1)),
             section_label: format!("{} mm\u{b2} section", to_string(SECTION_MM2)),
             tiles,
