@@ -409,3 +409,26 @@ fn files_opened_from_finder_land_here() {
     // a custom netlist picks its most-used members for the influence line
     assert!(has_label_containing(&h, "No moving load to sweep"));
 }
+
+/// NAV-5: the editor doesn't trap the keyboard; Tab moves on, and Space types (no drive).
+#[test]
+fn keyboard_moves_through_the_editor() {
+    let mut h = adv();
+    get(&h, "Netlist", Role::MultilineTextInput).focus();
+    h.step();
+    assert_eq!(focused_label(&h).as_deref(), Some("Netlist"));
+    press(&mut h, egui::Key::Space);
+    h.run_steps(2);
+    assert_eq!(
+        drive_label(&h).as_deref(),
+        Some("Drive across"),
+        "Space typed, not drove"
+    );
+    press(&mut h, egui::Key::Tab);
+    h.run_steps(2);
+    assert_ne!(
+        focused_label(&h).as_deref(),
+        Some("Netlist"),
+        "Tab leaves the editor"
+    );
+}

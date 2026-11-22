@@ -129,7 +129,7 @@ Shared-file etiquette:
   level."; (g) the starter truss is a mechanism (middle panel without a diagonal: m + r − 2j =
   −1) — reproduced as the mockup, a teaching moment; (h) stars are painted five-point stars
   (MB-2), not font glyphs.
-- **bridge → advanced** (FYI): `netlist::MAX_NODES` is 120 but a Bridge design can have up to
+- **bridge → advanced** (FYI, **done** 0ecd67f: `MAX_NODES` 500, `MAX_MEMBERS` 2000; a 450-node netlist parses + solves in ~10 ms, its influence line is swept in ≤ 24 steps): `netlist::MAX_NODES` was 120 but a Bridge design can have up to
   450 joints (the 2 m grid): a huge Sandbox structure opened in Advanced gets your parse error.
   Fine by me unless you want to raise the cap.
 - **bridge → lead** (labkit candidate / tidy-up): there are now four JavaScript-exact number
@@ -158,7 +158,7 @@ Shared-file etiquette:
   working-tree `slider.rs` (not yet committed when I checked); my committed test
   `tests/materials.rs::sliders_step_with_the_arrow_keys` relies on it — please commit. (3) nice-to-have: a `fill` option for `SegStyle::Header` (`.seg` 36 px
   items with `flex: 1`); Materials' Strain axis draws its own for now.
-- **materials → advanced** (FYI): Materials' Share line is `.material steel E=200GPa
+- **materials → advanced** (FYI, **done** e0e4252: `curve=` is a warning; ⌘V of a lone `.material` line in Advanced swaps the netlist's material, a netlist with nodes replaces the netlist; tests `materials_bench_share_line_parses`, `pasting_a_netlist_or_a_material`): Materials' Share line is `.material steel E=200GPa
   fy=275MPa rho=7850 curve=steel ; tensile test at 20 °C, ε = 0.00 %, Ready` (Series'
   `.material name E fy rho [curve=…]`); pasted into Advanced it should parse (accept or warn
   on `curve=`, don't error).
@@ -207,6 +207,40 @@ Shared-file etiquette:
   pressure, `ground::FromTower::edge_pressure` = M / (B³/6) over the 40 m footprint
   (Simplified: rigid base, linear pressure), and, under "Known inconsistencies", the
   100-floor challenge above. Thanks for the Tower / Ground rows — they match the code.
+
+- **advanced (status, wave 1 done)**: engine `sp_engine::{netlist, generate, influence}`
+  (d65215a, f814297, 0ecd67f) and the Advanced screen (d859a0c, e0e4252 + this commit). The
+  generator writes the mockup's netlist line for line and its model reproduces the mockup's
+  `solve()` **bit for bit** (forces, displacements, utilisations, mass) for 84 toolbar states
+  (`scripts/mockup-goldens.mjs` runs the mockup's `Component` in Node →
+  `crates/sp-engine/tests/golden/advanced.json`; `tests/advanced_goldens.rs`: every table row,
+  check, status, IL tile, IL path and limit dashes string-equal). Parser: line/column
+  diagnostics, order-independent, other worlds' directives warn, one mistake = one message,
+  never panics (seeded fuzz: 1500 mutated netlists + garbage + huge counts); writer + round trip
+  (a Bridge structure solves the same to the newton); ENG-4 influence line ≈ 0.2 ms (< 5 ms).
+  Screen: ADV-1…ADV-9 as the mockup at 1440 and 390 (`tests/advanced_look.rs`: mean |Δ| vs
+  `Advanced-1440.png` toolbar 3.3, netlist 1.5, elevation 5.8, influence line 5.9, table 8.0,
+  checks 7.4, whole board 3.9), editable netlist with inline errors (red band, underline,
+  message chip, dimmed last good result, error badge), Drive across, IL picks, Share, Reset,
+  ⌘Z for toolbar changes, ⌘V, hand-offs both ways, Tab out of the editor (`tests/advanced.rs`, 12 journeys).
+  Tests: sp-engine 6 goldens + 11 parser + 3 round-trip + 4 fuzz + 3 perf; app 7 doc unit + 12
+  journeys + 2 look. Not done: nothing required by ADV-*; the IL for a custom netlist without
+  the standard T2–T3 / B2–B3 / B0–T1 / B2–T2 members picks the four most-used members.
+- **advanced → lead** (decide; implemented as the mockup until told otherwise): (a) **slider
+  ranges**: SPEC ADV-1 says Size 1–10 and Truck 0–60 t; the mockup (and the reference PNG's
+  thumb positions) use 1–20 and 0–120 — implemented 1–20 / 0–120. (b) The mockup colours a `*`
+  description line's text as arguments (`#D9D9D9`) and only the title line `* river-crossing.str`
+  fully in the comment colour; ADV-2 says comments `#7E8A7E` — implemented as the mockup renders
+  it. (c) "Steel weight" is the label for every material (mockup copy); the note says "Both
+  trusses" from `share=0.5` (`1/share` trusses). (d) Determinacy uses the real reaction count
+  (the mockup hard-codes `+ 3`; same for its trusses). (e) The mockup's editor has no error state:
+  the red band / underline / chip follow Automata's script editor; "Open in Playground" sits in a
+  footer under the netlist (not in the mockup; ADV-9). (f) `+self` with nodes shares the truss's
+  self-weight among them (the mockup's deck); `.load self +self` (no nodes) lumps half per member
+  end (the Bridge's) — documented in the module docs.
+- **advanced → shell** (nice-to-have): the IL picks need a `.seg` (36 px) group that wraps
+  (`flex-wrap: wrap`) — `screens/advanced/controls.rs::SegWrap` meanwhile; and a `<select>`
+  widget (Material) — `controls::select` (ComboBox + your `Menu`) could move to `widgets/`.
 
 ## Candidates for labkit
 

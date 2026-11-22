@@ -227,7 +227,7 @@ pub fn netlist_panel(ui: &mut Ui, doc: &Doc) -> EditorOutput {
                     .desired_width((width - TEXT_X - 14.0).max(40.0))
                     .desired_rows(1)
                     .code_editor()
-                    .lock_focus(true)
+                    .lock_focus(false)
                     .layouter(&mut layouter)
                     .show(ui)
             });

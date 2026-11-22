@@ -193,6 +193,19 @@ All UI-free; numbers in SI inside, text exactly as the Advanced mockup prints it
   limit_tension, limit_compression, scale, from, to }>` (full solve per position; `.level(kN)`
   → ±1.3 plot units, `peak_text()`, `limit_text()`, `label()`, …); `now_text(kN)`,
   `force_kn(&report, m)`, `sweep(&net)`.
+- **The Advanced screen** (`screens/advanced.rs` + `screens/advanced/`, agent `advanced`):
+  `AdvancedScreen { doc: Doc, playing }`; `doc::Doc` is UI-free and holds the netlist text (the
+  source of truth), `generated: Option<Params>` (while the text is exactly the generator's, its
+  bit-exact model is used), `origin` (Generated / Received(route) / File / Pasted / Edited),
+  `good: Option<Good { netlist, report }>` (the last good model), `diagnostics`, `stale`
+  (errors on screen: results dimmed), `pick` (IL), an undo stack. Mutators: `apply_generator`,
+  `set_truck` (Truck / x / drive: edits the `.load … lane=` line in place), `edit` (debounced
+  150 ms, `tick(now)`), `load(text, name, origin)` (hand-offs, files, ⌘V), `paste_material`
+  (a lone `.material` line swaps the material), `undo`, `reset`, `drive_step`. For MCP (wave
+  2): `app.screens().advanced.doc.load(..)` + `.report()` / `.influence_line()`;
+  `describe()` = one line with file, size, status and x. Header: Drive across / Pause,
+  Reset, `x = 24.0 m`, Share = the netlist text; Carry::Netlist in, "Open in Playground" →
+  `Carry::netlist(text, None, Route::Advanced)` to the Bridge.
 - Tests: `tests/advanced_goldens.rs` against `tests/golden/advanced.json`, written by
   `node scripts/mockup-goldens.mjs` (the mockup's `Component` run in Node; 84 toolbar states);
   `tests/netlist_*.rs` (parser errors, round trip, fuzz), `tests/advanced_perf.rs` (ENG-4).
