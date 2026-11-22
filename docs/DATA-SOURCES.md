@@ -242,7 +242,7 @@ Bench constants:
 | Strain axes | 0–25 % and 0–2 %; stress axis 0–700 MPa | Drawing | `bench::Zoom`, `curves::STRESS_AXIS_MAX_MPA` |
 | Pull | 0.08 % per tick (25 % axis) / 0.006 % (2 % axis), 20 ticks/s | Game | `bench::Zoom::pull_step`, `bench::TICK_SECONDS` |
 | Drawn stretch | 4.5 px per % strain ("stretch exaggerated") | Drawing | `view::RIG_PX_PER_PERCENT` |
-| Challenge | Break all five; rung 5 / 12 | Game | `bench::CHALLENGE_RANK` |
+| Challenge | Break all five; rung 5 / 12 | Game | `bench::CHALLENGE_RUNG` |
 
 ## Known inconsistencies (documented, not changed)
 

@@ -15,6 +15,9 @@ use sp_theme::materials as mt;
 /// Draws the plot into `rect` (the `.graph` box).
 pub fn show(ui: &mut Ui, rect: Rect, v: &View) {
     let stage = crate::layout::graph_panel(ui, rect, None);
+    // The SVG and the labels are `position: absolute` in the padding box (inside the border).
+    let outer = rect;
+    let rect = outer.shrink(1.0);
     let vb = ViewBox::meet(rect, PLOT_VIEW);
     let p = stage.painter().clone();
     let g = &v.plot;
@@ -109,9 +112,9 @@ pub fn show(ui: &mut Ui, rect: Rect, v: &View) {
         );
     }
 
-    crate::layout::graph_panel_border(ui, rect);
+    crate::layout::graph_panel_border(ui, outer);
     // `role="img" aria-label="{{plotLabel}}"`.
-    let resp = ui.interact(rect, ui.scope_id().with("materials-plot"), Sense::hover());
+    let resp = ui.interact(outer, ui.scope_id().with("materials-plot"), Sense::hover());
     let label = v.plot_label.clone();
     resp.widget_info(|| WidgetInfo::labeled(Role::Image, true, &label));
 }

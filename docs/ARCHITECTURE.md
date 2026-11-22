@@ -146,7 +146,7 @@ The Materials mockup's model, number for number (`Materials.dc.html` `defs()`, `
   (`ε = 0.00 %`), `share()` (NAV-6: `.material steel E=200GPa fy=275MPa rho=7850
   curve=steel ; tensile test at 20 °C, ε = 0.00 %, Ready`), `describe()`. `Zoom::{Wide,
   Close}` (`max`, `pull_step`, `slider_step`, `decimals`, `label`, `ticks`, `fitting(kind)`,
-  `parse`). `CHALLENGE_RANK` (5, 12).
+  `parse`). `CHALLENGE_RUNG` (5, 12).
 - `materials::view` — `Bench::view() -> View`: every displayed string formatted like the
   mockup's JS (tiles, spec bars with `fill`, challenge chips, status, explain, notes, labels,
   clock, load cell, accessible labels) and the drawing model in the mockup's viewBox units:

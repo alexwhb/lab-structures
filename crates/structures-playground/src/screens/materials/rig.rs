@@ -20,7 +20,9 @@ use sp_theme::materials as mt;
 /// Draws the rig into `rect` (the `.graph` stage box, `aspect-ratio: 420 / 560`).
 pub fn show(ui: &mut Ui, rect: Rect, v: &View) {
     let mut stage = crate::layout::graph_panel(ui, rect, None);
-    let vb = ViewBox::meet(rect, RIG_VIEW);
+    // The SVG and the overlays are `position: absolute` in the padding box (inside the border).
+    let inner = rect.shrink(1.0);
+    let vb = ViewBox::meet(inner, RIG_VIEW);
     let p = stage.painter().clone();
     let r = &v.rig;
     let px = |x: f64, y: f64| vb.pt([x, y]);
@@ -88,10 +90,10 @@ pub fn show(ui: &mut Ui, rect: Rect, v: &View) {
         ));
     }
 
-    load_cell(&mut stage, rect, v);
+    load_cell(&mut stage, inner, v);
     let b = Badge::plain("stretch exaggerated");
     let size = badge_size(&stage, &b);
-    let br = Rect::from_min_size(rect.max - vec2(10.0, 10.0) - size, size);
+    let br = Rect::from_min_size(inner.max - vec2(10.0, 10.0) - size, size);
     paint_badge(&stage, br, &b, BadgeLook::default());
 
     crate::layout::graph_panel_border(ui, rect);

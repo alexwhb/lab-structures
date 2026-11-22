@@ -3,7 +3,7 @@
 //! temperature, the derived quantities and robustness on garbage input (speed:
 //! `materials_perf.rs`).
 
-use sp_engine::materials::bench::{CHALLENGE_RANK, MAX_TICKS_PER_ADVANCE};
+use sp_engine::materials::bench::{CHALLENGE_RUNG, MAX_TICKS_PER_ADVANCE};
 use sp_engine::materials::curves::{TEMP_MAX_C, TEMP_MIN_C, load_cell_kn};
 use sp_engine::materials::{Bench, CURVES, Kind, Status, TICK_SECONDS, Tone, Zoom};
 use sp_engine::materials::{stress_at, temp_factor};
@@ -37,8 +37,8 @@ fn default_state_shows_the_mockup_numbers() {
     assert_eq!(v.strain_label, "0.00 % \u{b7} 0 MPa");
     assert_eq!(v.temp_label, "20 \u{b0}C");
     assert_eq!(v.temp_note, "Room-temperature strength.");
-    assert_eq!(v.challenge_rank, "5 / 12");
-    assert_eq!(CHALLENGE_RANK, (5, 12));
+    assert_eq!(v.challenge_rung, "5 / 12");
+    assert_eq!(CHALLENGE_RUNG, (5, 12));
     assert!(v.challenge.iter().all(|c| !c.lit));
     assert!(
         v.explain

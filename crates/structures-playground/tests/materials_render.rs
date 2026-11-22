@@ -11,11 +11,11 @@ use eframe::egui::accesskit::Role;
 use structures_playground::Route;
 
 /// (name, region x, y, w, h, bound): the three columns under the chrome. Measured at the time
-/// of writing: parts ≈ 1.9, stage ≈ 5.6, readouts ≈ 6.2; the bounds leave room for font
+/// of writing: parts ≈ 1.9, stage ≈ 3.2, readouts ≈ 6.2; the bounds leave room for font
 /// rasterisation differences, not for layout drift.
 const REGIONS: [(&str, u32, u32, u32, u32, f64); 3] = [
     ("parts", 0, 106, 249, 794, 3.5),
-    ("stage", 251, 106, 888, 580, 7.5),
+    ("stage", 251, 106, 888, 580, 5.0),
     ("readouts", 1141, 106, 299, 794, 7.5),
 ];
 

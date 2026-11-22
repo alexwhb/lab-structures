@@ -14,7 +14,7 @@ pub const TICK_SECONDS: f64 = 0.05;
 pub const MAX_TICKS_PER_ADVANCE: usize = 400;
 /// The challenge's place on the bench's card (`Challenge · Break all five` · `5 / 12`, a fixed
 /// label in the mockup).
-pub const CHALLENGE_RANK: (u32, u32) = (5, 12);
+pub const CHALLENGE_RUNG: (u32, u32) = (5, 12);
 
 /// The strain axis range (mockup `zoom`: 25 or 2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]

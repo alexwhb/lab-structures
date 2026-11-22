@@ -203,7 +203,7 @@ fn challenge(ui: &mut Ui, v: &View) {
     let tg = galley(ui, "Challenge \u{b7} Break all five", title_font, t::TEXT);
     let rg = galley(
         ui,
-        &v.challenge_rank,
+        &v.challenge_rung,
         lab_theme::font::mono(11.0),
         t::TEXT_MUTED,
     );

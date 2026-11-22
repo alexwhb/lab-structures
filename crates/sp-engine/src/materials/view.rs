@@ -4,7 +4,7 @@
 //! `0 0 420 560`, the plot `0 0 560 400`). The screen scales those into its rectangles; the
 //! goldens compare them with the mockup's path strings.
 
-use super::bench::{Bench, CHALLENGE_RANK, Status, Tone, Zoom};
+use super::bench::{Bench, CHALLENGE_RUNG, Status, Tone, Zoom};
 use super::curves::{HOT_C, Kind, SECTION_MM2, STRESS_AXIS_MAX_MPA, load_cell_kn, temp_factor};
 use super::jsnum::{round, to_fixed, to_string};
 
@@ -182,7 +182,7 @@ pub struct View {
     /// Challenge chips.
     pub challenge: Vec<ChallengeChip>,
     /// The challenge card's rank label ("5 / 12").
-    pub challenge_rank: String,
+    pub challenge_rung: String,
     /// The rig's accessible label.
     pub rig_label: String,
     /// The plot's accessible label.
@@ -511,7 +511,7 @@ impl Bench {
             tiles,
             spec,
             challenge,
-            challenge_rank: format!("{} / {}", CHALLENGE_RANK.0, CHALLENGE_RANK.1),
+            challenge_rung: format!("{} / {}", CHALLENGE_RUNG.0, CHALLENGE_RUNG.1),
             rig_label: format!(
                 "{} sample in a tensile test machine, stretched {}%. {}.",
                 m.name,

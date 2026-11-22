@@ -235,24 +235,29 @@ fn title_row(ui: &mut Ui, v: &View) {
 
 /// The rig (`flex: 1 1 300px; aspect-ratio: 420 / 560`) and the plot (`flex: 999 1 380px;
 /// aspect-ratio: 560 / 400`) in a wrapping row with `gap: 12px`; side by side both take the
-/// taller one's height (`align-items: stretch`).
+/// taller one's height (`align-items: stretch`). Both boxes are `box-sizing: content-box`
+/// with a 1 px border, so the basis and the aspect ratio apply inside the border (at 1440 the
+/// rig is 302.2 × 402.2 and the plot 543.8 wide, as in the reference).
 pub fn rig_and_plot_rects(origin: eframe::egui::Pos2, width: f32) -> (Rect, Rect, f32) {
     let gap = 12.0;
-    if 300.0 + gap + 380.0 <= width {
-        let free = width - 300.0 - gap - 380.0;
-        let rig_w = 300.0 + free / 1000.0;
-        let plot_w = 380.0 + free * 999.0 / 1000.0;
-        let h = (rig_w * 560.0 / 420.0).max(plot_w * 400.0 / 560.0);
+    let b = 2.0; // the two borders
+    let rig_h = |w: f32| (w - b).max(0.0) * 560.0 / 420.0 + b;
+    let plot_h = |w: f32| (w - b).max(0.0) * 400.0 / 560.0 + b;
+    let (rig_basis, plot_basis) = (300.0 + b, 380.0 + b);
+    if rig_basis + gap + plot_basis <= width {
+        let free = width - rig_basis - gap - plot_basis;
+        let rig_w = rig_basis + free / 1000.0;
+        let plot_w = plot_basis + free * 999.0 / 1000.0;
+        let h = rig_h(rig_w).max(plot_h(plot_w));
         let rig = Rect::from_min_size(origin, vec2(rig_w, h));
         let plot = Rect::from_min_size(origin + vec2(rig_w + gap, 0.0), vec2(plot_w, h));
         (rig, plot, h)
     } else {
         let w = width.max(0.0);
-        let rig_h = w * 560.0 / 420.0;
-        let plot_h = w * 400.0 / 560.0;
-        let rig = Rect::from_min_size(origin, vec2(w, rig_h));
-        let plot = Rect::from_min_size(origin + vec2(0.0, rig_h + gap), vec2(w, plot_h));
-        (rig, plot, rig_h + gap + plot_h)
+        let (rh, ph) = (rig_h(w), plot_h(w));
+        let rig = Rect::from_min_size(origin, vec2(w, rh));
+        let plot = Rect::from_min_size(origin + vec2(0.0, rh + gap), vec2(w, ph));
+        (rig, plot, rh + gap + ph)
     }
 }
 
