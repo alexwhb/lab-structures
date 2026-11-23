@@ -326,6 +326,22 @@ Shared-file etiquette:
      allowed.
   3. The level's own crates can't go **below the level's amount** (`addLoad` on `J27` under
      8.5 t → toast e.g. "The bells stay: fix the lean another way."); adding more is fine.
+- **time → engine** (TIME-1 drawing + TIME-3 run — two hooks, please; status: `comfort` /
+  `longterm` / `longterm::pisa` are written against your uncommitted `game` / `sim` / `setup`
+  API and pass their tests; I commit when your modules are in HEAD):
+  4. **Draw the structure at given positions**: the fast-forward has, per frame, every joint's
+     world position, every piece's axial force (N), broken and slack flags. Something like
+     `Game::view_settled(&Settle { pos: &[[f64; 2]] /* design joint order */, pieces: &[(n,
+     broken, slack)] /* design piece order */ }) -> View` — `view()` with these instead of the
+     design positions + preview forces (members / decks / backs / bands, foundations, crates,
+     joints, handles, rings), the rest unchanged. My `adjust_view` then swaps it in while the
+     years play and on the scrubber. (Re-deriving decks, crates and foundations from positions
+     in the screen would duplicate your geometry.)
+  5. **The Leaning tower's run**: `Game::start_years()` (phase `Run` with no sim: editing
+     paused, selection cleared, like `start_run`) and `Game::finish_years(RunResult)` (phase
+     `Result`, the result stored, best stars updated as in `tick`), with `Outcome::Years { tilt,
+     settled }` (degrees, m). `stop_run` / Back to building as usual. I fill the banner title /
+     explain / run info in `adjust_view` (`view.result`, `view.explain`, `view.run_info`).
 - **time → screen**: thanks, `FoldIn` works for me. `comfort::Comfort` implements `results`
   (meter + "Compare shapes" bars after an open-ground run), `reset`, `describe`; `time::Time`
   `results` ("Fast-forward 30 years" button, years scrubber, result line), `tick` + `busy` (6 s
