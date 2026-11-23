@@ -247,6 +247,71 @@ owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample
   `longterm_pisa.rs` (the level: untouched fails, the named fix passes), `longterm_perf.rs`
   (`PERF 30-year fast-forward …`, < 300 ms); GUI `structures-playground/tests/builder_time.rs`.
 
+#### The builder screen (agent `screen`)
+
+`crates/structures-playground/src/screens/builder.rs` + `builder/**`; scene colours in
+`sp_theme::builder` (each with its CSS source). The screen draws `Game::view()` every frame and
+owns nothing but pixels: every number and sentence comes from the view (DONE-2).
+
+- **`BuilderScreen { pub game: Game, pub fold: FoldIns, .. }`** (MCP and tests reach the
+  engine through `app.screens_mut().builder.game`; a change shows the next frame). Each frame
+  `ui` builds the view, lets the fold-ins `adjust_view` it, collects the HUD chips, lays out the
+  row on `layout::columns` (`Tools` rail · `Stage` · `Level, site and inspector` aside; stacked
+  at 390), collects clicks as `builder::Action`s and applies them after drawing. Header:
+  `document` = `level.slug()`, `drive_button` = a fold-in's or `Drive::new(view.hdr_run)`
+  ("Run traffic" / "Run the test", "Pause" while running), `drive` = a fold-in's `drive` or
+  `toggle_run`, Reset = `clear`, `clock` = `view.clock`, Share = `game.share_text()`; Carry in
+  and ⌘V = `game.paste_netlist` (toast "Loaded a 10-joint structure into the Sandbox");
+  "Open in Advanced" = `Carry::netlist(share_text, Some(slug), Route::Playground)`. Commands:
+  Undo, Delete, ZoomIn / ZoomOut / ZoomFit, `Pan` (40 stage px per press), `Nudge`, `Escape`
+  (fold-ins first, then ends the chain, then clears the selection). Best stars persist in egui
+  memory (`BEST_STARS_KEY`, `Vec<(level key, stars)>`), restored on `enter`.
+- **Frame pacing** (PLAT-3, BLD-15): `tick` calls `game.advance(dt)` (one wake-up for a fading
+  toast), the fold-ins' `tick`, and while `game.animating()` one `game.tick()` per 1/30 s
+  (`Ticker`) with `ctx.wake_in(due)`; the water / wind dashes, snowfall and the quake shake move
+  only while running (decision: the mockup's CSS snowfall also falls while building; we keep
+  0 % idle). Fold-ins that animate say `busy()`.
+- **Modules**: `rail` (Select, Build, Found, Crate, Erase, Undo, Clear; the Found icon is drawn
+  here, the rest are shared `Icon`s), `hint` (the hint bar as CSS flex-wrap: the tool's chip
+  group shrinks onto its own line, the hint takes the free space, all hit targets tiled),
+  `stage` (the grid surface button "Building grid": click → `click_surface`, drag →
+  `surface_down` / `pointer_move` / `pointer_up` pan, wheel → one ×1.15 step per wheel event
+  about the pointer, pinch → `zoom_by`; joints (`click_and_drag`) and handles as AccessKit
+  buttons with the engine's labels; crate tags; HUD (right-aligned wrapping lines, 60 % wide);
+  toast; run overlay; result banner with painted stars (MB-2) and "Replay in slow motion" /
+  "Back to building"; the stage's `role=img` summary; the quake shake offsets the drawing),
+  `scene` (the SVG layer in the mockup's paint order from the view's stage-px shapes), `paint`
+  (`Xf`: stage px / world m → points; `height_for` = CSS `aspect-ratio` on the content box
+  inside the 1 px border; dashes that restart per subpath, Béziers, an ear-clipping fill for
+  the river's concave soil outline), `legend` (legend, zoom group, the PROV-1 line as the group
+  "Where the numbers come from"), `aside` (levels, goal panel, result slot, Sandbox scenes,
+  Conditions, inspector / Materials cards, Open in Advanced, What's happening), `bits` (chips
+  with swatch bars / dots, chip rows, pills, level rows, tool buttons, bars, framed / section /
+  paragraph blocks).
+- **Fold-in hooks** (`builder/host.rs`): one trait, every method defaulted, called in the order
+  comfort, time, lab, fire — `tick(&mut self, &mut Game, &mut Ctx)` (before drawing;
+  `wake_in` while moving), `adjust_view(&self, &Game, &mut View)` (TIME-1), `hud(&self, &Game,
+  &mut Vec<HudChip>)` (after the core's chips; `HudChip { key, value, color }`),
+  `paint_stage(&self, &Game, &View, &Painter, &Xf)` (over the structure, under joints and
+  overlays), `conditions(&mut self, &mut Ui, &mut Game, &mut Ctx)` (end of Conditions: Fire),
+  `results(..)` (the aside slot under the goal panel), `open_sample(&mut self, PieceType) ->
+  bool` (a Materials card, LAB-1), `drawer(..) -> bool` (replaces the aside while open),
+  `escape(&mut self) -> bool`, `drive(..) -> bool` / `drive_button(&self, &Game) ->
+  Option<Drive>` (TIME-3 takes the run), `reset(&mut self, &Game)` (new level / scene, back to
+  building, Reset, Clear, a netlist loaded — the screen detects these itself), `busy(&self)`,
+  `describe(&self, &Game) -> Option<String>`. `FoldIns { comfort, time, lab, fire }`
+  (`each()` / `each_ref()`); helpers for fold-ins: `host::card`, `bits::{chip_row, chip_rows,
+  ChipSpec, framed, section, para, eyebrow, label_node, status_pill, bar}`.
+- **Tests** (`tests/builder.rs`, `tests/builder_look.rs`; `builder_time.rs` / `builder_lab.rs`
+  are the fold-in owners'): level 1 built by clicks → all across with stars and the level row's
+  best; placement toasts; inspectors; palette / foundations / crates / Sandbox scenes; zoom /
+  pan / fit by buttons, ⌘ keys, the wheel and a drag; conditions while running, Shake now,
+  refusals, slow motion; Share / ⌘V / hand-offs; ⌘Z / Delete / Esc / ⌥-arrow nudge / Reset;
+  frame pacing (idle asks for no frame, a run ~30 fps); closeness per region vs
+  `BridgeBuild-1440.png` and `TowerBuild-1440.png` (boards rebuilt with `Preset::board`, MB-10);
+  1440 / 390 without overlapping controls. `SP_BUILDER_SHOTS=1` writes `[app | mockup]` images
+  of every board (and the running ones 16 s in) to `target/compare/`.
+
 ### `bridge` (v1, retiring in v2 wave 2; agent `bridge`)
 
 The Playground › Bridge game: `Playground.dc.html`'s `class Component` without the drawing,
