@@ -107,6 +107,15 @@ fn invariants(g: &Game, ctx: &str) {
         assert!(*t > 0.0 && *t <= MAX_LOAD_T, "{ctx}: load {t}");
     }
     assert!(g.undo_depth() <= UNDO_DEPTH);
+    if g.phase() == Phase::Held {
+        // held means held: stable, nothing over its limit at full load
+        let r = g.analysis();
+        assert!(r.ok, "{ctx}: held but unstable");
+        assert!(
+            r.worst_state().is_none_or(|(_, q)| q.utilisation <= 1.0),
+            "{ctx}: held with a member over its limit"
+        );
+    }
     let v = g.view();
     for p in &v.positions {
         assert!(
@@ -453,5 +462,138 @@ fn performance_budget() {
         assert!(per_solve < 2e-3, "60-joint solve {per_solve:.6} s");
         assert!(worst < 16e-3, "Test tick {worst:.6} s");
         assert!(thirty < 16e-3, "30 solves {thirty:.6} s");
+    }
+}
+
+/// Review finding: refused edits leave no undo step (underground spot, pair already joined,
+/// joint already at 200 t, the same size again, a drag that didn't move the joint).
+#[test]
+fn refused_edits_leave_no_undo_step() {
+    let mut g = Game::new();
+    g.pick_tool(Tool::Joint);
+    g.click_grid(2, -4);
+    assert_eq!(g.toast(), Some("That spot is underground."));
+    assert_eq!(g.undo_depth(), 0);
+    g.pick_tool(Tool::Member);
+    g.click_grid(2, -4);
+    assert_eq!(g.undo_depth(), 0);
+    g.click_joint("J1");
+    g.click_joint("J3");
+    assert_eq!(g.undo_depth(), 1);
+    g.click_joint("J1");
+    assert_eq!(g.toast(), Some("Those two are already joined."));
+    assert_eq!(g.undo_depth(), 1);
+    g.finish_line();
+    g.pick_tool(Tool::Weight);
+    g.pick_weight(25);
+    for _ in 0..8 {
+        g.click_joint("J3");
+    }
+    assert_eq!(g.design().load("J3"), 200.0);
+    let d = g.undo_depth();
+    g.click_joint("J3");
+    assert_eq!(g.undo_depth(), d, "already at 200 t");
+    g.set_member_size("M1", SizeKey::Medium);
+    assert_eq!(g.undo_depth(), d, "the same size");
+    g.pick_tool(Tool::Joint);
+    g.click_grid(20, 4);
+    g.pick_tool(Tool::Select);
+    let d = g.undo_depth();
+    g.joint_down("J4");
+    g.pointer_move(20, 4);
+    g.pointer_up();
+    assert_eq!(g.undo_depth(), d, "a drag that didn't move");
+    g.joint_down("J4");
+    g.pointer_move(22, 4);
+    g.pointer_up();
+    assert_eq!(g.undo_depth(), d + 1, "a real drag");
+}
+
+/// Review finding: a cascade that outruns the 30-break cap on the last ramp tick must not end
+/// "It held!" while members are still over their limit. A rigid hub hangs a load from 60 thin
+/// timber members to every support spot; the load is tuned so the first member gives at
+/// λ ≈ 0.993, inside the last ramp step, and the cascade breaks far more than 30.
+#[test]
+fn a_cascade_on_the_last_tick_is_not_called_held() {
+    let mut d = Design::default();
+    let add_joint = |d: &mut Design, x: i32, y: i32, sup: Option<Support>| {
+        let n = d.nodes.len() + 1;
+        d.nodes.push(Joint {
+            id: format!("J{n}"),
+            x,
+            y,
+            sup,
+            locked: false,
+        });
+        format!("J{n}")
+    };
+    let mut supports = Vec::new();
+    for x in (0..=8).step_by(2).chain((48..=58).step_by(2)) {
+        supports.push(add_joint(&mut d, x, 0, Some(Support::Pin)));
+    }
+    for x in (10..=46).step_by(2) {
+        supports.push(add_joint(&mut d, x, -12, Some(Support::Pin)));
+    }
+    let b1 = add_joint(&mut d, 24, 10, None);
+    let b2 = add_joint(&mut d, 32, 10, None);
+    let b3 = add_joint(&mut d, 28, 14, None);
+    let add_bar = |d: &mut Design, a: &str, b: &str, size: SizeKey| {
+        let n = d.members.len() + 1;
+        d.members.push(sp_engine::bridge::Bar {
+            id: format!("M{n}"),
+            a: a.into(),
+            b: b.into(),
+            size,
+        });
+    };
+    for (a, b) in [(&b1, &b2), (&b2, &b3), (&b3, &b1)] {
+        add_bar(&mut d, a, b, SizeKey::Thick);
+    }
+    for s in &supports {
+        add_bar(&mut d, &b1, s, SizeKey::Thin);
+        add_bar(&mut d, &b2, s, SizeKey::Thin);
+    }
+    d.n_n = d.nodes.len() as u32;
+    d.n_m = d.members.len() as u32;
+    let mat = MaterialKey::Timber;
+    let worst_at = |d: &Design, t: f64| {
+        let mut d = d.clone();
+        d.set_load(&b3, t);
+        let a = d.analyse(mat, 1.0, &[]);
+        assert!(a.ok);
+        a.worst_state().unwrap().1.utilisation
+    };
+    // ut is affine in the load: aim the first break at λ ≈ 0.993
+    let (u0, u1) = (worst_at(&d, 0.0), worst_at(&d, 100.0));
+    let target = 1.0 / 0.993;
+    let mut lo = 0.0;
+    let mut hi = 200.0;
+    assert!(u0 < target && worst_at(&d, 200.0) > target, "{u0} {u1}");
+    for _ in 0..60 {
+        let mid = (lo + hi) / 2.0;
+        if worst_at(&d, mid) < target {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    d.set_load(&b3, hi);
+    let mut g = Game::new();
+    g.open_in_sandbox(d, mat);
+    let phase = g.run_test(2000);
+    let breaks_at_full = g
+        .log()
+        .iter()
+        .filter(|l| l.member.is_some() && l.lam >= 1.0)
+        .count();
+    assert!(
+        breaks_at_full >= 30,
+        "the cascade hits the cap on the last tick: {breaks_at_full} breaks at λ = 1"
+    );
+    if phase == Phase::Held {
+        let r = g.analysis();
+        assert!(r.ok && r.worst_state().is_none_or(|(_, q)| q.utilisation <= 1.0));
+    } else {
+        assert_eq!(phase, Phase::Collapsed);
     }
 }

@@ -50,7 +50,7 @@ pub fn py(y: f64) -> f64 {
 /// NaN snaps to 0; infinities clamp.
 pub fn snap(stage_x: f64, stage_y: f64) -> (i32, i32) {
     let grid = |v: f64, lo: i32, hi: i32| {
-        let g = super::fmt::js_round(v / PX_PER_M / 2.0) * 2.0;
+        let g = crate::jsnum::js_round(v / PX_PER_M / 2.0) * 2.0;
         if g.is_nan() {
             0
         } else {

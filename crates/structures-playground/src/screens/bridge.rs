@@ -113,6 +113,16 @@ pub struct BridgeScreen {
     ticker: Ticker,
     /// Water dash offset, stage px.
     flow: f32,
+    /// The best stars last written to egui's persisted memory.
+    saved_best: [u8; 4],
+}
+
+/// The key of the best stars per level (`[u8; 4]`) in egui's persisted memory: eframe saves
+/// that memory with the window, so they survive a restart (BR-6, NAV-7).
+pub const BEST_STARS_KEY: &str = "structures-playground/bridge/best-stars";
+
+fn best_id() -> Id {
+    Id::unique(BEST_STARS_KEY)
 }
 
 impl Default for BridgeScreen {
@@ -128,6 +138,7 @@ impl BridgeScreen {
             game: Game::new(),
             ticker: Ticker::default(),
             flow: 0.0,
+            saved_best: [0; 4],
         }
     }
 
@@ -457,6 +468,11 @@ impl Screen for BridgeScreen {
         if self.game.revision() != before {
             ui.ctx().request_repaint();
         }
+        let best = self.game.best();
+        if best != self.saved_best {
+            ui.ctx().data_mut(|d| d.insert_persisted(best_id(), best));
+            self.saved_best = best;
+        }
         let _ = Id::NULL;
     }
 
@@ -506,7 +522,8 @@ impl Screen for BridgeScreen {
             }
             // `@keyframes flow { to { stroke-dashoffset: -48 } }` over 1.6 s
             self.flow = (self.flow + 30.0 * dt) % 48.0;
-            ctx.animate();
+            // ~30 frames a second: the next frame when the next tick is due (PLAT-3)
+            ctx.wake_in(self.ticker.due_in((1.0 / TICK_SECONDS) as f32));
         } else {
             self.ticker.reset();
         }
@@ -526,6 +543,19 @@ impl Screen for BridgeScreen {
                 self.load_netlist(&text, ctx);
                 true
             }
+        }
+    }
+
+    fn enter(&mut self, ctx: &mut Ctx) {
+        // best stars from an earlier run (never lowers what this run has earned)
+        if let Some(saved) = ctx
+            .egui()
+            .data_mut(|d| d.get_persisted::<[u8; 4]>(best_id()))
+        {
+            let now = self.game.best();
+            let merged = std::array::from_fn(|i| now[i].max(saved[i]));
+            self.game.set_best(merged);
+            self.saved_best = merged;
         }
     }
 

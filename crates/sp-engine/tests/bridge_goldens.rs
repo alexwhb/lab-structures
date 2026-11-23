@@ -13,9 +13,9 @@
 use serde_json::Value;
 use sp_engine::bridge::data::{px, py, snap};
 use sp_engine::bridge::design::Band;
-use sp_engine::bridge::fmt::to_fixed;
 use sp_engine::bridge::view::{BarTone, Inspector, Tone, View};
 use sp_engine::bridge::{Game, LevelKey, MaterialKey, Phase, Selection, SizeKey, Support, Tool};
+use sp_engine::jsnum::to_fixed;
 
 const GOLDENS: &str = include_str!("bridge_goldens.json");
 

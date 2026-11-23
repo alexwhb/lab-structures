@@ -17,7 +17,8 @@
 //! - [`view`] — everything the screen shows ([`Game::view`]): positions, bands, handles and
 //!   joints with accessible labels, status, explain and inspector sentences, overlays, header.
 //! - [`netlist`] — the structure as a `.str` netlist (Share, "Open in Advanced").
-//! - [`fmt`] — JavaScript-exact number formatting (`toFixed`, `Math.round`).
+//!
+//! Numbers print with [`crate::jsnum`] (JavaScript-exact `toFixed` / `Math.round` / `String`).
 //!
 //! ```
 //! use sp_engine::bridge::{Game, Phase, Tool};
@@ -33,7 +34,6 @@
 
 pub mod data;
 pub mod design;
-pub mod fmt;
 pub mod game;
 pub mod netlist;
 pub mod sim;

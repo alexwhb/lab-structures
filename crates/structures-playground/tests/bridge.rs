@@ -591,3 +591,39 @@ fn state_gallery() {
     click_button(&mut p, "Drop in a starter truss");
     println!("{}", screenshot(&mut p, "bridge-390").display());
 }
+
+/// Review finding (BR-6, NAV-7): best stars survive a restart. The screen keeps them in egui's
+/// persisted memory (which eframe saves with the window); a fresh app whose memory holds them
+/// shows them on the level rows when the Bridge opens.
+#[test]
+fn best_stars_survive_a_restart() {
+    let mut h = harness(Route::Bridge);
+    build_howe(&mut h);
+    click_button(&mut h, "Test it: add the load");
+    assert!(run_until_result(&mut h, 600));
+    settle(&mut h);
+    assert!(has_label(&h, "It held!"));
+    let key = egui::Id::unique(structures_playground::screens::bridge::BEST_STARS_KEY);
+    let saved = h.ctx.data_mut(|d| d.get_persisted::<[u8; 4]>(key));
+    assert_eq!(saved, Some([1, 0, 0, 0]), "written to the persisted memory");
+    // a fresh app (started on another screen) whose restored memory holds it
+    let mut fresh = harness(Route::Tower);
+    fresh
+        .ctx
+        .data_mut(|d| d.insert_persisted(key, saved.unwrap()));
+    goto(&mut fresh, Route::Bridge);
+    let desc = |h: &App, row: &str| {
+        h.get_by_role_and_label(Role::Button, row)
+            .accesskit_node()
+            .description()
+    };
+    assert_eq!(
+        desc(&fresh, "1 · River crossing").as_deref(),
+        Some("Best: 1 of 3 stars")
+    );
+    assert_eq!(
+        desc(&fresh, "2 · Overhang").as_deref(),
+        Some("Best: 0 of 3 stars")
+    );
+    assert_eq!(desc(&fresh, "Sandbox"), None, "no stars without a budget");
+}

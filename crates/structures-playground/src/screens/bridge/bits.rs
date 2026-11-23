@@ -173,7 +173,8 @@ pub fn stars_width(size: f32) -> f32 {
 }
 
 /// `.lvl` level row (`min-height: 40px; padding: 0 12px`, radius 8): the name left, the best
-/// stars right. AccessKit: a `Button` named by the level with its pressed state.
+/// stars right. AccessKit: a `Button` named by the level with its pressed state; the best
+/// stars are its description ("Best: 1 of 3 stars").
 pub fn level_row(
     ui: &mut Ui,
     id: Id,
@@ -183,6 +184,11 @@ pub fn level_row(
     on: bool,
 ) -> Response {
     let resp = interact(ui, id, rect, true, Role::Button, name, Some(on));
+    if let Some(n) = stars {
+        let d = format!("Best: {n} of 3 stars");
+        ui.ctx()
+            .accesskit_node_builder(resp.id, |b| b.set_description(d));
+    }
     let hovered = resp.hovered();
     let (fill, border, fg) = if on {
         (t::TINT, t::EDGE_ON, t::INK)

@@ -6,9 +6,15 @@
 
 use super::data::{LevelKey, MaterialKey, SizeKey, Support};
 use super::design::{Analysis, Band};
-use super::fmt::{num, round_str, stars, to_fixed};
 use super::game::{Game, Phase, Selection, Tool};
+use crate::jsnum::{num, round_str, to_fixed};
 use crate::truss::{FailureMode, ZERO_FORCE_N};
+
+/// The star row: `★★★` for 3, `★☆☆` for 1 (`starsTxt` in the mockup).
+pub fn stars(n: u8) -> String {
+    let n = n.min(3) as usize;
+    "★".repeat(n) + &"☆".repeat(3 - n)
+}
 
 /// Displacements are drawn × 40 with "Exaggerate sag" on.
 pub const SAG_FACTOR: f64 = 40.0;
@@ -894,5 +900,17 @@ impl Game {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::stars;
+
+    #[test]
+    fn star_rows() {
+        assert_eq!(stars(0), "☆☆☆");
+        assert_eq!(stars(2), "★★☆");
+        assert_eq!(stars(9), "★★★");
     }
 }

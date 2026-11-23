@@ -341,9 +341,21 @@ impl Game {
     }
 
     fn push(&mut self) {
-        self.hist.push(self.design.clone());
+        self.push_design(self.design.clone());
+    }
+
+    fn push_design(&mut self, d: Design) {
+        self.hist.push(d);
         if self.hist.len() > UNDO_DEPTH {
             self.hist.remove(0);
+        }
+    }
+
+    /// Records `before` as an undo step if the design changed since (refused edits — an
+    /// underground spot, a pair already joined, a joint already at 200 t — leave no step).
+    fn commit(&mut self, before: Design) {
+        if before != self.design {
+            self.push_design(before);
         }
     }
 
@@ -526,8 +538,9 @@ impl Game {
                     None => self.pending = Some(n.id),
                     Some(p) if p == n.id => self.pending = None,
                     Some(p) => {
-                        self.push();
+                        let before = self.design.clone();
                         self.add_member(&p, &n.id);
+                        self.commit(before);
                         self.pending = Some(n.id);
                     }
                 }
@@ -547,20 +560,22 @@ impl Game {
         let (x, y) = (x.clamp(X_MIN, X_MAX), y.clamp(Y_MIN, Y_MAX));
         match self.tool {
             Tool::Joint => {
-                self.push();
+                let before = self.design.clone();
                 if let Some(id) = self.add_node(x, y) {
                     self.sel = Some(Selection::Joint(id));
                 }
+                self.commit(before);
                 self.refresh();
             }
             Tool::Member => {
-                self.push();
+                let before = self.design.clone();
                 let Some(id) = self.add_node(x, y) else {
                     return;
                 };
                 if let Some(p) = self.pending.clone() {
                     self.add_member(&p, &id);
                 }
+                self.commit(before);
                 self.pending = Some(id);
                 self.refresh();
             }
@@ -644,9 +659,13 @@ impl Game {
         }
     }
 
-    /// Pointer released (or left the stage): ends a drag.
+    /// Pointer released (or left the stage): ends a drag. A drag that didn't move the joint
+    /// leaves no undo step.
     pub fn pointer_up(&mut self) {
         if self.drag.take().is_some() {
+            if self.hist.last() == Some(&self.design) {
+                self.hist.pop();
+            }
             self.revision = self.revision.wrapping_add(1);
         }
     }
@@ -681,10 +700,11 @@ impl Game {
             self.say(msg);
             return;
         }
-        self.push();
+        let before = self.design.clone();
         if let Some(n) = self.design.nodes.iter_mut().find(|n| n.id == id) {
             n.sup = sup;
         }
+        self.commit(before);
         self.refresh();
     }
 
@@ -706,8 +726,9 @@ impl Game {
             self.say("The level’s load stays on.");
             return;
         }
-        self.push();
+        let before = self.design.clone();
         self.design.set_load(id, nv);
+        self.commit(before);
         self.refresh();
     }
 
@@ -716,10 +737,11 @@ impl Game {
         if !self.building() || self.design.member(id).is_none() {
             return;
         }
-        self.push();
+        let before = self.design.clone();
         if let Some(m) = self.design.members.iter_mut().find(|m| m.id == id) {
             m.size = size;
         }
+        self.commit(before);
         self.refresh();
     }
 
@@ -728,8 +750,9 @@ impl Game {
         if !self.building() {
             return;
         }
-        self.push();
+        let before = self.design.clone();
         self.design.members.retain(|m| m.id != id);
+        self.commit(before);
         self.sel = None;
         self.refresh();
     }
@@ -746,7 +769,7 @@ impl Game {
                 return;
             }
         }
-        self.push();
+        self.push(); // a joint that isn't locked always goes
         self.design.set_load(id, 0.0);
         self.design.nodes.retain(|n| n.id != id);
         self.design.members.retain(|m| m.a != id && m.b != id);
@@ -940,6 +963,8 @@ impl Game {
             return;
         }
         let mut r = r0;
+        // the cascade stopped because the structure settled (not because of the cap)
+        let mut settled = false;
         for k in 0..MAX_BREAKS_PER_TICK {
             if k > 0 {
                 r = self.design.analyse(self.mat, lam, &broken);
@@ -975,10 +1000,16 @@ impl Game {
                     });
                     broken.push(id);
                 }
-                _ => break,
+                _ => {
+                    settled = true;
+                    break;
+                }
             }
         }
-        if lam >= 1.0 {
+        // At full load it holds only once the cascade has settled: if this tick's 30 breaks
+        // ran out first, the next tick goes on breaking at λ = 1 (the mockup's `tick()` would
+        // call it held with members still over their limit; review finding).
+        if lam >= 1.0 && settled {
             self.finish_hold(broken, log);
             return;
         }

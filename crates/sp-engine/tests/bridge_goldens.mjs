@@ -183,12 +183,32 @@ function starterMB5(c) {
   s.nM = 18;
 }
 
+// Undo steps (lead decision (d) + review finding): the app records a step only when the
+// design changed — a refused edit (underground spot, pair already joined, joint already at
+// 200 t, same size) or a drag that didn't move the joint leaves none. The mockup pushes first
+// and checks later, so the harness drops its no-op steps after each action.
+const designKey = (s) => JSON.stringify({ nodes: s.nodes, members: s.members, loads: s.loads, nN: s.nN, nM: s.nM });
+
 function run(actions) {
   const c = new Playground({});
   const snaps = [];
   const v = () => c.renderVals();
   for (const a of actions) {
     const [op, p, q] = a;
+    const before = designKey(c.state);
+    const depth = c.hist.length;
+    act(c, v, snaps, op, p, q);
+    if (op === 'up') {
+      if (c.hist.length && c.hist[c.hist.length - 1] === designKey(c.state)) c.hist.pop();
+    } else if (op !== 'down' && op !== 'move' && c.hist.length > depth && designKey(c.state) === before) {
+      c.hist.length = depth;
+    }
+  }
+  return snaps;
+}
+
+function act(c, v, snaps, op, p, q) {
+  {
     switch (op) {
       case 'snap': snaps.push(snapshot(c)); break;
       case 'tool': v().tools[['select', 'member', 'joint', 'support', 'weight', 'erase'].indexOf(p)].pick(); break;
@@ -219,7 +239,6 @@ function run(actions) {
       default: throw new Error('unknown action ' + op);
     }
   }
-  return snaps;
 }
 
 const out = {};
