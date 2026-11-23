@@ -175,7 +175,7 @@ Game materials (one material per structure, "Built from"):
 | Floors, wind, exaggeration | 5–120 floors; V10 5–50 m/s (default 30); sway drawn × 1–150 (default 40) | Game / Drawing | |
 | m/s → mph | × 2.237 | Exact (2.23694) | `MPH` |
 | Gust playback | modal mass factor 33/140, turbulence 8 %, vortex force 6 %, mean lean 0.85, 48 steps per period, playback 0.55 Hz | Illustrative / Drawing | `dynamics` (owner: `worlds`) |
-| Challenge | 100 floors, at V10 = 30 m/s; rung 7 / 12 | Game | |
+| Challenge | 100 floors at V10 = 30 m/s, drift better than H/350 (SPEC MB-6; the tile keeps "aim H/500"), under 10 milli-g, under $160M; rung 7 / 12 | Game | `CHALLENGE_FLOORS`, `CHALLENGE_V10`, `DRIFT_GOAL`, `CHALLENGE_RUNG` |
 
 ## Ground (`Ground.dc.html` `defs()`, `calc()`) — `sp_engine::ground`
 
@@ -201,6 +201,7 @@ Soil presets (one uniform layer to bedrock):
 | Consolidation in time | 1 − e^(−t/τ) | Simplified | [Terzaghi] |
 | Safety factor target | 3 (shallow), 2 (deep); bar to 5 | Representative | common practice for allowable-stress foundation design |
 | Pisa reference | "Pisa today ≈ 4°" | Representative | [Burland] |
+| Tower → Ground note | the tower's overturning moment adds ± M / (B³/6) at the foundation's edges (40 m square footprint: section modulus 10 667 m³; 248 kPa for the default 60-floor tower) | Simplified (rigid base, linear pressure) | `FromTower::edge_pressure` |
 | Years, floors, piles | 0–30 yr (0.25 yr per 60 ms); 2–80 floors; piles 8–40 m | Game / Drawing | |
 | Challenge | tilt under 0.5° at 30 years from the leaning-tower scenario; rung 10 / 12 | Game | `LEAN_TILT`, `CHALLENGE_RUNG` |
 
@@ -217,9 +218,10 @@ corner. **Class: representative** (badge "Curves: representative"; "Not certifie
 | Timber (clear softwood, along the grain) | (0,0) (0.67,80) | 12 GPa | — | 80 MPa | 0.67 % | 500 | [FPL] clear-wood tension parallel to the grain, linear and brittle |
 | Carbon fiber (quasi-isotropic laminate) | (0,0) (0.86,600) | 70 GPa | — | 600 MPa | 0.86 % | 1600 | [CMH17] QI carbon/epoxy, linear to failure (E at the upper end; standard-modulus QI is nearer 50 GPa) |
 
-Derived values (all **exact for the model**): toughness = area under the curve (steel 83.72,
-aluminium 35.58, concrete 0.10, timber 0.27, carbon fibre 2.58 MJ/m³); specific strength = peak
-÷ density (55, 115, 17, 160, 375 kN·m/kg at 20 °C); load cell force = stress × 50 mm².
+Derived values (all **exact for the model**): toughness = area under the curve as drawn, i.e.
+heat-scaled (at 20 °C: steel 83.72, aluminium 35.58, concrete 0.10, timber 0.27, carbon fibre
+2.58 MJ/m³; SPEC MB-8); specific strength = peak ÷ density (55, 115, 17, 160, 375 kN·m/kg at
+20 °C); load cell force = stress × 50 mm².
 
 Temperature strength factors (× every stress; linear between the points, flat outside).
 **Class: illustrative** (badge "Heat effects: illustrative").
@@ -252,6 +254,10 @@ Bench constants:
   MPa). Both are representative for their grade; they are different grades.
 - **Timber**: the Bridge's 30 MPa and Advanced's 24 MPa (GL24h) are structural design-class
   strengths; the Materials bench's 80 MPa is clear, defect-free wood along the grain.
-- **Toughness at temperature**: the Materials toughness tile shows the room-temperature area
-  (as the mockup does) while the plotted curve is scaled by the temperature factor (raised in
-  `PROGRESS.md` › Requests).
+- **Toughness at temperature** (resolved, SPEC MB-8): the mockup's toughness tile showed the
+  room-temperature area while its curve was heat-scaled; the app shows the area under the drawn
+  (heat-scaled) curve.
+- **The Tower's 100-floor challenge** (SPEC MB-6, resolved by `worlds` in wave 2): with the
+  mockup's model no 100-floor tower reaches H/500 at 30 m/s (best: a braced tapered tube ≈
+  H/367), so the mockup's goal could never complete; the goal reads "Drift better than H/350 at
+  30 m/s" while the drift tile keeps "aim H/500" (serviceability practice, H/400–H/600).

@@ -442,7 +442,7 @@ impl Bench {
             },
             Tile {
                 key: "Toughness",
-                value: format!("{} MJ/m\u{b3}", to_fixed(m.toughness(), 2)),
+                value: format!("{} MJ/m\u{b3}", to_fixed(m.toughness_at(temp), 2)),
                 note: "area under the curve",
             },
             Tile {

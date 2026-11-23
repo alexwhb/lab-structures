@@ -137,6 +137,9 @@ pub struct Curve {
     pub yield_mpa: Option<f64>,
     /// The note under the sample tiles.
     pub note: &'static str,
+    /// Shown in compression (concrete): it microcracks, cracks and crushes rather than yields,
+    /// necks and tears (status and explain wording, MB-8).
+    pub compressive: bool,
 }
 
 /// The five curves, in [`Kind::ALL`] order (mockup `defs()`, verbatim).
@@ -159,6 +162,7 @@ pub static CURVES: [Curve; 5] = [
         ultimate_strain: 15.0,
         yield_mpa: Some(275.0),
         note: "Mild structural steel. Yields, flows, hardens, necks, then tears. Lots of warning.",
+        compressive: false,
     },
     Curve {
         kind: Kind::Aluminum,
@@ -177,6 +181,7 @@ pub static CURVES: [Curve; 5] = [
         ultimate_strain: 8.0,
         yield_mpa: Some(276.0),
         note: "6061-T6 aluminum. A third of steel\u{2019}s weight and stiffness, no clean yield point.",
+        compressive: false,
     },
     Curve {
         kind: Kind::Concrete,
@@ -193,6 +198,7 @@ pub static CURVES: [Curve; 5] = [
         ultimate_strain: 0.2,
         yield_mpa: None,
         note: "Shown in compression. In tension it cracks at about a tenth of this, which is why it gets steel rebar.",
+        compressive: true,
     },
     Curve {
         kind: Kind::Timber,
@@ -203,6 +209,7 @@ pub static CURVES: [Curve; 5] = [
         ultimate_strain: 0.67,
         yield_mpa: None,
         note: "Clear wood pulled along the grain. Strong for its weight, but it snaps without stretching.",
+        compressive: false,
     },
     Curve {
         kind: Kind::CarbonFiber,
@@ -213,6 +220,7 @@ pub static CURVES: [Curve; 5] = [
         ultimate_strain: 0.86,
         yield_mpa: None,
         note: "Quasi-isotropic laminate. Huge strength, straight line to failure, no yield at all.",
+        compressive: false,
     },
 ];
 
@@ -378,9 +386,8 @@ impl Curve {
         self.yield_mpa.map(|y| y * temp_factor(self.kind, t_c))
     }
 
-    /// Toughness: the area under the room-temperature curve to fracture, MJ/m³ (mockup
-    /// `tough`, trapezoids of strain/100 × stress). Note the mockup shows this value at every
-    /// temperature; [`Curve::toughness_at`] is the heat-scaled variant.
+    /// The area under the room-temperature curve to fracture, MJ/m³ (mockup `tough`, trapezoids
+    /// of strain/100 × stress). The Toughness tile shows [`Curve::toughness_at`] (MB-8).
     pub fn toughness(&self) -> f64 {
         let mut tough = 0.0;
         for w in self.points.windows(2) {
@@ -390,8 +397,9 @@ impl Curve {
         tough
     }
 
-    /// The area under the curve as drawn at `t_c` °C (toughness × the temperature factor),
-    /// MJ/m³. Not shown by the mockup (see [`Curve::toughness`]).
+    /// Toughness at `t_c` °C: the area under the curve as drawn (heat-scaled), MJ/m³ — the
+    /// Toughness tile (SPEC MB-8; the mockup showed the room-temperature area at every
+    /// temperature).
     pub fn toughness_at(&self, t_c: f64) -> f64 {
         self.toughness() * temp_factor(self.kind, t_c)
     }

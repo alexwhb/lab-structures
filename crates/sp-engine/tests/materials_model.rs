@@ -89,7 +89,13 @@ fn pull_breaks_each_material_and_lights_its_chip() {
         );
         assert!(b.strain() > brk && b.strain() <= brk + step + 1e-9);
         let v = b.view();
-        assert_eq!(v.status, Status::Fractured { at: brk });
+        let want = if kind == Kind::Concrete {
+            Status::Crushed { at: brk }
+        } else {
+            Status::Fractured { at: brk }
+        };
+        assert_eq!(v.status, want);
+        assert!(v.status.is_broken());
         assert_eq!(v.status_tone, Tone::Danger);
         assert_eq!(v.force_label, "0.0 kN");
         assert!(v.challenge[kind.index()].lit);
@@ -124,6 +130,7 @@ fn steel_passes_elastic_plastic_necking_then_fracture() {
             Status::Plastic => 2,
             Status::Necking => 3,
             Status::Fractured { .. } => 4,
+            Status::Microcracking | Status::Cracking | Status::Crushed { .. } => 9,
         };
         if seen.last() != Some(&tag) {
             seen.push(tag);
@@ -252,8 +259,8 @@ fn temperature_factors_and_notes() {
     assert_eq!(tile(&v, "Yield"), "202 MPa");
     assert_eq!(
         tile(&v, "Toughness"),
-        "83.72 MJ/m\u{b3}",
-        "as the mockup: room temperature"
+        "61.54 MJ/m\u{b3}",
+        "MB-8: the area under the heat-scaled curve"
     );
     b.pick(Kind::Aluminum);
     assert!(
@@ -407,4 +414,42 @@ fn garbage_input_never_panics_or_leaks_nan() {
     assert_eq!(Kind::parse(""), None);
     assert_eq!(Kind::parse("\u{0}\u{ffff}"), None);
     assert_eq!(Zoom::parse("NaN"), None);
+}
+
+/// MB-8: concrete is squeezed — it microcracks, cracks past its peak and crushes; no metal
+/// wording ("yield", "atoms slipping", "tore"); and every explain says "Press Pull".
+#[test]
+fn concrete_speaks_of_cracking_and_crushing() {
+    let mut b = Bench::default();
+    assert!(b.explain().ends_with("Press Pull to keep pulling."));
+    b.pick(Kind::Concrete);
+    assert!(b.explain().ends_with("Press Pull to keep squeezing."));
+    let stages = [
+        (0.05, Status::Elastic, "Elastic: springs back"),
+        (
+            0.15,
+            Status::Microcracking,
+            "Microcracking: won\u{2019}t fully recover",
+        ),
+        (0.3, Status::Cracking, "Cracking: past its peak"),
+        (0.4, Status::Crushed { at: 0.35 }, "Crushed at 0.35%"),
+    ];
+    for (e, status, label) in stages {
+        b.set_strain(e);
+        assert_eq!(b.status(), status, "at {e} %");
+        let v = b.view();
+        assert_eq!(v.status_label, label);
+        assert!(v.rig_label.ends_with(&format!("{label}.")));
+        for bad in ["yield", "atoms", "tore", "stretches a lot", "necking"] {
+            assert!(!v.explain.contains(bad), "{bad:?} in {:?}", v.explain);
+        }
+    }
+    assert!(b.explain().starts_with("It crushed at 0.35% squeezing"));
+    assert_eq!(Status::Cracking.tone(), Tone::Caution);
+    assert_eq!(Status::Crushed { at: 0.35 }.tone(), Tone::Danger);
+    // The metals keep the mockup's words.
+    b.pick(Kind::Steel);
+    b.set_strain(5.0);
+    assert_eq!(b.status(), Status::Plastic);
+    assert!(b.explain().starts_with("Past the yield point"));
 }

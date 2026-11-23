@@ -12,6 +12,9 @@ pub const TICK_SECONDS: f64 = 0.05;
 /// Most ticks one [`Bench::advance`] runs (a long stall must not spin): more than a full pull
 /// on either axis (25 / 0.08 ≈ 313, 2 / 0.006 ≈ 334).
 pub const MAX_TICKS_PER_ADVANCE: usize = 400;
+/// The first sentence of the elastic explain (mockup `explain`).
+const SPRING: &str = "At first the sample behaves like a stiff spring: let go and it returns to its length. The slope of that first straight line is the stiffness, E.";
+
 /// The challenge's place on the bench's card (`Challenge · Break all five` · `5 / 12`, a fixed
 /// label in the mockup).
 pub const CHALLENGE_RUNG: (u32, u32) = (5, 12);
@@ -134,6 +137,16 @@ pub enum Status {
         /// The strain at fracture, %.
         at: f64,
     },
+    /// Concrete (squeezed) past its first straight line: tiny cracks open inside
+    /// ("Microcracking: won't fully recover"; MB-8).
+    Microcracking,
+    /// Concrete past its peak strength ("Cracking: past its peak"; MB-8).
+    Cracking,
+    /// Concrete crushed ("Crushed at 0.35%"; MB-8).
+    Crushed {
+        /// The strain at crushing, %.
+        at: f64,
+    },
 }
 
 impl Status {
@@ -145,6 +158,9 @@ impl Status {
             Status::Plastic => "Plastic: permanently stretched".into(),
             Status::Necking => "Necking".into(),
             Status::Fractured { at } => format!("Fractured at {}%", jsnum::to_string(*at)),
+            Status::Microcracking => "Microcracking: won\u{2019}t fully recover".into(),
+            Status::Cracking => "Cracking: past its peak".into(),
+            Status::Crushed { at } => format!("Crushed at {}%", jsnum::to_string(*at)),
         }
     }
 
@@ -153,10 +169,15 @@ impl Status {
         match self {
             Status::Ready => Tone::Muted,
             Status::Elastic => Tone::Ok,
-            Status::Plastic => Tone::Accent,
-            Status::Necking => Tone::Caution,
-            Status::Fractured { .. } => Tone::Danger,
+            Status::Plastic | Status::Microcracking => Tone::Accent,
+            Status::Necking | Status::Cracking => Tone::Caution,
+            Status::Fractured { .. } | Status::Crushed { .. } => Tone::Danger,
         }
+    }
+
+    /// The sample has failed (fractured or crushed).
+    pub fn is_broken(&self) -> bool {
+        matches!(self, Status::Fractured { .. } | Status::Crushed { .. })
     }
 }
 
@@ -364,6 +385,23 @@ impl Bench {
     pub fn status(&self) -> Status {
         let c = self.curve();
         let now = self.now();
+        if self.strain == 0.0 {
+            return Status::Ready;
+        }
+        if c.compressive {
+            // MB-8: concrete is squeezed, so it cracks and crushes rather than yields and tears.
+            return if now.broken {
+                Status::Crushed {
+                    at: now.break_strain,
+                }
+            } else if self.strain > c.ultimate_strain {
+                Status::Cracking
+            } else if self.strain > c.elastic_limit() {
+                Status::Microcracking
+            } else {
+                Status::Elastic
+            };
+        }
         let mut s = Status::Elastic;
         if self.strain > c.elastic_limit() && c.has_plastic_range() {
             s = Status::Plastic;
@@ -376,18 +414,34 @@ impl Bench {
                 at: now.break_strain,
             };
         }
-        if self.strain == 0.0 {
-            s = Status::Ready;
-        }
         s
     }
 
-    /// The "What's happening" sentence (mockup `explain`).
+    /// The "What's happening" sentence (mockup `explain`, with MB-8: "Press Pull", and concrete's
+    /// compression wording).
     pub fn explain(&self) -> String {
+        let mut x = if self.curve().compressive {
+            self.explain_compressive()
+        } else {
+            self.explain_tensile()
+        };
+        if self.temp >= HOT_C
+            && matches!(self.kind, Kind::Aluminum | Kind::CarbonFiber | Kind::Timber)
+        {
+            x.push_str(&format!(
+                " At {}\u{b0}C this one has lost much of its strength.",
+                jsnum::to_string(self.temp)
+            ));
+        }
+        x
+    }
+
+    /// The mockup's sentences for the materials pulled in tension.
+    fn explain_tensile(&self) -> String {
         let c = self.curve();
         let now = self.now();
         let plastic = c.has_plastic_range();
-        let mut x: String = "At first the sample behaves like a stiff spring: let go and it returns to its length. The slope of that first straight line is the stiffness, E. Press Play to keep pulling.".into();
+        let mut x: String = format!("{SPRING} Press Pull to keep pulling.");
         if self.strain > c.elastic_limit() && !now.broken && plastic {
             x = "Past the yield point the atoms start slipping past each other. The metal stretches a lot for little extra force, and it will not spring back fully. That slack is what lets steel bend instead of snap, a warning before failure.".into();
         }
@@ -407,15 +461,26 @@ impl Bench {
             };
             x.push_str(" Try another material, or heat it up.");
         }
-        if self.temp >= HOT_C
-            && matches!(self.kind, Kind::Aluminum | Kind::CarbonFiber | Kind::Timber)
-        {
-            x.push_str(&format!(
-                " At {}\u{b0}C this one has lost much of its strength.",
-                jsnum::to_string(self.temp)
-            ));
-        }
         x
+    }
+
+    /// Concrete's sentences (MB-8): it is squeezed, so it microcracks, cracks and crushes.
+    fn explain_compressive(&self) -> String {
+        let c = self.curve();
+        let now = self.now();
+        if now.broken {
+            return format!(
+                "It crushed at {}% squeezing, with little warning: a small area under the curve, so little energy absorbed. Pulled instead, it would have cracked at about a tenth of the load. Try another material, or heat it up.",
+                jsnum::to_string(now.break_strain)
+            );
+        }
+        if self.strain > c.ultimate_strain {
+            return "Past its peak strength the cracks join up and run along the sample. Each step of squeezing carries less force, until it crushes.".into();
+        }
+        if self.strain > c.elastic_limit() {
+            return "Tiny cracks open between the stones and the cement paste. The curve bends over: it still carries more load, but it will not spring all the way back.".into();
+        }
+        format!("{SPRING} Press Pull to keep squeezing.")
     }
 
     /// NAV-6 Share: a one-line `.material` summary (Series "Netlist directives": `.material name

@@ -121,7 +121,13 @@ fn pull_breaks_every_sample_and_lights_its_chip() {
         assert_eq!(status(&h), "Ready");
         pull_to_stop(&mut h);
         let brk = kind.curve().break_strain();
-        assert_eq!(status(&h), format!("Fractured at {brk}%"));
+        // MB-8: concrete is squeezed, so it crushes.
+        let word = if kind == Kind::Concrete {
+            "Crushed"
+        } else {
+            "Fractured"
+        };
+        assert_eq!(status(&h), format!("{word} at {brk}%"));
         assert_eq!(drive_label(&h).as_deref(), Some("Pull"));
         assert!(
             has_text(&h, &format!("{}: broken", kind.name())),
@@ -137,7 +143,7 @@ fn pull_breaks_every_sample_and_lights_its_chip() {
                 .accesskit_node()
                 .label()
                 .unwrap_or_default()
-                .contains("Fractured")),
+                .contains(word)),
         );
         assert_eq!(bench(&h).broke_count(), n + 1);
         // The clock shows the stretch at the stop.
@@ -302,7 +308,7 @@ fn stacks_at_390() {
     click_button(&mut h, "Fresh sample");
     reveal(&mut h, "Pull", Some(Role::Button));
     pull_to_stop(&mut h);
-    assert_eq!(status(&h), "Fractured at 0.35%");
+    assert_eq!(status(&h), "Crushed at 0.35%");
 }
 
 /// PLAT-3: while pulling, the screen asks for the next frame only when the next 50 ms step is

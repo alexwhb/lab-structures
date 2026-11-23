@@ -12,6 +12,8 @@
 // `pick`, `toggleDrive`, `newSample`, `reset`) are called from `renderVals()` exactly as the
 // markup would, and `tick()` is called as the 50 ms interval would.
 //
+// The app follows the mockup except where the SPEC overrides it (MB-8, see `mb8()` below).
+//
 // Output: `scenarios` (each a list of steps from the default state) and `snaps` (one per line:
 // the scenario, the step index after which it was taken, the raw state and the displayed
 // values of `renderVals()` — strings verbatim, SVG paths as the mockup builds them — that
@@ -61,9 +63,46 @@ function apply(c, step) {
 // Static or derivable values not worth repeating in every snapshot.
 const SKIP = new Set(['stageCls', 'notPlaying', 'curveColor', 'specFill']);
 
-/** Everything `renderVals()` displays, without the handlers. */
+// MB-8 (SPEC, lead decision): the app departs from the mockup on purpose here, and only here.
+// (a) Toughness is the area under the heat-scaled (drawn) curve; (c) the explain says "Press
+// Pull" (the button's name); (b) concrete is squeezed, so it microcracks, cracks and crushes
+// instead of yielding and tearing (status, explain and the rig label that quotes the status).
+const SPRING = 'At first the sample behaves like a stiff spring: let go and it returns to its length. The slope of that first straight line is the stiffness, E.';
+function mb8(c, r) {
+  const s = c.state;
+  const m = c.defs()[s.mat];
+  const p = m.pts;
+  const f = c.tempFactor(s.mat, s.temp);
+  let tough = 0;
+  for (let i = 1; i < p.length; i++) tough += (p[i][0] - p[i - 1][0]) / 100 * (p[i][1] + p[i - 1][1]) / 2;
+  r.tiles[4].v = (tough * f).toFixed(2) + ' MJ/m³';
+  r.explain = r.explain.replace('Press Play to keep pulling.', 'Press Pull to keep pulling.');
+  if (s.mat !== 'concrete') return;
+  const now = c.stressAt(s.mat, s.e, s.temp);
+  let label, color, explain;
+  if (s.e === 0) {
+    [label, color, explain] = ['Ready', '#A3A3A3', SPRING + ' Press Pull to keep squeezing.'];
+  } else if (now.broken) {
+    label = 'Crushed at ' + now.brk + '%';
+    color = '#E5534B';
+    explain = 'It crushed at ' + now.brk + '% squeezing, with little warning: a small area under the curve, so little energy absorbed. Pulled instead, it would have cracked at about a tenth of the load. Try another material, or heat it up.';
+  } else if (s.e > m.uts) {
+    [label, color, explain] = ['Cracking: past its peak', '#E7A47C', 'Past its peak strength the cracks join up and run along the sample. Each step of squeezing carries less force, until it crushes.'];
+  } else if (s.e > p[1][0]) {
+    [label, color, explain] = ['Microcracking: won’t fully recover', '#D6C7A1', 'Tiny cracks open between the stones and the cement paste. The curve bends over: it still carries more load, but it will not spring all the way back.'];
+  } else {
+    [label, color, explain] = ['Elastic: springs back', '#5FBF8A', SPRING + ' Press Pull to keep squeezing.'];
+  }
+  r.statusLabel = label;
+  r.statusColor = color;
+  r.explain = explain;
+  r.rigLabel = m.name + ' sample in a tensile test machine, stretched ' + s.e.toFixed(2) + '%. ' + label + '.';
+}
+
+/** Everything `renderVals()` displays (with the MB-8 overrides), without the handlers. */
 function snapshot(c) {
   const r = c.renderVals();
+  mb8(c, r);
   const keep = {};
   for (const [k, val] of Object.entries(r)) {
     if (typeof val === 'function' || SKIP.has(k)) continue;
