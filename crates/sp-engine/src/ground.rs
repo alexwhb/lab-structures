@@ -18,7 +18,7 @@
 //!
 //! Around it: statuses, the "What's happening" sentences, the readout tiles, the safety-factor
 //! bar, the scenarios, the "Challenge · The lean of Pisa" goals and the Tower hand-off note.
-//! Soil swatch colours live in `sp_theme::ground` (the engine has no colours).
+//! The engine has no colours (the v2 builder's soil swatches are in `sp_theme::builder`).
 //!
 //! Everything is total: inputs are clamped to the screen's ranges, nothing panics.
 

@@ -23,8 +23,8 @@ and towers. Decisions (user + lead):
 | v2 wave | Work | Status |
 |---|---|---|
 | 0 | v2 mockup + references, SPEC v2, module stubs | done (lead) |
-| 1 | builder engine · builder screen · app frame + MCP + removals · time + comfort · lab + fire | in progress |
-| 2 | integration, e2e journeys, visual pass, reviews + fixes, docs | not started |
+| 1 | builder engine · builder screen · app frame + MCP + removals · time + comfort · lab + fire | done |
+| 2 | all 12 journeys, cross-reviews (engine → lab + time, lab → engine + shell, time → screen, screen → shell) + fixes, visual pass, docs | done (2026-11-22): `scripts/test-all.sh` ALL GREEN, 453 tests; lead's live MCP run against the bundle (covered window) passed |
 
 ### Ownership (v2 wave 1)
 

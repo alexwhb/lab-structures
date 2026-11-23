@@ -46,7 +46,7 @@ pub fn band_bar(
     // the marker is clipped by the bar's `overflow: hidden` to the bar's height
     let marker =
         Rect::from_min_size(pos2(mx - 2.0, rect.top() - 2.0), vec2(4.0, 18.0)).intersect(rect);
-    p.rect_filled(marker, CornerRadius::same(2), t::tower::BAR_MARKER);
+    p.rect_filled(marker, CornerRadius::same(2), t::time::METER_MARKER);
     let s = name.to_string();
     let r = ui.interact(rect, ui.scope_id().with(("band-bar", name)), Sense::hover());
     r.widget_info(|| WidgetInfo::labeled(Role::Label, true, &s));

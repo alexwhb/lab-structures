@@ -10,7 +10,7 @@
 //! a colour: they use the constants here (or [`lab_theme::pal`] for the generic roles).
 //!
 //! Layout: this file holds the shared tokens (lead-owned). Each screen's scene colours live in
-//! its own module ([`bridge`], [`advanced`], [`tower`], [`ground`], [`materials`]), owned by
+//! its own module ([`advanced`], [`builder`], [`fire`], [`time`], [`materials`]), owned by
 //! that screen's agent (see `PROGRESS.md`); add tokens there with their CSS source.
 //!
 //! ```ignore
@@ -21,13 +21,10 @@ use egui::Color32;
 pub use lab_theme::{self, Grid, font, hex, mix, rgba};
 
 pub mod advanced;
-pub mod bridge;
 pub mod builder;
 pub mod fire;
-pub mod ground;
 pub mod materials;
 pub mod time;
-pub mod tower;
 
 /// Installs the series fonts and the egui style built from [`PALETTE`].
 pub fn install(ctx: &egui::Context) {
