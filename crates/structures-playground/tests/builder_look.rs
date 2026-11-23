@@ -89,13 +89,13 @@ fn render_board(name: &str) -> (RgbaImage, RgbaImage, u32) {
 fn bridge_build_is_close_to_the_reference() {
     let (img, mock, dy) = render_board("BridgeBuild");
     for (name, region, bound, below_levels) in [
-        ("tool rail", (0, 62, 76, 520), 4.0, false),
-        ("hint bar", (93, 75, 1032, 52), 9.0, false),
-        ("stage", (93, 138, 1032, 553), 6.0, false),
+        ("tool rail", (0, 62, 76, 520), 3.0, false),
+        ("hint bar", (93, 75, 1032, 52), 5.0, false),
+        ("stage", (93, 138, 1032, 553), 3.0, false),
         ("legend + zoom", (93, 700, 1032, 40), 8.0, false),
-        ("level rows", (1152, 75, 276, 300), 6.0, false),
+        ("level rows", (1152, 75, 276, 300), 5.0, false),
         ("goal panel", (1152, 462, 276, 210), 10.5, true),
-        ("conditions", (1152, 686, 276, 620), 8.0, true),
+        ("conditions", (1152, 686, 276, 620), 5.0, true),
     ] {
         let d = shifted_diff(&img, &mock, region, if below_levels { dy } else { 0 });
         println!("BridgeBuild {name}: mean |Δ| {d:.2}");
@@ -109,10 +109,10 @@ fn bridge_build_is_close_to_the_reference() {
 fn tower_build_is_close_to_the_reference() {
     let (img, mock, dy) = render_board("TowerBuild");
     for (name, region, bound, below_levels) in [
-        ("tool rail", (0, 62, 76, 520), 4.0, false),
-        ("hint bar", (93, 75, 1032, 52), 8.0, false),
-        ("stage", (93, 138, 1032, 553), 8.0, false),
-        ("level rows", (1152, 75, 276, 300), 6.0, false),
+        ("tool rail", (0, 62, 76, 520), 3.0, false),
+        ("hint bar", (93, 75, 1032, 52), 3.0, false),
+        ("stage", (93, 138, 1032, 553), 7.0, false),
+        ("level rows", (1152, 75, 276, 300), 5.0, false),
         ("goal panel", (1152, 462, 276, 230), 10.5, true),
     ] {
         let d = shifted_diff(&img, &mock, region, if below_levels { dy } else { 0 });
@@ -199,6 +199,23 @@ fn board_gallery() {
         "TowerQuake",
     ] {
         render_board(name);
+    }
+    for name in [
+        "BridgeBuild",
+        "BridgeStorm",
+        "BridgeCollapse",
+        "BridgeCable",
+        "TowerBuild",
+        "TowerStorm",
+        "TowerQuake",
+    ] {
+        let mock = board_png(name, 390);
+        let mut app = board(name, PHONE_W, mock.height() as f32 + 200.0);
+        let img = render(&mut app);
+        save(
+            &side_by_side(&img, &mock),
+            &repo().join(format!("target/compare/{name}-390.png")),
+        );
     }
     for name in ["BridgeStorm", "BridgeCollapse", "TowerStorm", "TowerQuake"] {
         let mock = load(&repo().join(format!("docs/design/v2/screenshots/{name}-1440-16s.png")));

@@ -135,9 +135,11 @@ pub enum Action {
     OpenInAdvanced,
 }
 
-/// The row: tool rail · stage · aside.
+/// The row: tool rail · stage · aside. The rail is 77 px, not its 76 px basis: Chrome's
+/// automatic minimum size for a flex item is its min-content width, the 60 px tool buttons +
+/// 2 × 8 px padding + the 1 px border (measured in `BridgeBuild-1440.png`).
 const COLS: [Column; 3] = [
-    Column::rail("Tools"),
+    Column::rail("Tools").min(77.0),
     Column::main("Stage"),
     Column::readouts("Level, site and inspector"),
 ];

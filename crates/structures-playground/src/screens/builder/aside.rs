@@ -40,9 +40,6 @@ pub fn show(
     }
     levels(ui, v, actions);
     goal(ui, v, actions);
-    for f in fold.each() {
-        f.results(ui, game, ctx);
-    }
     if v.is_sandbox {
         let specs: Vec<ChipSpec> = v
             .sb_scenes
@@ -54,6 +51,11 @@ pub fn show(
         {
             actions.push(Action::Scene(c.value));
         }
+    }
+    // the fold-ins' result slot (after the Sandbox's scene chips, which the mockup keeps next
+    // to the goal panel)
+    for f in fold.each() {
+        f.results(ui, game, ctx);
     }
     conditions(ui, ctx, game, fold, v, actions);
     match &v.inspector {

@@ -624,18 +624,24 @@ pub fn para(ui: &mut Ui, text: &str, size: f32, lh: f32, color: Color32) {
 }
 
 /// A `.lbl` eyebrow's galley wrapped at `width` (uppercase, 11 px semibold, `.08em`).
+///
+/// Its rows sit on Chrome's line boxes (`line-height: normal`: 14 px for Inter 11 px), so a
+/// one-line heading is 14 px tall, a two-line one 28.
 pub fn lbl_wrapped(ui: &Ui, text: &str, width: f32) -> std::sync::Arc<eframe::egui::Galley> {
+    let lh = css_line_height(ui, &lab_theme::font::semibold(11.0));
     let g = lbl_galley(ui, text, t::TEXT_MUTED);
-    if g.size().x <= width {
-        return g;
-    }
+    let width = if g.size().x <= width {
+        f32::INFINITY
+    } else {
+        width
+    };
     crate::widgets::text::wrapped_job(
         ui,
         &text.to_uppercase(),
         lab_theme::font::semibold(11.0),
         t::TEXT_MUTED,
         width,
-        None,
+        Some(lh),
         crate::widgets::text::LBL_SPACING,
         false,
     )
@@ -644,14 +650,9 @@ pub fn lbl_wrapped(ui: &Ui, text: &str, width: f32) -> std::sync::Arc<eframe::eg
 /// A `.lbl` eyebrow at the cursor (`<h2 class="lbl">`), wrapped when long.
 pub fn eyebrow(ui: &mut Ui, text: &str) {
     let w = ui.available_width();
-    let g = lbl_galley(ui, text, t::TEXT_MUTED);
-    if g.size().x <= w {
-        crate::widgets::lbl(ui, text);
-    } else {
-        let g = lbl_wrapped(ui, text, w);
-        let rect = Rect::from_min_size(ui.cursor().min, vec2(w, g.size().y));
-        ui.painter().galley(rect.min, g, t::TEXT_MUTED);
-        label_node(ui, ("builder-lbl", text), rect, text);
-        ui.advance_cursor_after_rect(rect);
-    }
+    let g = lbl_wrapped(ui, text, w);
+    let rect = Rect::from_min_size(ui.cursor().min, vec2(w, g.size().y));
+    ui.painter().galley(rect.min, g, t::TEXT_MUTED);
+    label_node(ui, ("builder-lbl", text), rect, text);
+    ui.advance_cursor_after_rect(rect);
 }

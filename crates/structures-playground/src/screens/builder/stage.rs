@@ -128,7 +128,9 @@ pub fn main_column(
     }
     let w = ui.available_width();
     let top = ui.cursor().min;
-    let rect = Rect::from_min_size(top, vec2(w, height_for(w)));
+    // (the height from the whole-pixel width, as Chrome snaps the box before its aspect ratio
+    // reaches the page: 1 px taller at 1440, where the column is 1030.5 px wide)
+    let rect = Rect::from_min_size(top, vec2(w, height_for(w.round())));
     stage(ui, rect, game, fold, v, extra_hud, anim, actions);
     ui.advance_cursor_after_rect(rect);
     legend::show(ui, &v.zoom_pct, actions);
