@@ -6,9 +6,10 @@
 //!   [`CHANGE_DELAY_S`] after Fire is switched on mid-run) and grows over [`GROW_S`]: its
 //!   temperature rises from 20 °C to the level's and its reach from 0 to the level's
 //!   ([`Blaze`]).
-//! - A piece's exposure comes from its distance to the fire, measured as a plume: height above
-//!   the fire counts [`PLUME`] × (flames and hot gas rise). Inside half the reach a piece sees the
-//!   full fire temperature; it falls off linearly to nothing at the reach.
+//! - A piece's exposure comes from its distance to the fire, measured as a plume: only what is at
+//!   or above the fire's height heats, and height above it counts [`PLUME`] × (flames and hot gas
+//!   rise). Inside half the reach a piece sees the full fire temperature; it falls off linearly
+//!   to nothing at the reach.
 //! - A piece's temperature follows its exposure with a first-order lag (time constant per
 //!   material, [`lag_s`]: thin steel heats fastest, thick concrete slowest).
 //! - Strength and stiffness follow the [`super::factors`] tables: steel and cable at their
@@ -72,27 +73,27 @@ pub fn source_for(scene: Scene, supports: &[[f64; 2]], joints: &[[f64; 2]]) -> [
     }
 }
 
-/// The plume distance from the fire at `s` to the segment `a`–`b`, m: height above the fire
-/// counts [`PLUME`] ×. Non-finite input gives `f64::INFINITY` (out of reach).
+/// The plume distance from the fire at `s` to the segment `a`–`b`, m: only the part of the piece
+/// at or above the fire's height counts (flames and hot gas rise; nothing below the fire heats),
+/// and height above the fire counts [`PLUME`] ×. A piece wholly below the fire, or non-finite
+/// input, gives `f64::INFINITY` (out of reach).
 pub fn plume_distance(s: [f64; 2], a: [f64; 2], b: [f64; 2]) -> f64 {
     if !(s.iter().chain(&a).chain(&b)).all(|v| v.is_finite()) {
         return f64::INFINITY;
     }
-    // Map into plume space (x − sx, (y − sy) × PLUME above, × 1 below); the map is linear on
-    // each side of the fire's height, so split a segment that crosses it.
-    let map = |p: [f64; 2]| {
-        let dy = p[1] - s[1];
-        [p[0] - s[0], if dy > 0.0 { dy * PLUME } else { dy }]
-    };
-    let seg = |p: [f64; 2], q: [f64; 2]| point_segment(map(p), map(q));
     let (da, db) = (a[1] - s[1], b[1] - s[1]);
-    if (da > 0.0 && db < 0.0) || (da < 0.0 && db > 0.0) {
-        let f = da / (da - db);
-        let m = [a[0] + (b[0] - a[0]) * f, s[1]];
-        seg(a, m).min(seg(m, b))
-    } else {
-        seg(a, b)
-    }
+    let (a, b) = match (da >= 0.0, db >= 0.0) {
+        (true, true) => (a, b),
+        (false, false) => return f64::INFINITY,
+        _ => {
+            // clip at the fire's height, keeping the upper end
+            let f = da / (da - db);
+            let m = [a[0] + (b[0] - a[0]) * f, s[1]];
+            if da >= 0.0 { (a, m) } else { (m, b) }
+        }
+    };
+    let map = |p: [f64; 2]| [p[0] - s[0], (p[1] - s[1]).max(0.0) * PLUME];
+    point_segment(map(a), map(b))
 }
 
 /// Distance from the origin to the segment `p`–`q`.
@@ -207,7 +208,7 @@ mod tests {
     fn plume_distance_counts_height_above_half() {
         let s = [0.0, 0.0];
         assert_eq!(plume_distance(s, [-1.0, 8.0], [1.0, 8.0]), 4.0);
-        assert_eq!(plume_distance(s, [-1.0, -8.0], [1.0, -8.0]), 8.0);
+        assert_eq!(plume_distance(s, [-1.0, -8.0], [1.0, -8.0]), f64::INFINITY);
         assert_eq!(plume_distance(s, [3.0, -5.0], [3.0, 5.0]), 3.0);
         assert_eq!(
             plume_distance(s, [f64::NAN, 0.0], [1.0, 1.0]),

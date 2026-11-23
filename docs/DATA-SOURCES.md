@@ -273,7 +273,7 @@ point.
 | Reach (fully grown) | 8 / 12 / 16 m of plume distance (interpolated for other temperatures) | Illustrative | |
 | Where | river: on the water under mid-span (28, −8 m); open ground: the mean x of the founded joints at y = 0 (else the joints at ground level, else x = 100 m) | Game | |
 | Timing | lights 3 s into a run (as the quake), 0.5 s after Fire is switched on mid-run, 0.2 s after "Light it now"; grows over 5 s (temperature and reach); Off puts it out | Game | |
-| Plume distance | height above the fire counts × 0.5 (flames and hot gas rise); full fire temperature within half the reach, falling linearly to ambient at the reach | Illustrative | |
+| Plume distance | only what is at or above the fire's height heats; height above it counts × 0.5 (flames and hot gas rise); full fire temperature within half the reach, falling linearly to ambient at the reach | Illustrative | |
 | Heating lag | first-order, time constant steel / cable 3 s, wood 4 s, rope 2 s, concrete 8 s | Illustrative (time compressed: real members take minutes; [EC3-1-2]) | thin steel heats fastest, thick concrete slowest |
 | Recovery | steel and cable follow their temperature now (they regain strength as they cool); concrete, wood and rope keep the worst they reached | Simplified | steel regains most of its strength after cooling; charring, melting and cracking don't heal |
 | "Softened" / "burned through" | a piece that breaks with less than 90 % of its strength left (steel, cable / wood, rope) | Game | |

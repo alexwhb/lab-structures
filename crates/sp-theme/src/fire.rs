@@ -64,7 +64,7 @@ pub const FIRE_BED: Color32 = hex(0x4A2418);
 /// Embers on the bed.
 pub const EMBER: Color32 = hex(0xC2451E);
 /// The fire's reach: a faint warm haze.
-pub const REACH_HAZE: Color32 = rgba(240, 120, 50, 0.08);
+pub const REACH_HAZE: Color32 = rgba(240, 120, 50, 0.06);
 
 /// The HUD chip's value ("Fire 650 °C"), flame orange at text contrast on the HUD pill.
 pub const HUD_FIRE: Color32 = hex(0xF2995E);

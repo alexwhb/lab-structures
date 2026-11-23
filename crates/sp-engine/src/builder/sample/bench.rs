@@ -341,6 +341,12 @@ impl Sample {
         self.acc = 0.0;
     }
 
+    /// Pauses a running test (the drawer closed); the sample stays as it is.
+    pub fn pause(&mut self) {
+        self.playing = false;
+        self.acc = 0.0;
+    }
+
     /// "Fresh sample": unloaded and paused, same test.
     pub fn fresh_sample(&mut self) {
         self.strain = 0.0;
