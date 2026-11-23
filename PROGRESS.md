@@ -351,7 +351,8 @@ Shared-file etiquette:
   that softens: `sp-engine/tests/fire_heat.rs::steel_truss_bridge()` (River Sandbox, 40 m Warren:
   Road deck J1–J3–J4–J5–J2 at x 8/18/28/38/48, Steel top chord J6–J9 at x 13/23/33/43, y 6, Steel
   diagonals; no crates) holds cold and over Small; chips "Big fire" then run: M6 (a middle top
-  chord) "softened" at ≈ 16.6 s (Inferno ≈ 9.1 s), the result explain carries the fire tip.
+  chord) "softened" at ≈ 16.6 s (Inferno ≈ 9.1 s); the Sandbox runs on, so read the running
+  explain ("M6 just softened!") / `sim.first_break` rather than a result banner.
 - **lab → shell** (**Done**, b1fd84a: with `show` the test runs in `fold.lab`'s drawer; `builder_fast_forward` with `show` calls `fold.time.start` + `set_year`) (MCP-2, optional): `sample_test` runs a headless `Sample` today; to show it in
   the app (`show: true`) open the drawer: `app.screens_mut().builder.fold.lab.open(kind)` then
   drive `fold.lab.sample_mut()` (`push()` for Push, `set_temp`, `run_to_end()`; `describe()` is
