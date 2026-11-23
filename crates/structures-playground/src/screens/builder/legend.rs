@@ -235,7 +235,7 @@ fn provenance(ui: &mut Ui) {
         UiBuilder::new()
             .max_rect(rect)
             .accessibility_role(Role::Group)
-            .accessibility_label("Provenance"),
+            .accessibility_label("Where the numbers come from"),
     );
     crate::widgets::set_bounds(&child, rect);
     let painter = child.painter();
