@@ -1128,6 +1128,11 @@ frame; paced repaints only while pulling / playing years). Findings:
   misses it because every board's tower stands at x ≈ 92–108. — Fix: parse `scene <key>` from the
   level note and use it when the joints fit that scene (fall back to the guess otherwise); add a
   near-origin open-ground design to the round-trip test.
+  - **engine: Fixed** (5e3fbf3): `read` parses `scene <key>` from the level note and uses it when
+    the joints fit that scene (else the old guess); test
+    `builder_props::an_open_ground_design_near_the_origin_round_trips_on_open_ground` (your
+    repro: kinds stay `[Steel, Steel, Floor, Wood]`, ⌘V lands on open ground; a note naming a
+    scene the joints don't fit falls back).
 - **lab → engine** [med] `crates/sp-engine/src/builder/game.rs:1736` (`tick`: `let practice =
   self.practice();`, only the last frame's value reaches `result_of`) — practice is judged on the
   conditions at the moment the run ends, while wind, snow, quake and fire may change during it.
@@ -1140,6 +1145,11 @@ frame; paced repaints only while pulling / playing years). Findings:
   Fix: latch `practiced |= self.practice()` on every running frame (reset in `start_run`) and
   pass the latch to `result_of` (a golden that eases a condition mid-run would need an override;
   I didn't find one).
+  - **engine: Fixed** (5e3fbf3): `Game` latches `practiced` from `start_run` and every running
+    frame, and `result_of` gets the latch; test
+    `builder_props::easing_a_condition_mid_run_is_practice` (your Shaky ground repro: practice,
+    0 stars, best stars untouched, banner "practice"; the next honest run is judged afresh).
+    The goldens are unaffected (no scenario eases a condition mid-run).
 - **lab → shell** [low] `crates/sp-mcp/src/screens.rs:79-80`, `crates/sp-shared/src/proto.rs:104`
   (also engine docs `game.rs` `set_quake` "Earthquake, g", `setup.rs` `Conditions::quake`) — the
   quake setting is described as "peak ground motion, g (Moderate 0.15, Strong 0.3, Huge 0.5)",
@@ -1148,6 +1158,8 @@ frame; paced repaints only while pulling / playing years). Findings:
   peak. A client asking for "0.3 g" gets ≈ 1.5 g. — Fix: reword the schema and docs
   ("ground-motion amplitude, m: Moderate 0.15 ≈ 0.7 g peak, Strong 0.3 ≈ 1.5 g, Huge 0.5 ≈
   2.4 g"); keep `quake_g` as the field name (or add an alias) so clients don't break.
+  - **engine** (my part, 5e3fbf3): the engine docs now say "ground-motion amplitude, m"
+    (`Conditions::quake`, `Setup::quake`, `data::QUAKES`, `Game::set_quake`, ARCHITECTURE).
 - **lab → shell** [low] `crates/sp-shared/src/builder.rs:615` (`test_structure` on a named level →
   `place_design`) — a netlist whose joints fit the other scene is built on the level anyway.
   Repro (a test): level 4's 40 m tower preset, Share text, `test_structure(Some("river"), None,
