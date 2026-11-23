@@ -210,7 +210,7 @@ pub fn draw(ui: &mut Ui, rect: Rect, s: &GroundScreen, r: &GroundResult) {
     }
     // sand boils
     if r.liquefied && input.years > 0.0 {
-        let tick = sp_engine::tower::fmt::js_round(input.years * 8.0) as i64;
+        let tick = sp_engine::jsnum::js_round(input.years * 8.0) as i64;
         for (i, x) in [140.0, 230.0, 650.0, 760.0, 330.0, 580.0]
             .iter()
             .enumerate()
@@ -344,23 +344,25 @@ pub fn draw(ui: &mut Ui, rect: Rect, s: &GroundScreen, r: &GroundResult) {
         rect_drawn.top() + rect_drawn.height() * 0.10,
     );
     chip.show_at(&panel, pos2(at.x, at.y - 0.3 * cs.y), Align2::CENTER_BOTTOM);
+    // the soil name and "bedrock", each on a dark chip so they read on every soil (MB-7)
     let mono = font::mono(11.0);
-    let bg = galley(&panel, "bedrock", mono.clone(), t::TEXT_MUTED);
     let line = css_line_height(&panel, &mono);
+    let bg = galley(&panel, "bedrock", mono.clone(), t::TEXT_MUTED);
     let by = rect_drawn.top() + rect_drawn.height() * 0.84;
-    p.galley(
-        pos2(
-            rect_drawn.right() - 12.0 - bg.size().x,
-            text_top(by + line / 2.0, &bg),
-        ),
+    label_on_chip(
+        &panel,
+        pos2(rect_drawn.right() - 12.0 - bg.size().x, by),
+        line,
         bg,
         t::TEXT_MUTED,
     );
     let name = input.soil.def().name.to_lowercase();
     let sg = galley(&panel, &name, mono, tg::SOIL_LABEL);
     let sy = rect_drawn.top() + rect_drawn.height() * 0.64;
-    p.galley(
-        pos2(rect_drawn.left() + 12.0, text_top(sy + line / 2.0, &sg)),
+    label_on_chip(
+        &panel,
+        pos2(rect_drawn.left() + 12.0, sy),
+        line,
         sg,
         tg::SOIL_LABEL,
     );
@@ -370,6 +372,24 @@ pub fn draw(ui: &mut Ui, rect: Rect, s: &GroundScreen, r: &GroundResult) {
     let resp = panel.interact(rect, panel.scope_id().with("ground-stage"), Sense::hover());
     resp.widget_info(|| WidgetInfo::labeled(Role::Image, true, &label));
     layout::graph_panel_border(ui, rect_drawn);
+}
+
+/// A stage label whose text box starts at `at` (CSS `left` / `top`), on a [`tg::LABEL_CHIP`]
+/// (`padding: 2px 6px`, radius 4) so it reaches 4.5:1 on every soil (SPEC MB-7).
+fn label_on_chip(
+    ui: &Ui,
+    at: Pos2,
+    line: f32,
+    g: std::sync::Arc<eframe::egui::Galley>,
+    color: eframe::egui::Color32,
+) {
+    let chip = Rect::from_min_size(
+        pos2(at.x - 6.0, at.y - 2.0),
+        vec2(g.size().x + 12.0, line + 4.0),
+    );
+    let p = ui.painter();
+    p.rect_filled(chip, CornerRadius::same(4), tg::LABEL_CHIP);
+    p.galley(pos2(at.x, text_top(at.y + line / 2.0, &g)), g, color);
 }
 
 /// The legend box at the stage's bottom-left (`left: 12px; bottom: 10px; padding: 6px 10px;

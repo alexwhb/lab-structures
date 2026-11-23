@@ -163,6 +163,16 @@ fn soils_foundations_floors_and_quake() {
     assert!(ground_input(&h).quake);
     assert!(has_label(&h, "Status: Liquefaction"));
     assert!(has_label_containing(&h, "liquefied!"));
+    // shaking while playing: ~30 fps, not the display rate (PLAT-3)
+    click_drive(&mut h);
+    h.run_steps(6);
+    let asked = h.output().viewport_output[&egui::ViewportId::ROOT].repaint_delay;
+    assert!(
+        asked >= std::time::Duration::from_millis(30)
+            && asked <= std::time::Duration::from_millis(40),
+        "quake asks for a frame in {asked:?}"
+    );
+    click_drive(&mut h);
     assert!(has_label(
         &h,
         "Legend: Pressure bulb under the foundation, Water table"

@@ -137,7 +137,7 @@ fn defaults_show_the_mockup_numbers() {
     assert_eq!(pressed(&h, "Tube"), Some(false));
     assert_eq!(pressed(&h, "Straight"), Some(true));
     assert!(!goal_done(&h, "Reach 100 floors"));
-    assert!(!goal_done(&h, "Drift better than H/500 at 30 m/s"));
+    assert!(!goal_done(&h, "Drift better than H/350 at 30 m/s"));
     assert!(goal_done(&h, "Top floor under 10 milli-g"));
     assert!(goal_done(&h, "Under $160M (game money)"));
     let damper = get(&h, "Tuned mass damper at the top", Role::CheckBox);
@@ -300,9 +300,10 @@ fn hand_off_to_ground_and_back() {
     assert_eq!(tower_input(&h).floors, 40);
 }
 
-/// DONE-4 (tower half): 100 floors with a braced tube and the damper.
+/// DONE-4 (tower half) / SPEC MB-6: 100 floors, a braced tapered tube and the damper complete
+/// the challenge (`tower::CHALLENGE_DESIGN`: all four goals lit).
 #[test]
-fn a_100_floor_braced_tube_with_a_damper() {
+fn a_100_floor_braced_tube_with_a_damper_completes_the_challenge() {
     let mut h = harness(Route::Tower);
     set_slider(&mut h, "Number of floors", 99.0);
     click_button(&mut h, "Add a floor");
@@ -310,18 +311,27 @@ fn a_100_floor_braced_tube_with_a_damper() {
     click_button(&mut h, "Tapered");
     click(&mut h, "Tuned mass damper at the top");
     let input = tower_input(&h);
-    assert_eq!(
-        (input.floors, input.system, input.shape, input.damper),
-        (100, System::Braced, Shape::Tapered, true)
-    );
-    assert!(goal_done(&h, "Reach 100 floors"));
-    assert!(goal_done(&h, "Top floor under 10 milli-g"));
-    assert!(goal_done(&h, "Under $160M (game money)"));
+    assert_eq!(input, tower::CHALLENGE_DESIGN);
+    for goal in [
+        "Reach 100 floors",
+        "Drift better than H/350 at 30 m/s",
+        "Top floor under 10 milli-g",
+        "Under $160M (game money)",
+    ] {
+        assert!(goal_done(&h, goal), "{goal}");
+    }
+    assert!(has_label_containing(&h, "drift H/367 · aim H/500"));
     expect_engine_labels(&h, &input);
-    // and it plays
+    // and it plays, at ~30 fps (PLAT-3)
     click_drive(&mut h);
     h.run_steps(10);
     assert!(h.state().screens().tower.sim.as_ref().unwrap().has_damper());
+    let asked = h.output().viewport_output[&egui::ViewportId::ROOT].repaint_delay;
+    assert!(
+        asked >= std::time::Duration::from_millis(30)
+            && asked <= std::time::Duration::from_millis(40),
+        "Play gusts asks for a frame in {asked:?}"
+    );
 }
 
 /// LOOK-1: renders at 1440 and 390 and stays close to the 1440 reference in its stable

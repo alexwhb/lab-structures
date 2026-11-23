@@ -23,10 +23,8 @@
 //! Everything is total: inputs are clamped to the screen's ranges ([`TowerInput::sanitized`]),
 //! nothing panics.
 
-pub mod fmt;
-
 use crate::dynamics::SwayParams;
-use fmt::{fixed, round_str};
+use crate::jsnum::{self, fixed, round_str};
 use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
 
@@ -72,8 +70,12 @@ pub const EX_MAX: f64 = 150.0;
 /// Default exaggeration (`sway drawn ×40`).
 pub const EX_DEFAULT: f64 = 40.0;
 
-/// Drift aim: `H/500` or better is "OK".
+/// Drift aim: `H/500` or better is "OK" (the Top sway tile, the status).
 pub const DRIFT_AIM: f64 = 500.0;
+/// The challenge's drift goal: `H/350` at 30 m/s (SPEC MB-6: the mockup's H/500 can't be met by
+/// any 100-floor tower in the model; at H/350 a braced tapered tube meets all four goals at
+/// once, see [`CHALLENGE_DESIGN`]).
+pub const DRIFT_GOAL: f64 = 350.0;
 /// Drift worse than `H/200` is "Dangerously flexible".
 pub const DRIFT_DANGER: f64 = 200.0;
 /// Comfort bands, milli-g: noticed, uneasy, seasick (illustrative).
@@ -88,6 +90,16 @@ pub const CHALLENGE_FLOORS: u32 = 100;
 pub const CHALLENGE_V10: f64 = 30.0;
 /// "Challenge · 100 floors" is rung 7 of the series' 12-rung challenge ladder.
 pub const CHALLENGE_RUNG: (u32, u32) = (7, 12);
+/// A design that meets all four challenge goals at once (SPEC MB-6, DONE-4): 100 floors, a
+/// braced tapered tube with the tuned mass damper, in the 30 m/s storm — drift H/367,
+/// 4.4 milli-g, $144M.
+pub const CHALLENGE_DESIGN: TowerInput = TowerInput {
+    floors: 100,
+    system: System::Braced,
+    shape: Shape::Tapered,
+    v10: 30.0,
+    damper: true,
+};
 
 /// Generalised mass of the first mode per `μH`, for the mode shape [`mode_shape`]:
 /// `∫₀¹ φ² dx = 33/140`.
@@ -395,9 +407,14 @@ impl TowerResult {
         self.height / self.delta
     }
 
-    /// Drift at least `H/500`.
+    /// Drift at least `H/500` (the tile's aim).
     pub fn sway_ok(&self) -> bool {
         self.drift_ratio() >= DRIFT_AIM
+    }
+
+    /// Drift at least `H/350` (the challenge's goal, SPEC MB-6).
+    pub fn drift_goal_ok(&self) -> bool {
+        self.drift_ratio() >= DRIFT_GOAL
     }
 
     /// Top floor under 10 milli-g.
@@ -707,7 +724,7 @@ pub fn v_top_label(r: &TowerResult) -> String {
 
 /// The storm slider's readout ("30 m/s · 67 mph").
 pub fn v10_label(v10: f64) -> String {
-    format!("{} m/s · {} mph", fmt::num(v10), fixed(v10 * MPH, 0))
+    format!("{} m/s · {} mph", jsnum::num(v10), fixed(v10 * MPH, 0))
 }
 
 /// The header clock ("T = 9.9 s").
@@ -717,7 +734,7 @@ pub fn clock(r: &TowerResult) -> String {
 
 /// The floors well's note ("floors · 240 m").
 pub fn floors_note(input: &TowerInput) -> String {
-    format!("floors · {} m", fmt::num(input.sanitized().height()))
+    format!("floors · {} m", jsnum::num(input.sanitized().height()))
 }
 
 /// The stage's accessible summary (the mockup's `stageLabel`).
@@ -728,7 +745,7 @@ pub fn stage_label(input: &TowerInput, r: &TowerResult) -> String {
         input.floors,
         input.shape.def().name.to_lowercase(),
         input.system.def().name.to_lowercase(),
-        fmt::num(input.v10),
+        jsnum::num(input.v10),
         Status::of(r).label()
     )
 }
@@ -792,7 +809,8 @@ pub struct Goal {
     pub done: bool,
 }
 
-/// "Challenge · 100 floors": the four live goals.
+/// "Challenge · 100 floors": the four live goals. The drift goal is H/350 (SPEC MB-6; the
+/// mockup's H/500 is unreachable at 100 floors).
 pub fn goals(input: &TowerInput, r: &TowerResult) -> [Goal; 4] {
     let input = input.sanitized();
     let storm = input.v10 >= CHALLENGE_V10;
@@ -802,8 +820,8 @@ pub fn goals(input: &TowerInput, r: &TowerResult) -> [Goal; 4] {
             done: input.floors >= CHALLENGE_FLOORS,
         },
         Goal {
-            text: "Drift better than H/500 at 30 m/s",
-            done: storm && r.sway_ok(),
+            text: "Drift better than H/350 at 30 m/s",
+            done: storm && r.drift_goal_ok(),
         },
         Goal {
             text: "Top floor under 10 milli-g",
@@ -824,13 +842,13 @@ pub fn share_line(input: &TowerInput, r: &TowerResult) -> String {
     format!(
         ".story {} {} {}t {} shape={} damper={}  .wind {} {}  ; top {} · {} · {}",
         input.floors,
-        fmt::num(FLOOR_H),
-        fmt::num(floor_mass_t),
+        jsnum::num(FLOOR_H),
+        jsnum::num(floor_mass_t),
         input.system.def().key,
         input.shape.def().key,
         if input.damper { "on" } else { "off" },
-        fmt::num(input.v10),
-        fmt::num(ALPHA),
+        jsnum::num(input.v10),
+        jsnum::num(ALPHA),
         sway_chip(r).trim_start_matches("top "),
         clock(r),
         accel_label(r)
@@ -890,15 +908,15 @@ pub fn is_sky_slot(i: u32) -> bool {
 
 /// The outriggers' floors (a third and two thirds of the way up).
 pub fn is_outrigger_floor(i: u32, n: u32) -> bool {
-    let third = fmt::js_round(n as f64 / 3.0) as u32;
-    let two = fmt::js_round(2.0 * n as f64 / 3.0) as u32;
+    let third = jsnum::js_round(n as f64 / 3.0) as u32;
+    let two = jsnum::js_round(2.0 * n as f64 / 3.0) as u32;
     i == third || i == two
 }
 
 /// Heights of the wind arrows on the stage, m: from 20 m every `max(20, round(H/70)·10)` m up to
 /// the top.
 pub fn arrow_heights(height: f64) -> Vec<f64> {
-    let step = (fmt::js_round(height / 7.0 / 10.0) * 10.0).max(20.0);
+    let step = (jsnum::js_round(height / 7.0 / 10.0) * 10.0).max(20.0);
     let mut out = Vec::new();
     let mut z = 20.0;
     while z <= height + 1.0 && out.len() < 64 {
@@ -921,13 +939,17 @@ pub fn arrow_len(v10: f64, z: f64) -> f64 {
 /// Mass ratio of the tuned mass damper to the first mode's generalised mass (2 %: tuned by
 /// Den Hartog's rule it gives the first mode about 5 % equivalent damping, [`ZETA_DAMPER`]).
 pub const DAMPER_MASS_RATIO: f64 = 0.02;
-/// Turbulence intensity of the gusts (σᵤ / V̄): the default tower's gust peaks (≈ 3σ) come out
-/// near the mockup's dynamic amplitude `dyn`.
-pub const TURBULENCE: f64 = 0.08;
+/// Turbulence intensity of the gusts (σᵤ / V̄), calibrated so the default tower's swing has an
+/// rms of about a third of the mockup's dynamic amplitude `dyn` (peaks ≈ 3σ ≈ `dyn`): the gusts'
+/// one-period correlation time puts their energy near f1, where ζ = 1.5 % amplifies it about
+/// 1/(2ζ), so a small intensity already gives the mockup's swing.
+pub const TURBULENCE: f64 = 0.02;
 /// Amplitude of the vortex-shedding force at full lock-in, as a fraction of the mean wind
-/// force (× the lock-in nearness × the shape's cross-wind factor). Drawn in the plane of the
-/// stage for simplicity (real shedding pushes across the wind).
-pub const VORTEX_FORCE: f64 = 0.06;
+/// force (× the lock-in nearness × the shape's cross-wind factor), scaled with
+/// [`TURBULENCE`] so lock-in roughly doubles the swing as the mockup's `(1 + 3·near·cross)`
+/// does for the acceleration. Drawn in the plane of the stage for simplicity (real shedding
+/// pushes across the wind).
+pub const VORTEX_FORCE: f64 = 0.015;
 /// The drawn rest pose leans by this fraction of `δ` (the mockup's `delta*0.85`): the mean of the
 /// gusting wind.
 pub const MEAN_LEAN: f64 = 0.85;

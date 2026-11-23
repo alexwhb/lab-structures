@@ -454,10 +454,11 @@ impl Screen for GroundScreen {
         if !self.playing {
             return;
         }
-        let moving = (self.input.quake) || self.input.soil.wet();
+        let moving = self.input.quake || self.input.soil.wet();
         if moving {
+            // the shake / flowing water table at ~30 fps (PLAT-3), the years still on their ticks
             self.anim = (self.anim + dt) % 1000.0;
-            ctx.animate();
+            ctx.wake_in(super::tower::ANIM_FRAME.min(self.ticker.due_in(rate)));
         } else {
             ctx.wake_in(self.ticker.due_in(rate));
         }

@@ -7,7 +7,7 @@
 
 use serde_json::Value;
 use sp_engine::ground::{self, Foundation, GroundInput, SCENARIOS, Soil, Status};
-use sp_engine::tower::fmt::fixed;
+use sp_engine::jsnum::fixed;
 
 fn goldens() -> Vec<Value> {
     serde_json::from_str(include_str!("ground_goldens.json")).expect("valid golden JSON")

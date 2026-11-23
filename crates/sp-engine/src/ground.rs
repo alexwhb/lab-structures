@@ -22,8 +22,8 @@
 //!
 //! Everything is total: inputs are clamped to the screen's ranges, nothing panics.
 
+use crate::jsnum::{fixed, num};
 use crate::tower::Tone;
-use crate::tower::fmt::{fixed, num};
 use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
 

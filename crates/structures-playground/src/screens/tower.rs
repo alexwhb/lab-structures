@@ -41,6 +41,8 @@ pub const TITLE: &str = "Stack it up, then let the storm in";
 /// See [`TITLE`].
 pub const SUBTITLE: &str =
     "40 m square plan, 4 m floors. Wind blows from the left and gets stronger with height.";
+/// Frame interval while Play gusts runs, s (~30 fps, PLAT-3).
+pub const ANIM_FRAME: f32 = 1.0 / 30.0;
 /// The hand-off button (NAV-4).
 pub const SEND_TO_GROUND: &str = "Send base reactions to Ground ›";
 
@@ -376,7 +378,7 @@ impl TowerScreen {
                     ui,
                     bar.shape.def().name,
                     bar.shape == self.input.shape,
-                    sp_engine::tower::fmt::js_round(bar.width) as f32,
+                    sp_engine::jsnum::js_round(bar.width) as f32,
                     tone_color(bar.tone()),
                     &bar.label(),
                 );
@@ -477,7 +479,8 @@ impl Screen for TowerScreen {
             sim.advance(dt as f64 * playback_speed(f1));
         }
         self.flow = (self.flow + dt) % 1.6;
-        ctx.animate();
+        // ~30 fps while it moves (PLAT-3); SwaySim integrates in its own fixed steps
+        ctx.wake_in(ANIM_FRAME);
     }
 
     fn enter(&mut self, ctx: &mut Ctx) {

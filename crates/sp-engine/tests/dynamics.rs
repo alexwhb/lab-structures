@@ -325,14 +325,18 @@ fn play_gusts_sways_around_the_drawn_lean_and_the_damper_calms_it() {
         "mean {mean} vs {}",
         p.mean_top
     );
-    // Gusts move it by a visible fraction of the lean, on the scale of the mockup's dynamic
-    // amplitude `dyn` (peaks ≈ 3σ).
+    // Calibrated to the mockup's dynamic amplitude: rms ≈ dyn / 3, so gust peaks (≈ 3σ) are
+    // about `dyn` (materials' review: 0.08 turbulence gave rms 1.4 × dyn).
+    println!(
+        "rms {rms:.4} m, dyn {:.4} m, ratio {:.3}",
+        r.dyn_amp,
+        rms / r.dyn_amp
+    );
     assert!(
-        rms > 0.15 * r.dyn_amp && rms < 1.5 * r.dyn_amp,
+        rms > 0.2 * r.dyn_amp && rms < 0.5 * r.dyn_amp,
         "rms {rms} vs dyn {}",
         r.dyn_amp
     );
-
     let damped_in = TowerInput {
         damper: true,
         ..input
@@ -342,6 +346,32 @@ fn play_gusts_sways_around_the_drawn_lean_and_the_damper_calms_it() {
     assert!(pd.mass_ratio > 0.0);
     let (_, rms_d) = rms_swing(pd, 600.0);
     assert!(rms_d < 0.75 * rms, "damper: {rms_d} vs {rms}");
+}
+
+/// At the defaults the drawn top never swings through vertical into the wind, for any seed
+/// (500 periods each), and its peaks stay within about 1.5 × `dyn` of the lean.
+#[test]
+fn the_default_tower_never_swings_upwind() {
+    let input = TowerInput::default();
+    let r = tower::calc(&input);
+    for seed in [1, 7, 42, 99, 12345] {
+        let p = tower::sway_params(&input, &r, seed);
+        let mut sim = SwaySim::new(p);
+        let period = 1.0 / p.f1;
+        let (mut lo, mut hi) = (f64::MAX, f64::MIN);
+        for _ in 0..(500 * 30) {
+            sim.advance(period / 30.0);
+            lo = lo.min(sim.top());
+            hi = hi.max(sim.top());
+        }
+        assert!(lo > 0.0, "seed {seed}: the top reaches {lo} m (upwind)");
+        let peak = (hi - p.mean_top).max(p.mean_top - lo);
+        assert!(
+            peak < 1.6 * r.dyn_amp,
+            "seed {seed}: peak swing {peak} m vs dyn {}",
+            r.dyn_amp
+        );
+    }
 }
 
 #[test]

@@ -6,7 +6,8 @@
 //! `node crates/sp-engine/tests/tower_ground_goldens.mjs`.
 
 use serde_json::Value;
-use sp_engine::tower::{self, Shape, Status, System, TowerInput, fmt::fixed};
+use sp_engine::jsnum::fixed;
+use sp_engine::tower::{self, Shape, Status, System, TowerInput};
 
 fn goldens() -> Vec<Value> {
     serde_json::from_str(include_str!("tower_goldens.json")).expect("valid golden JSON")
@@ -82,9 +83,17 @@ fn every_golden_state_matches_the_mockup() {
             let selected = gb["tc"] == "#F5F5F5";
             assert_eq!(b.shape == input.shape, selected, "{ctx}");
         }
-        // Goals.
+        // Goals. The second is SPEC MB-6's H/350 (the mockup's H/500 is unreachable at 100
+        // floors); checked against the mockup's own drift numbers.
         let goals = tower::goals(&input, &r);
-        for (gl, gg) in goals.iter().zip(g["goals"].as_array().unwrap()) {
+        for (i, (gl, gg)) in goals.iter().zip(g["goals"].as_array().unwrap()).enumerate() {
+            if i == 1 {
+                assert_eq!(gl.text, "Drift better than H/350 at 30 m/s", "{ctx}");
+                let drift = c["H"].as_f64().unwrap() / c["delta"].as_f64().unwrap();
+                let storm = g["state"]["v10"].as_f64().unwrap() >= 30.0;
+                assert_eq!(gl.done, storm && drift >= 350.0, "{ctx}: MB-6 drift goal");
+                continue;
+            }
             assert_eq!(gl.text, gg["text"], "{ctx}");
             assert_eq!(gl.done, gg["done"].as_bool().unwrap(), "{ctx}: {}", gl.text);
         }
@@ -125,43 +134,59 @@ fn the_default_state_shows_the_reference_numbers() {
     assert_eq!(done, [false, false, true, true]);
 }
 
-/// DONE-4's tower: 100 floors, braced tube and damper lights three of the four goals. In the
-/// mockup's model no 100-floor tower reaches H/500 at 30 m/s (the stiffest, a braced tapered
-/// tube, manages H/367), so the drift goal is met at fewer floors (reported to the lead in
-/// PROGRESS; the model stays exactly the mockup's).
+/// SPEC MB-6 / DONE-4: the challenge can be completed. `tower::CHALLENGE_DESIGN` — 100 floors, a
+/// braced tapered tube with the tuned mass damper, 30 m/s — meets all four goals at once (drift
+/// H/367 against the H/350 goal, 4.4 milli-g, $144M). The mockup's H/500 is out of reach for
+/// every 100-floor tower in the (exact) model, which is why the goal moved; H/350 is the lowest
+/// round threshold (multiples of 50) that a complete design meets.
 #[test]
-fn the_100_floor_challenge_with_a_braced_tube_and_damper() {
-    let input = TowerInput {
-        floors: 100,
-        system: System::Braced,
-        shape: Shape::Tapered,
-        v10: 30.0,
-        damper: true,
-    };
+fn the_100_floor_challenge_is_completable() {
+    let input = tower::CHALLENGE_DESIGN;
+    assert_eq!(
+        (
+            input.floors,
+            input.system,
+            input.shape,
+            input.v10,
+            input.damper
+        ),
+        (100, System::Braced, Shape::Tapered, 30.0, true)
+    );
     let r = tower::calc(&input);
-    let done = tower::goals(&input, &r).map(|g| g.done);
-    assert_eq!(done, [true, false, true, true]);
-    assert_eq!(tower::fmt::round_str(r.drift_ratio()), "367");
-    let best = System::ALL
+    let goals = tower::goals(&input, &r);
+    assert!(goals.iter().all(|g| g.done), "{goals:?}");
+    assert_eq!(sp_engine::jsnum::round_str(r.drift_ratio()), "367");
+    assert_eq!(tower::accel_label(&r), "4.4 milli-g");
+    assert_eq!(fixed(r.cost, 0), "144");
+    // The tile still aims at H/500 (and the status says so).
+    assert_eq!(tower::tiles(&r)[0].note, "drift H/367 · aim H/500");
+    assert_eq!(Status::of(&r), Status::TooMuchSway);
+
+    // Every 100-floor design in the storm: none reaches H/500; the complete ones (all four
+    // goals with the threshold relaxed) top out at H/367, so H/350 is the lowest round bar.
+    let designs: Vec<TowerInput> = System::ALL
         .into_iter()
-        .flat_map(|system| Shape::ALL.map(|shape| (system, shape)))
-        .map(|(system, shape)| {
-            tower::calc(&TowerInput {
-                system,
-                shape,
-                ..input
+        .flat_map(|system| {
+            Shape::ALL.into_iter().flat_map(move |shape| {
+                [false, true].map(|damper| TowerInput {
+                    floors: 100,
+                    system,
+                    shape,
+                    v10: 30.0,
+                    damper,
+                })
             })
-            .drift_ratio()
         })
+        .collect();
+    let best_complete = designs
+        .iter()
+        .map(|d| (d, tower::calc(d)))
+        .filter(|(_, r)| r.comfort_ok() && r.within_budget())
+        .map(|(_, r)| r.drift_ratio())
         .fold(0.0, f64::max);
-    assert!(best < tower::DRIFT_AIM, "best drift H/{best:.0}");
-    // The drift goal itself is reachable: a braced tapered tube of 77 floors.
-    let shorter = TowerInput {
-        floors: 77,
-        ..input
-    };
-    let r = tower::calc(&shorter);
-    assert!(tower::goals(&shorter, &r)[1].done);
+    assert!(best_complete < tower::DRIFT_AIM, "H/{best_complete:.0}");
+    assert!((tower::DRIFT_GOAL..400.0).contains(&best_complete));
+    assert_eq!(tower::DRIFT_GOAL, 350.0);
 }
 
 #[test]

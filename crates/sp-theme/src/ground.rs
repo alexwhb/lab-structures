@@ -81,6 +81,10 @@ pub const BULB: Color32 = rgba(0xE0, 0x90, 0x5E, 0.7);
 pub const BULB_LEGEND: Color32 = hex(0xE0905E);
 /// The soil name on the stage `#E5E0D0` (mono 11).
 pub const SOIL_LABEL: Color32 = hex(0xE5E0D0);
+/// The chip behind the stage's soil name and "bedrock" labels: `rgba(10,10,10,.7)`, radius 4,
+/// `padding: 2px 6px` (SPEC MB-7: the mockup's bare labels are ~2:1 on the light soils; with the
+/// chip both reach 4.5:1 on every soil, the stage's other dark overlays' look).
+pub const LABEL_CHIP: Color32 = rgba(10, 10, 10, 0.7);
 /// The legend box `rgba(10,10,10,.82)` with a `#242424` border.
 pub const LEGEND: Color32 = rgba(10, 10, 10, 0.82);
 /// The foundation tile icons' ground line `#6A6A6A`.
@@ -94,14 +98,19 @@ mod tests {
     use super::*;
     use lab_theme::contrast::{over, ratio};
 
+    /// SPEC MB-7 / LOOK-4: the soil name and the muted "bedrock" label (both drawn over the soil
+    /// body: "bedrock" sits just above the rock line) reach 4.5:1 on every soil with the chip.
     #[test]
-    fn labels_read_on_every_soil() {
+    fn stage_labels_reach_4_5_on_every_soil() {
         for s in SOILS {
-            let r = ratio(SOIL_LABEL, s.body);
-            assert!(r >= 1.9, "soil label on {:?}: {r:.2}", s.body);
+            let bg = over(LABEL_CHIP, s.body);
+            for (name, c) in [("soil name", SOIL_LABEL), ("bedrock", crate::TEXT_MUTED)] {
+                let r = ratio(c, bg);
+                assert!(r >= 4.5, "{name} on {:?}: {r:.2}", s.body);
+            }
         }
-        // The muted "bedrock" label on the bedrock.
-        assert!(ratio(crate::TEXT_MUTED, BEDROCK) >= 4.5);
+        // without the chip the lightest soil fails (why the chip exists)
+        assert!(ratio(SOIL_LABEL, SOILS[3].body) < 4.5);
         // The legend text on its box over the stage.
         assert!(ratio(crate::TEXT_DIM, over(LEGEND, crate::GRAPH.base)) >= 4.5);
     }
