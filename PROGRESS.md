@@ -337,6 +337,23 @@ Shared-file etiquette:
   broken flag from the `View` (as you listed) and the piece index into the sim. Create the two
   files as stubs when you need them; after that I fill them.
 
+- **time (v2 status)**: engine `builder::comfort` + `builder::longterm` (+ `statics`, `pisa`)
+  committed (6bb9f43, 06752bb) with `sp_theme::time` (589b69d), the UIs `screens/builder/
+  {comfort,time}.rs` (cf3a4c2) and ARCHITECTURE § builder › Fold-ins (3c146e6). CMF-1 meter (live
+  and after the run), CMF-2 "Compare shapes" (four headless runs, ~35 ms release), TIME-1/2
+  fast-forward (exact settle per 0.5 yr with P-Δ, 3–30 ms release; HUD chips, plumb + lean line,
+  scrubber, result line), TIME-3 level `longterm::pisa::level()` (waiting for `engine` to plug it
+  in). Tests: engine 34 (comfort, longterm, longterm_model, longterm_pisa, statics units) + 2
+  perf targets (`comfort_perf`, `longterm_perf`, `PERF` lines); GUI `tests/builder_time.rs` (4).
+  **Waiting on**: engine hooks 4 (draw the structure at given positions — until then the stage
+  shows the design / last run while the years play) and 5 (`start_years` / `finish_years`),
+  plugging Pisa in, the three Leaning tower rules; lab: the DATA-SOURCES rows below.
+  **For `shell` (MCP)**: headless = `longterm::fast_forward_design(&design, &setup, &cond)` →
+  `LongTerm` (`result_line()`, `sentence()`, `chips(year)`, `at(year)`, `ending`); Leaning tower
+  scoring `longterm::pisa::result(&lt, pisa::fix_cost(&design), practice, budget)`; four shapes
+  `comfort::compare(&design, &setup, &cond)`. In the app: `builder.fold.time.start(&game)`
+  (shows it; no-op unless `Time::available(&game)`), `.finish(&mut game)` (skip to year 30),
+  `.set_year(y)`, `.long_term()`, `.pisa_result()`; `builder.fold.comfort.compare(&game)`.
 - **time → engine** (CMF-2 / TIME-1 / TIME-3 hooks — rename freely, I adapt):
   1. **CMF-2 factors**: two per-run factors on the sim, default 1.0, applied exactly at the
      mockup's wind line: `fx += dir·0.613·v²·1.3·drag·4·4·gust` and `gust = 1 + 0.3·shedding·
@@ -395,6 +412,20 @@ Shared-file etiquette:
      `Result`, the result stored, best stars updated as in `tick`), with `Outcome::Years { tilt,
      settled }` (degrees, m). `stop_run` / Back to building as usual. I fill the banner title /
      explain / run info in `adjust_view` (`view.result`, `view.explain`, `view.run_info`).
+- **time → lab** (DATA-SOURCES, § "Comfort and settlement fold-ins" — thanks for the
+  pre-filled rows; they're right. Please add / adjust these, all from `builder::{comfort,
+  longterm}` as committed in 6bb9f43 / 06752bb):
+  | Constant | Value | Class | Note |
+  |---|---|---|---|
+  | Comfort value | the engine's peak smoothed top-floor acceleration of the run (live: so far) | Simplified | the meter shows exactly the HUD chip's number |
+  | Same storm, four shapes — runs | four headless 18 s open-ground tests at the run's level and conditions (the as-built bar equals the live run) | Simplified | `comfort::compare` |
+  | Long-term stiffness | `k_long = ks / ratio`, `ratio = 1 kPa/mm ÷ ks_ground` (v1 Ground ks): soft clay 1.67, loose wet sand 0.67, stiff clay 0.25, dense sand 0.125, rock 0 | Illustrative | so the final consolidation settlement is the first (immediate) one × ratio: soft clay settles tens of cm, sand millimetres, rock nothing (`longterm::consolidation`) |
+  | Overload creep | + 3 × (R − Qc) / k_long when a foundation is pushed past its capacity | Illustrative | `longterm::OVERLOAD_CREEP` |
+  | Consolidation stepping | every 0.5 yr: s ← s∞ + (s − s∞)·e^(−Δt/τ) for the current reaction (exact for a constant load), never rebounding | Simplified | [Terzaghi] first term; `longterm::STEP` |
+  | Long-term loads | self-weight (joint masses as the settling engine's) and crates; no wind, snow, quakes, traffic | Simplified | they come and go |
+  | Settled state | exact static equilibrium of the builder's springs (pieces E/15·A/L, foundations ks vertical and pinned horizontally), geometry updated each step (P-Δ); ropes slack, resting joints lift, foundations rip out past Qt, pieces break past capacity | Exact for the model | `longterm::statics` (energy minimisation; the preview's 520 steps don't converge the rocking mode on soft soil) |
+  | Tilt | angle between vertical and the foundations' centroid → top floor's centroid line, from the line as built; bridges: largest differential settlement | Exact (geometry) | SPEC TIME-2 |
+  | 7 · Leaning tower | soft clay; 2 bays × 8 storeys (8 m × 32 m), Concrete walls + diagonals, Floors, all locked; three footings; 8 t bells top right; goal under 0.5° after 30 years; budget $8k | Game | left alone 0.6° → 4.3° in 30 years; piles under all three footings 0.16° ($4.5k, three stars); an 8 t counterweight top left 0.0°. The real tower leaned ≈ 5.5° by 1990; 600 t of lead counterweights (1993) and soil extraction (1999–2001) took it back to ≈ 4° [Burland 2003: J. B. Burland, M. B. Jamiolkowski, C. Viggiani, "The stabilisation of the Leaning Tower of Pisa", Soils and Foundations 43(5), 2003] |
 - **time → screen**: thanks, `FoldIn` works for me. `comfort::Comfort` implements `results`
   (meter + "Compare shapes" bars after an open-ground run), `reset`, `describe`; `time::Time`
   `results` ("Fast-forward 30 years" button, years scrubber, result line), `tick` + `busy` (6 s
