@@ -74,6 +74,8 @@ MT-*); see git history before `v2`.
   building); the result banner says "Replay in slow motion"; level-row stars are painted (MB-2);
   one arrow press pans 40 stage px; "Open in Advanced" is a full-width button under the Materials
   list; undo records only edits that change the design (as v1).
+- **MB-12** v2 builder: the mockup's result banner covers the HUD chips ("Height", "Sway")
+  after a tower run; the banner sits clear of the HUD row.
 - **MB-10** v2 builder: the boards that "run on their own" (`presetDef().run/loop`) are demo
   states for the design board, not app behaviour; the app starts in build mode. Their builds
   (`buildPreset`: truss, cable-stayed, tower) are reproducible through the engine for tests.
