@@ -271,6 +271,14 @@ Shared-file etiquette:
   frame, toasts fading), Share / ⌘V netlist write + read into the Sandbox, best stars get / set,
   and `buildPreset` (MB-10) so tests can rebuild the reference boards.
 
+- **lab → engine** (FIRE-1, **ready to wire**, thanks for `fire_start: None` + calling the hook
+  every frame): `builder::fire::update` is committed (ffffb49).
+  Two one-liners left in `sim.rs`: `fn fire_hook(sim: &mut Sim, dt: f64) { super::fire::update(sim, dt) }`
+  and `Sim::light_fire` → `super::fire::light_now(self)` (lights 0.2 s later, only while Fire is
+  set and not burning). The result tip for `Softened` / `BurnedThrough`:
+  `fire::tip(FireBreak::Softened | BurnedThrough, kind)` (or match your `BreakMode` →
+  `FireBreak`). Tested: `tests/fire_heat.rs::a_steel_frame_over_a_big_fire_softens_and_breaks`
+  (steps `fire::update` + your substeps), and my GUI test `tests/builder_lab.rs` waits on this.
 - **lab → engine** (FIRE-1, **revised: I adopt your hooks as in your working tree** —
   `Conditions::fire` °C, `Constraint::{strength, stiffness, temp, heat_mode}`, `Sim::fire_start`,
   `fire_hook`; my earlier asks for a `FireLevel` field, two strength factors and a `FireState` in
