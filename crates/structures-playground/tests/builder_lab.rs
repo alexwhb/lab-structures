@@ -276,3 +276,20 @@ fn the_fire_row_the_hud_chip_and_the_glow() {
         .expect("fire is set");
     assert!(d.starts_with("Fire: Big (700 \u{b0}C), burning at"), "{d}");
 }
+
+#[test]
+fn a_fire_between_the_chips_lights_none_of_them() {
+    // MCP `builder_conditions` may set any 0–900 °C: no chip claims it, the note tells it.
+    let mut h = tall();
+    h.state_mut().screens_mut().builder.game.set_fire(650.0);
+    settle(&mut h);
+    for name in fire_ui::CHIP_NAMES {
+        assert_eq!(pressed(&h, name), Some(false), "{name}");
+    }
+    assert!(has_label(&h, &fire::note_at(650.0, true)));
+    assert!(has_label_containing(&h, "about 650 \u{b0}C"));
+    let d = fire_ui::Fire
+        .describe(&h.state().screens().builder.game)
+        .expect("fire is set");
+    assert_eq!(d, "Fire: 650 \u{b0}C");
+}

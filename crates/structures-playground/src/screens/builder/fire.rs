@@ -74,12 +74,13 @@ impl FoldIn for Fire {
     }
 
     fn conditions(&mut self, ui: &mut Ui, game: &mut Game, _ctx: &mut Ctx) {
-        let now = level(game);
+        let c = game.cond().fire;
+        let now = fire::exact_level(c);
         let specs: Vec<ChipSpec> = FireLevel::ALL
             .iter()
             .enumerate()
             .map(|(i, l)| {
-                let mut c = ChipSpec::new(l.name(), *l == now).dot(tf::LEVEL_DOT[i]);
+                let mut c = ChipSpec::new(l.name(), Some(*l) == now).dot(tf::LEVEL_DOT[i]);
                 c.name = CHIP_NAMES[i].into();
                 c
             })
@@ -97,7 +98,7 @@ impl FoldIn for Fire {
         }
         para(
             ui,
-            &fire::note(now, game.scene() == Scene::River),
+            &fire::note_at(c, game.scene() == Scene::River),
             12.0,
             1.5,
             t::TEXT_MUTED,
@@ -105,15 +106,15 @@ impl FoldIn for Fire {
     }
 
     fn describe(&self, game: &Game) -> Option<String> {
-        let l = level(game);
-        if !l.is_on() {
+        let c = game.cond().fire;
+        if !level(game).is_on() {
             return None;
         }
-        let mut s = format!(
-            "Fire: {} ({} \u{b0}C)",
-            l.name(),
-            sp_engine::jsnum::to_string(l.temp_c())
-        );
+        let deg = format!("{} \u{b0}C", sp_engine::jsnum::to_fixed(c, 0));
+        let mut s = match fire::exact_level(c) {
+            Some(l) => format!("Fire: {} ({deg})", l.name()),
+            None => format!("Fire: {deg}"),
+        };
         if let Some(sim) = game.sim() {
             if let Some(v) = fire::hud_value(sim) {
                 s.push_str(&format!(", burning at {v}"));

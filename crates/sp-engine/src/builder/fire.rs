@@ -325,7 +325,22 @@ pub fn hud_value(sim: &Sim) -> Option<String> {
 
 /// The note under the Fire chips: where it burns and when it lights.
 pub fn note(level: FireLevel, river: bool) -> String {
-    if !level.is_on() {
+    note_at(level.setting(), river)
+}
+
+/// The level whose setting is exactly `fire_c` °C (`None` for a setting between the chips, as
+/// MCP may set: then no chip is lit).
+pub fn exact_level(fire_c: f64) -> Option<FireLevel> {
+    FireLevel::ALL
+        .into_iter()
+        .find(|l| (l.setting() - fire_c).abs() < 1e-9)
+}
+
+/// The note for a Fire setting of `fire_c` °C (0 = off), any value: "A big fire at the foot of
+/// the tower, about 700 °C. …", or "A fire … about 650 °C. …" between the chips.
+pub fn note_at(fire_c: f64, river: bool) -> String {
+    let c = heat::sanitize_fire_c(fire_c);
+    if c <= 0.0 {
         return "Set a fire to see what heat does to each material.".into();
     }
     let place = if river {
@@ -333,10 +348,13 @@ pub fn note(level: FireLevel, river: bool) -> String {
     } else {
         "at the foot of the tower"
     };
+    let size = match exact_level(c) {
+        Some(l) => format!("{} ", l.name().to_lowercase()),
+        None => String::new(),
+    };
     format!(
-        "A {} fire {place}, about {} \u{b0}C. It lights {} s into the run.",
-        level.name().to_lowercase(),
-        crate::jsnum::to_string(level.temp_c()),
+        "A {size}fire {place}, about {} \u{b0}C. It lights {} s into the run.",
+        crate::jsnum::to_fixed(c, 0),
         crate::jsnum::to_string(heat::FIRE_START_S)
     )
 }
@@ -372,5 +390,20 @@ mod tests {
         assert_eq!(break_mode(PieceType::Road, 0.1), None);
         assert_eq!(break_mode(PieceType::Wood, f64::NAN), None);
         assert_eq!(FireBreak::BurnedThrough.name(), "burned through");
+    }
+
+    #[test]
+    fn notes_follow_the_setting() {
+        assert_eq!(
+            note(FireLevel::Big, false),
+            "A big fire at the foot of the tower, about 700 \u{b0}C. It lights 3 s into the run."
+        );
+        assert_eq!(
+            note_at(650.0, true),
+            "A fire on the water under the middle of the span, about 650 \u{b0}C. It lights 3 s into the run."
+        );
+        assert_eq!(exact_level(650.0), None);
+        assert_eq!(exact_level(0.0), Some(FireLevel::Off));
+        assert!(note_at(f64::NAN, true).starts_with("Set a fire"));
     }
 }
