@@ -187,6 +187,66 @@ owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample
   `tests/builder_props.rs` (random edits, NaN / huge inputs, absurd zooms never panic);
   `tests/builder_perf.rs` (BLD-15, `PERF` lines).
 
+**Fold-ins (agent `time`):**
+
+- **`builder::comfort`** (CMF-1 / CMF-2) — the v1 Tower's comfort bands and sentences
+  (`tower::Comfort`) on the builder's game scale `GAME_SCALE` = 15 (`bands()` 75 / 150 / 300 mg,
+  `full_scale()` 450 "450+"; level 5's 300 mg limit is the "Seasick" line). `Meter::new(mg,
+  limit) -> Meter { mg, limit, band, marker_pct, limit_pct, over_limit }` (`sentence()`,
+  `tone()` → `tower::Tone`, `value()` "272 mg", `limit_text()` "limit 300 mg", `label()` the
+  AccessKit summary; `Meter::stretches()` / `Meter::ticks()` with positions), `pct(mg)`,
+  `band(mg)`, `mg_text`. Four shapes: `Variant::{AsBuilt, Tapered, Twisted, Hollow}` (`name()`,
+  `factors() -> (drag, shedding)` = v1 `Shape::def()` `cd / BUILDER_CD` (1.3) and `cross`),
+  `tapered(&Design) -> Design` (x drawn toward the centre line with height, top `TAPER_TOP` =
+  60 % as wide; same pieces and crates), `applies(&Design, &Setup)` (open ground with Floors),
+  `compare(&Design, &Setup, &Conditions) -> Comparison { bars: [Bar { variant, mg, standing,
+  width }; 4], best, verdict }` — four 18 s `run_headless` tests on scoped threads,
+  deterministic, the as-built bar equals the live run (`Bar::{value, tone(limit), label}`).
+- **`builder::longterm`** (TIME-1 / TIME-2) — `fast_forward_design(&Design, &Setup,
+  &Conditions) -> LongTerm` = `structure(…) -> (statics::Structure, Kind)` (joint masses,
+  foundation grips and piece stiffness / capacities from `Sim::new(…, live = false)`; `Kind::
+  Tower { top }` on open ground with Floors, else `Kind::Bridge`) + `fast_forward(&Structure,
+  Kind)`. Each foundation consolidates toward `s∞ = R / k_long` (`k_long = ks / ratio`,
+  `consolidation(soil) -> Option<Consolidation { tau, ratio }>`: τ and `ratio = KS_REF /
+  ks_ground` from `sp_engine::ground`, rock `None`; overload past Qc creeps `OVERLOAD_CREEP` ×),
+  exactly per step of `STEP` = 0.5 yr, never back up; after each step `statics::Structure::
+  settle` finds the new equilibrium — an energy-minimising Newton solve with a positive-definite
+  tangent (builder springs `E/15·A/L`, foundations `ks` + pinned x, gravity on the joint masses,
+  geometric stiffness of pulled pieces) and a line search, starting from the last positions, so
+  the tilt moves the loads (P-Δ) and a tower past its tipping point slides over; ropes go slack,
+  resting joints lift, foundations rip out past Qt, pieces break past capacity. (Why not the
+  preview: its 520 steps don't converge the rocking mode on soft soil.) `LongTerm { kind,
+  frames: Vec<YearFrame { year, pos, force, broken, slack, settle, reaction, tilt, max_settle,
+  differential }>, giving: Vec<Giving::{Broke, Ripped}>, ending: Ending::{Stood, Toppled(yr),
+  CameDown(yr), Nothing}, joint_ids, piece_ids, found }` with `at(year) -> Snapshot`
+  (interpolated), `chips(year)` ("Year " "12.0", "Tilt " "1.8°" / "Differential " "12 mm",
+  "Settled " "214 mm"), `lean_line(year)` (foundations' and top floor's centroids),
+  `result_line()` ("After 30 years: tilt 0.3°, settled 41 mm."), `sentence()`, `end_year()`,
+  `piece_index` / `joint_index`; `has_foundations(&Design)`, `anim_year(elapsed, end)` (30
+  years over `ANIM_SECONDS` = 6), `TOPPLE_DEG` 5, `LEAN_OK_DEG` 0.5. Tilt is measured from the
+  line as built; "Settled" / differential count consolidation since year 0.
+- **`builder::longterm::pisa`** (TIME-3) — `level() -> Level` ("7 · Leaning tower", soft clay,
+  budget `BUDGET` $8k, `run: RunKind::Years`, `prebuilt`: `prebuilt()` — 2 bays × 8 storeys,
+  Concrete walls and diagonals, a Floor per level, all locked; three unlocked footings `J1`–`J3`
+  (swap for piles); the bells `BELLS_T` = 8 t on `bells_joint()` `J27`), `result(&LongTerm,
+  cost, practice, budget) -> PisaResult { pass, stars, title, explain, tilt }` (pass: stood and
+  under `GOAL_TILT` 0.5° after 30 years), `fix_cost(&Design)` (cost without locked pieces),
+  `footing_ids()`, `top_ids()`. Untouched: 0.6° → 4.3° after 30 years; piles under all three
+  footings: 0.16°, $4.5k, three stars; an 8 t counterweight on the top-left joint: 0.0°.
+- UI (`structures-playground/src/screens/builder/{comfort,time}.rs`, `FoldIn`s): `Comfort`
+  (`results`: the meter while running / after an open-ground run, "Compare shapes" → the bars
+  and verdict; `comparison(&game)`, `compare(&game)` for MCP), `Time` (`results`: "Fast-forward
+  30 years", progress + "Skip to the end", the "Years" scrubber, result line + sentence, "Play
+  again"; `hud`, `paint_stage` plumb + lean line, `tick` / `busy` while playing, the Leaning
+  tower's `drive` / `drive_button` / `adjust_view`; `Time::available(&game)`, `start(&game)`,
+  `finish(&mut game)`, `set_year`, `long_term()`, `year()`, `playing()`, `pisa_result()`).
+  Colours `sp_theme::time`.
+- Tests: `tests/comfort.rs`, `comfort_perf.rs` (`PERF compare shapes …`, < 400 ms),
+  `longterm.rs` (determinism, monotonic settlement, rock 0 / soft clay most, symmetric vs
+  eccentric, topple, bridges, random structures), `longterm_model.rs` (hand-built structures),
+  `longterm_pisa.rs` (the level: untouched fails, the named fix passes), `longterm_perf.rs`
+  (`PERF 30-year fast-forward …`, < 300 ms); GUI `structures-playground/tests/builder_time.rs`.
+
 ### `bridge` (v1, retiring in v2 wave 2; agent `bridge`)
 
 The Playground › Bridge game: `Playground.dc.html`'s `class Component` without the drawing,
