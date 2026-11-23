@@ -69,6 +69,11 @@ MT-*); see git history before `v2`.
 
 - **MB-9** v2 builder: the same double `.chip` rule as MB-1 floats the material palette, Show
   forces and every Conditions chip; they are in-flow chips (references rendered with the fix).
+- **MB-11** v2 builder (lead decisions on wave-1 questions): water, wind streaks, snowfall and
+  the quake shake animate only while running (PLAT-3; the mockup's snow also falls while
+  building); the result banner says "Replay in slow motion"; level-row stars are painted (MB-2);
+  one arrow press pans 40 stage px; "Open in Advanced" is a full-width button under the Materials
+  list; undo records only edits that change the design (as v1).
 - **MB-10** v2 builder: the boards that "run on their own" (`presetDef().run/loop`) are demo
   states for the design board, not app behaviour; the app starts in build mode. Their builds
   (`buildPreset`: truss, cable-stayed, tower) are reproducible through the engine for tests.
@@ -215,8 +220,9 @@ own JS in Node, as in v1). Units: metres, tonnes for crates, $k for cost.
   Truck looping). Picking a level resets to its anchors and conditions.
 - **BLD-12 Conditions** ("Conditions · change them any time"): Wind Calm 0 / Breezy 15 / Strong
   25 / Storm 35 / Hurricane 50 m/s with "From the left →" / "← From the right"; Snow None 0 /
-  Light 150 / Heavy 400 / Blizzard 800 kg/m; Earthquake Off / Moderate 0.15 / Strong 0.3 / Huge
-  0.5 g (with "Shake now" while running); Soil Rock / Dense sand / Stiff clay / Soft clay / Loose
+  Light 150 / Heavy 400 / Blizzard 800 kg/m; Earthquake Off / Moderate / Strong / Huge (ground-motion
+  amplitude 0.15 / 0.3 / 0.5 m at 1.1 Hz — exaggerated, about 0.7 / 1.5 / 2.4 g peak; the chips
+  show no unit) (with "Shake now" while running); Soil Rock / Dense sand / Stiff clay / Soft clay / Loose
   wet sand (swatch dots); Traffic (river scenes only) Level traffic / Rush hour / Buses / Trucks /
   Convoy; Fire (FIRE-1, new).
 - **BLD-13 Inspector.** Piece: "Steel · M7", length, utilisation bar and %, the sentence
@@ -284,8 +290,10 @@ The v1 Tower, Ground and Materials screens are retired; these three ideas from t
 the builder, drawn in the builder's look (reuse the v1 widgets and painters where they fit:
 `widgets/world.rs` band bars and comparison rows, the v1 tensile rig and plot painters).
 
-- **CMF-1 Comfort meter.** On open-ground runs and their result: a colour-banded meter 0–30+
-  milli-g with bands at 5 / 10 / 20 and the level's comfort limit marked, the peak value, and the
+- **CMF-1 Comfort meter.** On open-ground runs and their result: a colour-banded meter on the
+  builder's game scale — the v1 bands 5 / 10 / 20 milli-g × 15 (`comfort::GAME_SCALE`, because the
+  builder's structures are 15× softer than real ones: stiffness E/15), i.e. 0–450+ with bands at
+  75 / 150 / 300 and the level's comfort limit marked, the peak value, and the
   v1 sentence: "Nobody can feel it." (< 5), "Some people on the top floors notice." (5–10),
   "Hanging lamps swing. People get uneasy." (10–20), "Seasick. Nobody would rent this floor."
   (≥ 20).
