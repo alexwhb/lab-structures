@@ -229,6 +229,12 @@ Shared-file etiquette:
   Tests: sp-engine 6 goldens + 11 parser + 3 round-trip + 4 fuzz + 3 perf; app 7 doc unit + 12
   journeys + 2 look. Not done: nothing required by ADV-*; the IL for a custom netlist without
   the standard T2–T3 / B2–B3 / B0–T1 / B2–T2 members picks the four most-used members.
+- **advanced (status, wave 2)**: review of bridge + truss/linalg posted under Review findings
+  (a688a24: 1 med, 3 low, none for lead). MB-8 done (a289877: "<Material> weight" — Steel /
+  Aluminum / Glulam / Carbon fiber, other names title-cased, "Weight" for a mix; the goldens
+  override the mockup's "Steel weight" for non-steel states). Also: a load on a node no member
+  reaches now shows "Load on D hangs on nothing" in the status (the solver ignores such loads).
+  jsnum switch done. worlds' 4 findings fixed (7a38a91, 3c0d110).
 - **advanced → lead** (decide; implemented as the mockup until told otherwise): (a) **slider
   ranges**: SPEC ADV-1 says Size 1–10 and Truck 0–60 t; the mockup (and the reference PNG's
   thumb positions) use 1–20 and 0–120 — implemented 1–20 / 0–120. (b) The mockup colours a `*`
@@ -252,6 +258,8 @@ Shared-file etiquette:
   on ~10 000 values). Differences from the old copies: `tower::fmt::num(-0.0)` printed `"-0"`
   (now `"0"`, as JavaScript); `bridge::fmt::to_fixed` had no ≥ 1e21 case (now `"1e+21"`). The
   Bridge's `stars()` is not a number format and stays with the Bridge.
+  - **advanced: done** (a289877): `netlist::text` deleted; generate / influence / netlist / the
+    Advanced screen use `sp_engine::jsnum`; goldens green.
 
 ## Review findings
 
@@ -301,6 +309,9 @@ Shared-file etiquette:
   **0.06 m**; the slider and clock jump to 0.1 m, and Drive across stalls near 0 (each step writes
   x + 0.5 "m" = 0.005 m). — Write the unit (`x=6m`, which the parser already accepts) or divide
   by `units.length.per_metre()`; add a cm/mm test to `netlist_roundtrip.rs`.
+  - **Fixed** (7a38a91): `set_truck` writes x in the `.units` length unit (6.5 m → `x=650`
+    under cm); tests `x_is_written_in_the_netlists_length_unit`,
+    `truck_edits_respect_the_length_unit`.
 - **worlds → advanced** [severity: med] `crates/structures-playground/src/screens/advanced/doc.rs:233`
   (`influence_line` cache) + `advanced.rs:79` + `crates/sp-engine/src/influence.rs:297` — the
   cache key includes the truck weight, so **every Truck-slider step** (and every pick change)
@@ -313,6 +324,13 @@ Shared-file etiquette:
   truck weight, member) and scale by W (no re-solve on a weight change); and number the DOFs by
   x (or RCM) before the dense solve to keep K banded (`to_truss`, or ask the lead for
   `truss.rs`).
+  - **Fixed** (7a38a91): above 40 nodes the line comes from `influence::unit_sweep` (one static
+    + one unit-truck solve per position, all members) cached per model without truck x / weight,
+    so Truck drags and pick changes don't solve (29 µs); `influence::solve_ordered` numbers a
+    big truss's joints along its long side before the dense solve (450 nodes declared bottom
+    chord then top chord: solve + sweep 84 ms). Small trusses keep the mockup-exact full solves
+    (goldens unchanged). Tests `tests/advanced_sweep.rs` (superposition = full solves to 1e-6,
+    reordered solve = plain solve, perf).
 - **worlds → advanced** [severity: low] `crates/sp-engine/src/influence.rs:132` (`picks`) +
   `crates/sp-engine/src/netlist.rs:250` (`Plot::member`) — `.plot N(M3) vs truck.x 0 48 1`
   parses and stores the member, but nothing reads it (only `plot.range` is used, `influence.rs:277`).
@@ -320,12 +338,17 @@ Shared-file etiquette:
   still plots the standard pick and is titled `.plot N(M8) vs truck x`, contradicting the
   netlist. — When `plot.member` is set, put that member first in `picks` and select it on
   parse / load.
+  - **Fixed** (7a38a91): the member `.plot N(M3)` names comes first in `picks` (added if not a
+    standard one) and is selected when the line (re)names it; the user's later pick stays.
+    Test `a_plot_line_naming_a_member_selects_it`.
 - **worlds → advanced** [severity: low] `crates/structures-playground/src/screens/advanced/doc.rs:498`
   (`drive_step`) — Drive across on a custom netlist **with errors** never moves: `x()` reads
   the last good netlist, each step patches the text with that x + 0.5, the re-parse fails, so
   the next step writes the same x again; the button says Pause and the clock stays put. —
   Edit `.node B1 8 0` to `.node B1 8 oops`, press Drive across: `x = 24.0 m` forever. — Step
   from `params.x` (which `set_truck` already updates) or pause the drive while `stale`.
+  - **Fixed** (7a38a91, 3c0d110): Drive across is disabled — and a running drive pauses —
+    while the netlist has errors (the dimmed results can't follow the truck).
 - **worlds → advanced** — also checked, no findings: the parser (two passes, cascades
   suppressed, ranges bounded, CRLF, U+2212, units for E/fy/A/I/rho/forces/tonnes, every
   directive's errors on the right line/column), writer → parser round trips (materials,
