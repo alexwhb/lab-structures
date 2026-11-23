@@ -205,7 +205,7 @@ Sandbox vehicles loop from x = 70 m back to −20 m (Game).
 | Deck flutter | lift q10·0.25·10·L·sin(2π·0.45·t + 0.35·x)/2 on Road pieces | Illustrative | |
 | Snow levels | None 0, Light 150, Heavy 400, Blizzard 800 kg per metre of exposed deck | Illustrative | [EC1-3] 0.5–2 kN/m² on a ≈ 3–4 m wide deck |
 | Snow build-up | at most 90 kg/m per second toward the setting | Game | |
-| Earthquake levels | Off 0, Moderate 0.15, Strong 0.3, Huge 0.5 "g" | Illustrative | see "Known inconsistencies": the setting is the ground displacement amplitude in metres |
+| Earthquake levels | Off 0, Moderate 0.15, Strong 0.3, Huge 0.5 — ground-motion amplitudes in metres (SPEC BLD-12): peak ground acceleration setting × (2π·1.1 Hz)² ≈ 0.7 / 1.5 / 2.4 g | Illustrative | the chips name levels, not g; the field is still called `quake` (MCP `quake_g`) |
 | Quake motion | supports moved by setting × envelope × sin(2π·1.1·t); envelope 2 s up, 5 s, 2 s down; starts 3 s in, 0.5 s after a change, 0.2 s after "Shake now" | Illustrative / Game | |
 | Fire levels | Off, Small 400 °C, Big 700 °C, Inferno 900 °C | Illustrative | see § Fire |
 
@@ -253,7 +253,7 @@ From SPEC CMF-1 / CMF-2 / TIME-1…3 and `time`'s rows in PROGRESS; `time` owns 
 | Constant | Value | Class | Note |
 |---|---|---|---|
 | Comfort value | the engine's peak smoothed top-floor acceleration of the run (live: so far) | Simplified | the meter shows exactly the HUD chip's number |
-| Comfort bands | v1's 5 / 10 / 20 milli-g × 15 for the builder's game scale (`comfort::GAME_SCALE`): 75 / 150 / 300 mg, meter 0–450+ | Illustrative | [ISO10137] for the real-world bands; the ×15 maps the mockup's comfort number onto them |
+| Comfort bands | v1's 5 / 10 / 20 milli-g × 15 on the builder's game scale (`comfort::GAME_SCALE` = 15): 75 / 150 / 300 mg, meter 0–450+ | Illustrative | [ISO10137] for the real-world bands; × 15 because the builder's pieces are E/15 as stiff (SPEC CMF-1, lead 158ea12), so its towers sway that much more |
 | Same storm, four shapes — shapes | Tapered: each joint's x drawn toward the centre line in proportion to height, top 60 % as wide; Twisted: drag × 1.15/1.3, shedding × 0.45; Hollow core: drag × 1.0/1.3, shedding × 0.55 | Illustrative | factors from v1's tower model (`sp_engine::tower` Cd and cross-wind factors) |
 | Same storm, four shapes — runs | four headless 18 s open-ground tests at the run's level and conditions (the as-built bar equals the live run) | Simplified | `comfort::compare` |
 | Consolidation time τ | dense sand 0.3 yr, stiff clay 3 yr, soft clay 9 yr, loose wet sand 0.5 yr, rock none | Illustrative | as v1's Ground; [Terzaghi] first-term 1 − e^(−t/τ) |
@@ -483,10 +483,11 @@ Bench constants:
   mockup's model no 100-floor tower reaches H/500 at 30 m/s (best: a braced tapered tube ≈
   H/367), so the mockup's goal could never complete; the goal reads "Drift better than H/350 at
   30 m/s" while the drift tile keeps "aim H/500" (serviceability practice, H/400–H/600).
-- **The builder's earthquake "g"** (v2, from the mockup): the Conditions chips say Moderate 0.15
-  / Strong 0.3 / Huge 0.5 g, but the engine moves the supports by setting × envelope ×
-  sin(2π·1.1·t) **metres**, so the peak ground acceleration is setting × (2π·1.1)² ≈ 4.9 ×
-  setting in g (Strong ≈ 1.5 g). Illustrative; kept as the mockup (`engine` owns it).
+- **The builder's earthquake** (resolved, SPEC BLD-12, lead 158ea12): the mockup labelled the
+  quake settings 0.15 / 0.3 / 0.5 "g", but its engine moves the supports by setting × envelope ×
+  sin(2π·1.1·t) **metres**. The settings are ground-motion amplitudes in metres; their peak
+  ground acceleration is setting × (2π·1.1)² ≈ 4.9 × setting in g: Moderate ≈ 0.7 g, Strong ≈
+  1.5 g, Huge ≈ 2.4 g (illustrative, far above real design quakes).
 - **Builder steel vs the v1 bench**: the builder's Steel is A36-like (250 MPa, like v1's Bridge and
   Advanced); the sample drawer draws v1's S275 curve shape scaled to the builder's 250 MPa, so
   the drawer's "breaks at" is the builder's yield, and its hardening above it is the shape's.
@@ -495,6 +496,7 @@ Bench constants:
   compressive one) to both directions (simplified; § Fire).
 - **Cable in a fire** follows the steel table (SPEC FIRE-1); cold-drawn wire really loses its
   strength sooner (EN 1992-1-2 Table 3.3: about 0.5 at 400 °C).
-- **Comfort scale**: the builder's comfort number is the mockup's game scale (level 5 passes at
-  272 milli-g, limit 300); real comfort criteria are 5–15 milli-g ([ISO10137]). The CMF-1 meter
-  maps v1's bands × 15 (`time`'s decision, pending the lead).
+- **Comfort scale** (resolved, SPEC CMF-1, lead 158ea12): the builder's comfort number is on the
+  game scale (level 5 passes at 272 milli-g, limit 300; real criteria are 5–15 milli-g,
+  [ISO10137]) because its pieces are E/15 as stiff as real ones, so towers sway far more. The
+  CMF-1 meter shows v1's bands × 15 (`comfort::GAME_SCALE`).
