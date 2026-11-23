@@ -106,6 +106,17 @@ Shared-file etiquette:
 
 ## Requests
 
+- **shell (v2 wave-2 status, 1c30044)**: journeys 3–8 un-ignored and green (e5b2e50) — 3
+  cable-stayed Sandbox (pasted from the cable preset's Share) in rising wind, 4 the 64 m storm
+  tower built by clicks (85 joints, column by column) → "It stood!", the comfort meter and
+  "Compare shapes" (bars + verdict from `comfort::compare`), 5 Shaky ground footings liquefy →
+  piles (Found tool) → it stands, 6 Leaning tower with piles under all three footings → the
+  30-year banner and stars from `pisa::result`, 7 the Wood card → Pull → the engine sample's
+  status, 8 the lab's steel Warren (pasted) + "Big fire" → "M… just softened!". All 12
+  journeys run in ~2.5 s together. The README's builder screenshots are committed (ea8815a).
+  Review findings (screen ×4, lab ×2) all **Fixed** (f432356, b4bb41f, 1c30044) with replies
+  under each.
+
 - **shell (v2 wave-1 status, 3baf4ad)**: done — (1) routes **Playground · Advanced · Series**
   (2234b1f; v1 saves restore to the Playground; no world tab row; ⌘1 / ⌘2; the builder's keys
   as `Command`s: zoom, pan, ⌥ nudge, Esc; `Carry::Netlist` only); (2) v1 screens retired after
@@ -885,6 +896,11 @@ Shared-file etiquette:
   add to it: `game.add_crate(id, *t - game.design().load(id))` (refusals still toast for a
   crate below the level's floor), and a test that every level's own Share round-trips through
   `test_structure` with equal crates and the same result.
+  - **Fixed** (f432356): `place_design` sets each crate to the design's (adds the difference)
+    and leaves a level's own pieces of the same type alone; test
+    `sp_shared::builder::every_levels_share_round_trips` (every level's Share built back on it:
+    same joints, pieces, crates, nothing refused, same title / pass / stars — the Leaning
+    tower's bells stay 8 t and it says "Still leaning").
 - **screen → shell** [med] `crates/sp-shared/src/builder.rs:439` / `:446`
   (`fast_forward_report`) — for `years` < 30 the title / explain / `YearsOutcome::sentence` are
   the 30-year line while the numbers are the snapshot at `years`; on the Leaning tower `pass` /
@@ -895,6 +911,11 @@ Shared-file etiquette:
   `builder_test {years: 5}` report contradictory numbers. — Build the line from the snapshot (a
   `LongTerm::result_line_at(year)` from `time`, or format "After 5 years: …" here from `snap`),
   and on the Leaning tower either refuse `years` < 30 or say the verdict is the 30-year one.
+  - **Fixed** (f432356): below 30 years the title and `years.sentence` are the snapshot's
+    ("After 5 years: tilt 0.0°, settled 88 mm.", in the result line's words) and the explain
+    adds "By year 30: …"; at 30 years (or once it has come down) it is the app's line. The
+    Leaning tower is judged after 30 years only, so `years` < 30 there is refused with that
+    reason. Test `partial_years_say_what_they_show`.
 - **screen → shell** [low] `crates/structures-playground/src/widgets/world.rs:243…` +
   `widgets/icons.rs:107,109` — v1 leftovers with no caller outside `world.rs` / the gallery:
   `picture_tiles`, `stepper`, `value_row`, `readout_grid`, `goal_row`, `challenge`,
@@ -905,11 +926,17 @@ Shared-file etiquette:
   drop). — `rg 'picture_tiles\(|stepper\(|Icon::Joint'` outside `world.rs`, `icons.rs`,
   `gallery.rs`: no hits. — Delete them (and their gallery entries), or mark them as kept for a
   named wave-2 user.
+  - **Fixed** (b4bb41f): `widgets::world` keeps only `band_bar` and `compare_row`; the other
+    v1 world widgets and `Icon::Joint` / `Icon::Support` are gone (`sp_theme::tower` still
+    feeds `band_bar`'s marker; `sp_theme::{ground, bridge}` are the lead's to drop).
 - **screen → shell** [low] `scripts/check-bundle.sh:256-262` — "open -a … truss.str opens it in
   Advanced" passes on the log line `opened netlist …truss.str`, which `platform::open_netlist`
   writes as soon as the file is read, before any navigation or parse; a regression that drops
   the hand-off (or opens it in the Playground) still prints ok. — Log the delivery too (e.g.
   `AppEvent::Carried` → `log::info!("netlist {name} → advanced")`) and grep for that.
+  - **Fixed** (b4bb41f): the app logs `netlist <name> delivered to <screen>` when a hand-off
+    reaches its screen (after its `enter`, before `receive`); check-bundle's step needs both
+    the file read and `netlist truss delivered to advanced`.
 
 - **advanced → bridge** [severity: med] `crates/structures-playground/src/app.rs:92` (`Persisted`)
   + `crates/sp-engine/src/bridge/game.rs:471` (`Game::set_best`) — best stars per level are
@@ -1192,6 +1219,9 @@ frame; paced repaints only while pulling / playing years). Findings:
   2.4 g"); keep `quake_g` as the field name (or add an alias) so clients don't break.
   - **engine** (my part, 5e3fbf3): the engine docs now say "ground-motion amplitude, m"
     (`Conditions::quake`, `Setup::quake`, `data::QUAKES`, `Game::set_quake`, ARCHITECTURE).
+  - **Fixed** (1c30044): the field is now `quake_m` (`quake_g` still accepted as an alias by
+    the bridge's params), described as "ground-motion amplitude, m: Moderate 0.15 ≈ 0.7 g peak,
+    Strong 0.3 ≈ 1.5 g, Huge 0.5 ≈ 2.4 g" in the schemas, `ConditionsInfo` and the README.
 - **lab → shell** [low] `crates/sp-shared/src/builder.rs:615` (`test_structure` on a named level →
   `place_design`) — a netlist whose joints fit the other scene is built on the level anyway.
   Repro (a test): level 4's 40 m tower preset, Share text, `test_structure(Some("river"), None,
@@ -1200,6 +1230,10 @@ frame; paced repaints only while pulling / playing years). Findings:
   (x ≤ 76), `refused: []`, result "0 of 3 made it … a vehicle ran out of road". — Fix: refuse
   when the imported scene isn't the level's scene ("this netlist is an open-ground structure;
   level `river` is a river crossing"), or list it in `refused`.
+  - **Fixed** (1c30044): `test_structure` refuses a netlist whose scene isn't the named
+    level's ("this netlist is a structure for open ground (its joints fit that scene), but level
+    `river` is a river crossing: pick a level of that kind, or the Sandbox"); test in
+    `the_sandbox_takes_a_netlist_and_runs_for_a_while` (your level-4 repro).
 - Checked, no findings: `jsmath` (20 000 random + special arguments against libm: no panics, ≤
   1e-12 relative, JS's own `pow(±1, ±∞ / NaN) = NaN`; the `fma` switch is compile-time on
   `target_arch`, x86_64 gets plain `a·b + c` like an x86 V8 build); editing guards (every edit
