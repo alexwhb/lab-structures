@@ -269,6 +269,21 @@ impl Gallery {
             .playhead(Some(6))
             .label("Force in the top chord as the truck crosses")
             .show(ui);
+        lbl(ui, "Comfort and comparison");
+        world::band_bar(
+            ui,
+            &[
+                (5.0, t::OK),
+                (5.0, t::CAUTION),
+                (10.0, t::ACCENT),
+                (10.0, t::DANGER),
+            ],
+            40.0,
+            &["0", "5", "10", "20", "30+ mg"],
+            "Comfort: 12 milli-g",
+        );
+        world::compare_row(ui, "As built", true, 100.0, t::ACCENT, "12.0 mg");
+        world::compare_row(ui, "Tapered", false, 55.0, t::OK, "6.6 mg");
         Card::well().show(ui, |ui| {
             CodeBlock::new(
                 "* river-crossing.str\n.node B0 0 0 fix=xy\n.member M1 B0 B1 chord\n.static linear",
@@ -299,5 +314,38 @@ impl Gallery {
             rect.left_top(),
             Align2::LEFT_TOP,
         );
+        lbl(ui, "Sample test");
+        let (rect, _) =
+            ui.allocate_exact_size(vec2(ui.available_width(), 170.0), egui::Sense::hover());
+        let rig_rect = Rect::from_min_size(rect.min, vec2(128.0, rect.height()));
+        let plot_rect =
+            Rect::from_min_max(egui::pos2(rig_rect.right() + 10.0, rect.top()), rect.max);
+        let steel = sp_theme::materials::SAMPLES[0];
+        tensile::rig(
+            ui,
+            rig_rect,
+            &tensile::RigScene::dogbone(27.0, 0.2, false, true, steel.fill)
+                .readout("Load cell", "12.4 kN", "")
+                .label("A steel sample pulled to 6 %"),
+        );
+        let mut plot = tensile::PlotScene::axes(
+            25.0,
+            &[5.0, 10.0, 15.0, 20.0, 25.0],
+            700.0,
+            &[100.0, 200.0, 300.0, 400.0, 500.0, 600.0, 700.0],
+        );
+        let pt = |e, s| tensile::PlotScene::point(e, s, 25.0, 700.0);
+        plot.curve = vec![
+            pt(0.0, 0.0),
+            pt(0.14, 275.0),
+            pt(2.0, 290.0),
+            pt(15.0, 410.0),
+            pt(22.0, 360.0),
+        ];
+        plot.curve_color = steel.line;
+        plot.done = plot.curve[..3].to_vec();
+        plot.marker = Some(pt(2.0, 290.0));
+        plot.label = "Stress against strain for the steel sample".into();
+        tensile::plot(ui, plot_rect, &plot);
     }
 }

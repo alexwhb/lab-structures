@@ -22,6 +22,7 @@
 //! | [`Icon`] | every mockup icon as vector paths | icons |
 //! | [`Toasts`] | transient confirmations | |
 //! | [`header`] | the header (NAV-1; no world tab row in v2) | chrome |
+//! | [`tensile`] | the tensile rig and stress–strain plot painters (v1 Materials; the builder's sample drawer), generic over the scene they draw | |
 //! | [`world`] | band bars, comparison rows, readout tiles, goal rows, … (v1 Tower / Ground; reused by the builder's fold-ins) | |
 //!
 //! [`gallery`] draws all of them (the widget snapshot test renders it). Screen agents may add
@@ -39,6 +40,7 @@ pub mod plot;
 pub mod seg;
 pub mod select;
 pub mod slider;
+pub mod tensile;
 pub mod text;
 pub mod toast;
 pub mod world;

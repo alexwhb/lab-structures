@@ -297,3 +297,36 @@ fn icons_say_what_they_do() {
     }
     assert_eq!(Icon::ALL.len(), 15);
 }
+
+/// The painters kept from the retired v1 screens for the builder's fold-ins draw and are
+/// readable: the tensile rig and the stress–strain plot (`widgets::tensile`, LAB-1), the band
+/// bar and comparison rows (`widgets::world`, CMF-1 / CMF-2).
+#[test]
+fn fold_in_painters_draw() {
+    let mut h = gallery();
+    h.run();
+    for (label, role) in [
+        ("A steel sample pulled to 6 %", Role::Image),
+        ("Stress against strain for the steel sample", Role::Image),
+        ("Load cell 12.4 kN", Role::Label),
+        ("Comfort: 12 milli-g", Role::Label),
+        ("As built: 12.0 mg", Role::Label),
+        ("Tapered: 6.6 mg", Role::Label),
+    ] {
+        let r = h.get_by_role_and_label(role, label).rect();
+        assert!(r.width() > 10.0 && r.height() > 10.0, "{label}: {r:?}");
+    }
+    // the rig paints the sample's colour inside its box
+    let img = h.render().expect("render");
+    let rig = h
+        .get_by_role_and_label(Role::Image, "A steel sample pulled to 6 %")
+        .rect();
+    let fill = sp_theme::materials::SAMPLES[0].fill;
+    let found = (rig.top() as u32..rig.bottom() as u32).any(|y| {
+        (rig.left() as u32..rig.right() as u32).any(|x| {
+            let p = img.get_pixel(x, y).0;
+            (0..3).all(|i| (p[i] as i32 - fill.to_array()[i] as i32).abs() <= 2)
+        })
+    });
+    assert!(found, "the steel sample is drawn");
+}
