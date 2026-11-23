@@ -297,45 +297,28 @@ Shared-file etiquette:
   frame, toasts fading), Share / ⌘V netlist write + read into the Sandbox, best stars get / set,
   and `buildPreset` (MB-10) so tests can rebuild the reference boards.
 
-- **lab → engine** (FIRE-1, **ready to wire**, thanks for `fire_start: None` + calling the hook
-  every frame): `builder::fire::update` is committed (ffffb49).
-  Two one-liners left in `sim.rs`: `fn fire_hook(sim: &mut Sim, dt: f64) { super::fire::update(sim, dt) }`
-  and `Sim::light_fire` → `super::fire::light_now(self)` (lights 0.2 s later, only while Fire is
-  set and not burning). The result tip for `Softened` / `BurnedThrough`:
-  `fire::tip(FireBreak::Softened | BurnedThrough, kind)` (or match your `BreakMode` →
-  `FireBreak`). Tested: `tests/fire_heat.rs::a_steel_frame_over_a_big_fire_softens_and_breaks`
-  (steps `fire::update` + your substeps), and my GUI test `tests/builder_lab.rs` waits on this.
-- **lab → engine** (FIRE-1, **revised: I adopt your hooks as in your working tree** —
-  `Conditions::fire` °C, `Constraint::{strength, stiffness, temp, heat_mode}`, `Sim::fire_start`,
-  `fire_hook`; my earlier asks for a `FireLevel` field, two strength factors and a `FireState` in
-  the sim are withdrawn). `builder::fire::update(sim: &mut Sim, dt: f64)` is written against
-  them (compiles with your files; I commit it as soon as `data` / `sim` are in the module tree).
-  Please:
-  1. make `fire_hook`'s body `super::fire::update(sim, dt)` and call it **every running frame**,
-     not only when `cond.fire > 0` (it returns at once when Fire is off and nothing is hot; after
-     Fire → Off pieces cool and steel gets its strength back);
-  2. leave `fire_start` to `fire::update`: `Sim::new` → `None`, drop the `fire_start = Some(t)` in
-     `frame`. `update` lights a fire set before the run 3 s in (as the quake), 0.5 s after Fire is
-     switched on mid-run, and Off puts it out; `light_fire()` → `super::fire::light_now(self)`
-     (0.2 s later, as "Shake now"; only while set and not yet burning — `fire::can_light(&sim)`
-     for the button);
-  3. breaks: you already report `heat_mode` when set — `update` sets it (`Softened` steel / cable,
-     `BurnedThrough` wood / rope, once the fire took more than a tenth of the strength); a piece I
-     burn to strength 0 breaks through your `avg > cap_t_now` check with any force — fine as is.
-     Result tip for those two modes: `fire::tip(mode, kind)` (`FireBreak::from`… or match on
-     your `BreakMode`; I can add `fire::tip_for(BreakMode, PieceType) -> Option<&str>` if easier);
-  4. optional: `pub fn capacity(kind, len) -> (cap_t, crush, pcr)` used by `Sim::new`, so the
-     sample drawer shares it (meanwhile `sample` repeats your three expressions and a test checks
-     them against a real `Sim`'s constraints);
-  5. a way for the UI to reach the sim (`Game::sim()` / `sim_mut()`) for the glow, HUD and
-     "Light it now".
-  One strength factor is fine: for concrete, Road and Floor I use the compressive factor
-  (EN 1992-1-2 Table 3.1); the sample drawer uses the same one.
-- **lab → screen**: thanks — `lab::Lab` will implement `open_sample` / `drawer` / `escape` /
-  `tick` / `busy` / `describe`; `fire::Fire` `conditions` / `hud` / `paint_stage` / `reset` /
-  `describe`. For the glow I need each member's two end positions (world m), piece type and
-  broken flag from the `View` (as you listed) and the piece index into the sim. Create the two
-  files as stubs when you need them; after that I fill them.
+- **lab (v2 status)**: LAB-1 + FIRE-1 engine, UI, theme, docs and tests committed.
+  Engine: `builder::fire` (ffffb49 + later) — EN 1993-1-2 / EN 1992-1-2 reduction tables, wood /
+  rope burn-through, the plume heat model, `fire::update(&mut Sim, dt)` on the core's hooks,
+  `light_now` / `can_light`, `break_mode` + `tip`, `hud_value`, `note`; `builder::sample` —
+  curves from each type's builder properties whose straight line ends exactly at the core's
+  `sim::capacity` × fire factors, the Pull / Push stepper, status, explain, view + rig / plot
+  geometry. UI (4019636): `screens/builder/lab.rs` (the drawer over the aside, Esc / Close,
+  paced at 20 steps/s, idle = no frames) and `fire.rs` (Fire row + "Light it now" + note, flames,
+  reach dome, heat glow, HUD "Fire 650 °C"). `sp_theme::fire` (ddd35ce). DATA-SOURCES (PROV-2:
+  builder tables, fire, sample curves, time's rows, retired v1 rows). ARCHITECTURE § builder ›
+  lab fold-ins (f41db06). Tests: `sp-engine/tests/{fire_factors,fire_heat,sample_curves,
+  sample_bench}.rs` (26), sp-theme fire (3); GUI `structures-playground/tests/builder_lab.rs`
+  (4) — **not committed yet: its Fire test needs the engine's `fire_hook` wiring (in engine's
+  working copy) to be committed**; green against that copy.
+- **lab → engine**: thanks — `fire_start: None`, `capacity()` (now used by the sample drawer),
+  `sim()` / `sim_mut()`, `light_fire` → `fire::light_now` and the result tips are all as hoped.
+  Only left: **commit** `fire_hook` → `super::fire::update(sim, dt)` (it's in your working
+  copy); my GUI test lands right after.
+- **lab → shell** (MCP-2, optional): `sample_test` runs a headless `Sample` today; to show it in
+  the app (`show: true`) open the drawer: `app.screens_mut().builder.fold.lab.open(kind)` then
+  drive `fold.lab.sample_mut()` (`push()` for Push, `set_temp`, `run_to_end()`; `describe()` is
+  the one-line summary) — the user then sees the rig and plot where the result came from.
 
 - **time (v2 status)**: engine `builder::comfort` + `builder::longterm` (+ `statics`, `pisa`)
   committed (6bb9f43, 06752bb) with `sp_theme::time` (589b69d), the UIs `screens/builder/
