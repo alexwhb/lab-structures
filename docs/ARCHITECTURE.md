@@ -348,9 +348,11 @@ owns nothing but pixels: every number and sentence comes from the view (DONE-2).
 
 - **`BuilderScreen { pub game: Game, pub fold: FoldIns, .. }`** (MCP and tests reach the
   engine through `app.screens_mut().builder.game`; a change shows the next frame). Each frame
-  `ui` builds the view, lets the fold-ins `adjust_view` it, collects the HUD chips, lays out the
-  row on `layout::columns` (`Tools` rail · `Stage` · `Level, site and inspector` aside; stacked
-  at 390), collects clicks as `builder::Action`s and applies them after drawing. Header:
+  `ui` builds `adjusted_view()` (the engine's view + every fold-in's `adjust_view`; the header's
+  cached view and `describe` use the same), collects the HUD chips, lays out the row on
+  `layout::columns` (`Tools` rail, 77 px like Chrome's min-content width · `Stage` · `Level,
+  site and inspector` aside; stacked at 390), collects clicks as `builder::Action`s and applies
+  them after drawing. Header:
   `document` = `level.slug()`, `drive_button` = a fold-in's or `Drive::new(view.hdr_run)`
   ("Run traffic" / "Run the test", "Pause" while running), `drive` = a fold-in's `drive` or
   `toggle_run`, Reset = `clear`, `clock` = `view.clock`, Share = `game.share_text()`; Carry in
@@ -368,11 +370,15 @@ owns nothing but pixels: every number and sentence comes from the view (DONE-2).
   here, the rest are shared `Icon`s), `hint` (the hint bar as CSS flex-wrap: the tool's chip
   group shrinks onto its own line, the hint takes the free space, all hit targets tiled),
   `stage` (the grid surface button "Building grid": click → `click_surface`, drag →
-  `surface_down` / `pointer_move` / `pointer_up` pan, wheel → one ×1.15 step per wheel event
-  about the pointer, pinch → `zoom_by`; joints (`click_and_drag`) and handles as AccessKit
-  buttons with the engine's labels; crate tags; HUD (right-aligned wrapping lines, 60 % wide);
-  toast; run overlay; result banner with painted stars (MB-2) and "Replay in slow motion" /
-  "Back to building"; the stage's `role=img` summary; the quake shake offsets the drawing),
+  `surface_down` / `pointer_move` / `pointer_up` pan, wheel → a notch is one ×1.15 step and a
+  trackpad's points zoom continuously (50 points a step, `wheel_steps`) about the pointer, pinch
+  → `zoom_by`; keyboard building: the focused grid shows the hover dot at the stage centre while
+  the pointer is away and Enter / Space builds at the dot; joints (`click_and_drag`) and handles
+  as AccessKit buttons with the engine's labels; crate tags; HUD (right-aligned wrapping lines,
+  60 % wide); toast; run overlay; result banner with painted stars (MB-2) and "Replay in slow
+  motion" / "Back to building" — banner and run overlay move below the HUD when they'd cover it
+  (MB-12); the stage's `role=img` summary; the quake shake offsets the drawing; its height comes
+  from the whole-pixel width, as Chrome snaps it),
   `scene` (the SVG layer in the mockup's paint order from the view's stage-px shapes), `paint`
   (`Xf`: stage px / world m → points; `height_for` = CSS `aspect-ratio` on the content box
   inside the 1 px border; dashes that restart per subpath, Béziers, an ear-clipping fill for
