@@ -3,11 +3,16 @@
 //! After a run that stood (any scene with foundations) the aside's result slot offers "Fast-
 //! forward 30 years": the engine computes the 30 years at once
 //! (`sp_engine::builder::longterm::fast_forward_design`, a few milliseconds), then the years
-//! play over about 6 s — the HUD chips "Year 12.0", "Tilt 1.8°" (bridges: "Differential 12
-//! mm"), "Settled 214 mm", a plumb line and the lean line on the stage — and afterwards a years
-//! scrubber, the result line and its sentence. On the Leaning tower (`RunKind::Years`) the run
-//! itself is the fast-forward: the drive / goal button starts it, and the result (tilt under
-//! 0.5° after 30 years, stars by the fix's cost) shows in the same card.
+//! play over about 6 s — the stage draws the structure where it has settled
+//! (`Game::view_settled`), the HUD chips read "Year 12.0", "Tilt 1.8°" (bridges: "Differential
+//! 12 mm"), "Settled 214 mm", a plumb line and the lean line show the tilt — and afterwards a
+//! years scrubber, the result line and its sentence.
+//!
+//! On the Leaning tower (`RunKind::Years`) the run itself is the fast-forward: the drive / goal
+//! button (or the engine's `start_years`, e.g. "Watch again, slow") starts it, the years play
+//! with the run overlay reading "Year 12.0 / 30", and at the end the engine gets the result
+//! (`Game::finish_years`: tilt under 0.5° after 30 years, stars by the fix's cost) for its
+//! banner and best stars.
 
 use super::bits::{bar, eyebrow, label_node, para};
 use super::host::{FoldIn, HudChip, card};
@@ -18,9 +23,15 @@ use crate::widgets::text::{galley, text_top};
 use crate::widgets::{Slider, ghost};
 use eframe::egui::{Color32, Painter, Sense, Shape, Stroke, Ui, pos2, vec2};
 use lab_theme::font;
+use sp_engine::builder::game::RunResult;
 use sp_engine::builder::longterm::{self, Ending, LongTerm, pisa};
-use sp_engine::builder::{Conditions, Game, LevelKey, Outcome, Phase, RunKind, View};
+use sp_engine::builder::view::SettledView;
+use sp_engine::builder::{Conditions, Game, LevelKey, Outcome, Phase, RunKind, View, Years};
+use sp_engine::jsnum::fixed;
 use sp_theme::{self as t, time as tt};
+
+/// Per piece of the design: axial force (N), broken, slack (`SettledView::pieces`).
+type PieceStates = Vec<(f64, bool, bool)>;
 
 /// A fast-forward on show.
 #[derive(Debug, Clone)]
@@ -30,6 +41,8 @@ struct Run {
     level: LevelKey,
     cond: Conditions,
     lt: LongTerm,
+    /// For each of the design's pieces, its index in the fast-forward's frames.
+    piece_of: Vec<Option<usize>>,
     /// Seconds into the animation while it plays.
     elapsed: Option<f64>,
     /// The year on show.
@@ -38,6 +51,26 @@ struct Run {
     years_level: bool,
     /// The Leaning tower's result, once the years have played.
     result: Option<pisa::PisaResult>,
+}
+
+impl Run {
+    /// The structure at the year on show, for `Game::view_settled`.
+    fn settled(&self) -> (Vec<[f64; 2]>, PieceStates) {
+        let s = self.lt.at(self.year);
+        let pieces = self
+            .piece_of
+            .iter()
+            .map(|i| match i {
+                Some(i) => (
+                    s.force.get(*i).copied().unwrap_or(0.0),
+                    s.broken.get(*i).copied().unwrap_or(false),
+                    s.slack.get(*i).copied().unwrap_or(false),
+                ),
+                None => (0.0, false, false),
+            })
+            .collect();
+        (s.pos, pieces)
+    }
 }
 
 /// The fold-in's state.
@@ -51,6 +84,9 @@ fn stood(game: &Game) -> bool {
     let Some(r) = game.result() else {
         return false;
     };
+    if r.years.is_some() {
+        return false;
+    }
     match r.outcome {
         Outcome::Tower { standing, .. } => standing,
         _ => r.first.is_none() && r.first_found.is_none(),
@@ -60,6 +96,11 @@ fn stood(game: &Game) -> bool {
 /// The level's run is the fast-forward (the Leaning tower).
 fn years_level(game: &Game) -> bool {
     game.setup().run == RunKind::Years
+}
+
+/// A Leaning tower run the engine started (`start_years`) that has no fast-forward yet.
+fn years_running(game: &Game) -> bool {
+    years_level(game) && game.phase() == Phase::Run && game.sim().is_none()
 }
 
 /// The colour of a tilt in the HUD.
@@ -75,42 +116,55 @@ fn tilt_color(tilt: f64) -> Color32 {
 }
 
 impl Time {
-    /// Whether "Fast-forward 30 years" is offered now: after a run that stood with foundations
-    /// carrying something, or any time on the Leaning tower while building.
+    /// Whether "Fast-forward 30 years" can start now: after a run that stood, with foundations
+    /// carrying something; on the Leaning tower while building (or when its run has begun).
     pub fn available(game: &Game) -> bool {
         if !longterm::has_foundations(game.design()) {
             return false;
         }
         if years_level(game) {
-            game.phase() == Phase::Build
+            game.phase() == Phase::Build || years_running(game)
         } else {
             game.phase() == Phase::Result && stood(game)
         }
     }
 
     /// Computes the 30 years for the game's design, level and conditions and starts playing
-    /// them (the button; the Leaning tower's run; MCP `builder_fast_forward` with `show`).
-    /// Nothing happens when it isn't [available](Self::available).
-    pub fn start(&mut self, game: &Game) {
+    /// them (the button; the Leaning tower's run, which it starts in the engine; MCP
+    /// `builder_fast_forward` with `show`). Nothing happens unless [available](Self::available).
+    pub fn start(&mut self, game: &mut Game) {
         if !Self::available(game) {
             return;
         }
+        let years = years_level(game);
+        if years && game.phase() == Phase::Build {
+            game.start_years();
+        }
         let lt = longterm::fast_forward_design(game.design(), &game.setup(), game.cond());
+        let piece_of = game
+            .design()
+            .members
+            .iter()
+            .map(|m| lt.piece_index(&m.id))
+            .collect();
         self.run = Some(Run {
             rev: game.revision(),
             level: game.level(),
             cond: *game.cond(),
             lt,
+            piece_of,
             elapsed: Some(0.0),
             year: 0.0,
-            years_level: years_level(game),
+            years_level: years,
             result: None,
         });
     }
 
     /// Jumps to the end of the 30 years (skips the animation; tests, MCP).
     pub fn finish(&mut self, game: &mut Game) {
-        if let Some(r) = &mut self.run {
+        if let Some(r) = &mut self.run
+            && r.elapsed.is_some()
+        {
             // past the animation's length: the next step lands on the last year
             r.elapsed = Some(2.0 * longterm::ANIM_SECONDS);
         }
@@ -127,10 +181,12 @@ impl Time {
         self.run.as_ref().map(|r| r.year)
     }
 
-    /// Shows another year (the scrubber), clamped to the computed span.
+    /// Shows another year (the scrubber), clamped to the computed span. While the years are
+    /// still playing this does nothing.
     pub fn set_year(&mut self, year: f64) {
-        if let Some(r) = &mut self.run {
-            r.elapsed = None;
+        if let Some(r) = &mut self.run
+            && r.elapsed.is_none()
+        {
             r.year = r.lt.at(year).year;
         }
     }
@@ -146,14 +202,14 @@ impl Time {
     }
 
     /// Drops a fast-forward that no longer matches the game: the design, level or conditions
-    /// changed, or (outside the Leaning tower) a new run started.
+    /// changed, back to building, or (outside the Leaning tower) a new run started.
     fn validate(&mut self, game: &Game) {
         if self.run.as_ref().is_some_and(|r| {
             r.rev != game.revision()
                 || r.level != game.level()
                 || r.cond != *game.cond()
+                || game.phase() == Phase::Build
                 || (!r.years_level && game.phase() != Phase::Result)
-                || (r.years_level && game.phase() != Phase::Build)
         }) {
             self.run = None;
         }
@@ -165,14 +221,15 @@ impl Time {
             r.rev == game.revision()
                 && r.level == game.level()
                 && if r.years_level {
-                    game.phase() == Phase::Build
+                    matches!(game.phase(), Phase::Run | Phase::Result)
                 } else {
                     game.phase() == Phase::Result
                 }
         })
     }
 
-    /// Moves the animation on by `dt` seconds; at the end scores the Leaning tower.
+    /// Moves the animation on by `dt` seconds; at the end of a Leaning tower run hands the
+    /// result to the engine.
     fn advance(&mut self, game: &mut Game, dt: f64) {
         let Some(r) = &mut self.run else {
             return;
@@ -183,29 +240,40 @@ impl Time {
         let end = r.lt.end_year();
         let e = e + dt.max(0.0);
         r.year = longterm::anim_year(e, end);
-        if r.year >= end - 1e-9 {
-            r.year = end;
-            r.elapsed = None;
-            if r.years_level && r.result.is_none() {
-                let budget = game.setup().budget.unwrap_or(pisa::BUDGET);
-                let res = pisa::result(
-                    &r.lt,
-                    pisa::fix_cost(game.design()),
-                    game.practice(),
-                    budget,
-                );
-                if res.stars > game.best_for(r.level) {
-                    game.set_best(r.level, res.stars);
-                }
-                r.result = Some(res);
-            }
-        } else {
+        if r.year < end - 1e-9 {
             r.elapsed = Some(e);
+            return;
+        }
+        r.year = end;
+        r.elapsed = None;
+        if r.years_level && r.result.is_none() {
+            let budget = game.setup().budget.unwrap_or(pisa::BUDGET);
+            let cost = pisa::fix_cost(game.design());
+            let practice = game.practice();
+            let res = pisa::result(&r.lt, cost, practice, budget);
+            let settled = r.lt.last().map_or(0.0, |f| f.max_settle);
+            if game.phase() == Phase::Run {
+                let standing = !matches!(r.lt.ending, Ending::Toppled(_) | Ending::CameDown(_));
+                game.finish_years(RunResult::of_years(
+                    res.pass,
+                    res.stars,
+                    cost,
+                    practice,
+                    standing,
+                    game.design().top(),
+                    Years {
+                        tilt: res.tilt,
+                        settled,
+                    },
+                    None,
+                ));
+            }
+            r.result = Some(res);
         }
     }
 
     /// The card's contents.
-    fn card_body(&mut self, ui: &mut Ui, game: &Game) -> Press {
+    fn card_body(&self, ui: &mut Ui, game: &Game) -> Press {
         let mut press = Press::None;
         let Some(r) = &self.run else {
             eyebrow(ui, "Thirty years from now");
@@ -232,15 +300,16 @@ impl Time {
             }
             return press;
         };
-        if let Some(res) = &r.result {
-            let color = if res.pass {
-                tt::TONE_OK
-            } else {
-                tt::TONE_DANGER
-            };
-            title_row(ui, &res.title, &stars_text(game, res), color);
-        } else {
-            eyebrow(ui, "Thirty years from now");
+        match &r.result {
+            Some(res) => {
+                let color = if res.pass {
+                    tt::TONE_OK
+                } else {
+                    tt::TONE_DANGER
+                };
+                title_row(ui, &res.title, &stars_text(game, res), color);
+            }
+            None => eyebrow(ui, "Thirty years from now"),
         }
         let end = r.lt.end_year();
         if r.elapsed.is_some() {
@@ -248,11 +317,7 @@ impl Time {
             let w = ui.available_width();
             let (rect, _) = ui.allocate_exact_size(vec2(w, 8.0), Sense::hover());
             bar(ui.painter(), rect, frac, t::ACCENT);
-            let text = format!(
-                "Year {} of {}",
-                sp_engine::jsnum::fixed(r.year, 1),
-                sp_engine::jsnum::fixed(longterm::YEARS, 0)
-            );
+            let text = format!("Year {} of {}", fixed(r.year, 1), fixed(longterm::YEARS, 0));
             label_node(ui, ("years-progress", "bar"), rect, &text);
             para(ui, &text, 13.0, 1.5, t::TEXT_BODY);
             if ghost("Skip to the end")
@@ -263,38 +328,36 @@ impl Time {
             {
                 press = Press::Skip;
             }
-        } else {
-            let mut y = r.year as f32;
-            let value = format!("Year {}", sp_engine::jsnum::fixed(r.year, 1));
-            if Slider::new("Years", &mut y, 0.0..=end as f32)
-                .step(longterm::STEP as f32)
-                .value_text(value)
-                .show(ui)
-                .changed()
-            {
-                press = Press::Scrub(y as f64);
-            }
-            para(ui, &r.lt.result_line(), 13.0, 1.5, t::TEXT);
-            match &r.result {
-                Some(res) => {
-                    let tail = res
-                        .explain
-                        .strip_prefix(r.lt.result_line().as_str())
-                        .unwrap_or(&res.explain)
-                        .trim_start()
-                        .to_string();
-                    para(ui, &tail, 13.0, 1.5, t::TEXT_BODY);
-                }
-                None => para(ui, &r.lt.sentence(), 13.0, 1.5, t::TEXT_BODY),
-            }
-            if ghost("Play again")
-                .full_width()
-                .centered()
-                .show(ui)
-                .clicked()
-            {
-                press = Press::Replay;
-            }
+            return press;
+        }
+        let mut y = r.year as f32;
+        let value = format!("Year {}", fixed(r.year, 1));
+        if Slider::new("Years", &mut y, 0.0..=end as f32)
+            .step(longterm::STEP as f32)
+            .value_text(value)
+            .show(ui)
+            .changed()
+        {
+            press = Press::Scrub(y as f64);
+        }
+        para(ui, &r.lt.result_line(), 13.0, 1.5, t::TEXT);
+        let more = match &r.result {
+            Some(res) => res
+                .explain
+                .strip_prefix(r.lt.result_line().as_str())
+                .unwrap_or(&res.explain)
+                .trim_start()
+                .to_string(),
+            None => r.lt.sentence(),
+        };
+        para(ui, &more, 13.0, 1.5, t::TEXT_BODY);
+        if ghost("Play again")
+            .full_width()
+            .centered()
+            .show(ui)
+            .clicked()
+        {
+            press = Press::Replay;
         }
         press
     }
@@ -344,35 +407,48 @@ fn title_row(ui: &mut Ui, title: &str, stars: &str, color: Color32) {
 impl FoldIn for Time {
     fn tick(&mut self, game: &mut Game, ctx: &mut Ctx) {
         self.validate(game);
+        // a Leaning tower run the engine started ("Watch again, slow", MCP) plays the years
+        if years_running(game) && self.run.as_ref().is_none_or(|r| r.result.is_some()) {
+            self.run = None;
+            self.start(game);
+        }
         if self.playing() {
-            self.advance(game, ctx.dt() as f64);
+            let k = if game.slow() { 0.3 } else { 1.0 };
+            self.advance(game, ctx.dt() as f64 * k);
             ctx.wake_in(1.0 / 30.0);
         }
     }
 
     fn adjust_view(&self, game: &Game, view: &mut View) {
-        if !years_level(game) || game.phase() != Phase::Build {
-            return;
-        }
-        match &self.run {
-            None => {
-                view.run_label = "Fast-forward 30 years";
-            }
-            Some(r) if r.elapsed.is_some() => {
-                view.run_label = "Skip to the end";
-                view.explain = format!(
-                    "Year {} of {}: the soft clay squeezes slowly and the heavier side sinks \
-                     deeper, so every bit of lean puts more weight on it.",
-                    sp_engine::jsnum::fixed(r.year, 1),
-                    sp_engine::jsnum::fixed(longterm::YEARS, 0)
-                );
-            }
-            Some(r) => {
-                view.run_label = "Back to building";
-                if let Some(res) = &r.result {
-                    view.explain = res.explain.clone();
+        if let Some(r) = self.shown(game) {
+            let (pos, pieces) = r.settled();
+            *view = game.view_settled(&SettledView {
+                pos: &pos,
+                pieces: &pieces,
+            });
+            if r.years_level {
+                view.run_info =
+                    format!("Year {} / {}", fixed(r.year, 1), fixed(longterm::YEARS, 0));
+                match &r.result {
+                    Some(res) => {
+                        if let Some(b) = &mut view.result {
+                            b.title = res.title.clone();
+                        }
+                        view.explain = res.explain.clone();
+                    }
+                    None => {
+                        view.status.label = "Settling, year by year".into();
+                        view.explain = format!(
+                            "Year {} of {}: the soft clay squeezes slowly and the heavier side \
+                             sinks deeper, so every bit of lean puts more weight on it.",
+                            fixed(r.year, 1),
+                            fixed(longterm::YEARS, 0)
+                        );
+                    }
                 }
             }
+        } else if years_level(game) && game.phase() == Phase::Build {
+            view.run_label = "Fast-forward 30 years";
         }
     }
 
@@ -414,7 +490,7 @@ impl FoldIn for Time {
 
     fn results(&mut self, ui: &mut Ui, game: &mut Game, _ctx: &mut Ctx) {
         self.validate(game);
-        if self.run.is_none() && !Self::available(game) {
+        if self.shown(game).is_none() && !Self::available(game) {
             return;
         }
         let mut press = Press::None;
@@ -423,8 +499,14 @@ impl FoldIn for Time {
         });
         match press {
             Press::None => {}
-            Press::Start | Press::Replay => self.start(game),
+            Press::Start => self.start(game),
             Press::Skip => self.finish(game),
+            Press::Replay => {
+                if let Some(r) = &mut self.run {
+                    r.elapsed = Some(0.0);
+                    r.year = 0.0;
+                }
+            }
             Press::Scrub(y) => self.set_year(y),
         }
         if press != Press::None {
@@ -436,24 +518,13 @@ impl FoldIn for Time {
         if !years_level(game) || game.phase() != Phase::Build {
             return false;
         }
-        self.validate(game);
-        match &self.run {
-            None => self.start(game),
-            Some(r) if r.elapsed.is_some() => self.finish(game),
-            Some(_) => self.run = None,
-        }
+        self.start(game);
         true
     }
 
     fn drive_button(&self, game: &Game) -> Option<Drive> {
-        if !years_level(game) || game.phase() != Phase::Build {
-            return None;
-        }
-        Some(match &self.run {
-            None => Drive::new("Fast-forward 30 years"),
-            Some(r) if r.elapsed.is_some() => Drive::new("Fast-forward 30 years").running(true),
-            Some(_) => Drive::new("Back to building"),
-        })
+        (years_level(game) && game.phase() == Phase::Build)
+            .then(|| Drive::new("Fast-forward 30 years"))
     }
 
     fn reset(&mut self, _game: &Game) {
@@ -464,13 +535,9 @@ impl FoldIn for Time {
         self.playing()
     }
 
-    fn describe(&self, _game: &Game) -> Option<String> {
-        let r = self.run.as_ref()?;
-        let mut s = format!(
-            "{} (year {})",
-            r.lt.result_line(),
-            sp_engine::jsnum::fixed(r.year, 1)
-        );
+    fn describe(&self, game: &Game) -> Option<String> {
+        let r = self.shown(game)?;
+        let mut s = format!("{} (year {})", r.lt.result_line(), fixed(r.year, 1));
         if let Some(res) = &r.result {
             s = format!("{}: {s}", res.title);
         }

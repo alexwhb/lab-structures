@@ -54,7 +54,7 @@ pub fn reading(game: &Game) -> Option<Reading> {
             limit: setup.comfort,
             done: false,
         }),
-        Phase::Result => match game.result()?.outcome {
+        Phase::Result => match game.result().filter(|r| r.years.is_none())?.outcome {
             Outcome::Tower { mg, .. } if game.design().top() > 0.0 => Some(Reading {
                 mg,
                 limit: setup.comfort,
@@ -117,7 +117,7 @@ fn meter(ui: &mut Ui, m: &Meter) {
         let x = x_of(lp);
         let tick = Rect::from_min_max(pos2(x - 1.0, bar.top() - 4.0), pos2(x + 1.0, bar.bottom()));
         p.rect_filled(tick, CornerRadius::ZERO, tt::LIMIT);
-        let g = galley(ui, &m.limit_text(), tf.clone(), tt::LIMIT);
+        let g = galley(ui, m.limit_text(), tf.clone(), tt::LIMIT);
         let gx = (x - g.size().x / 2.0).clamp(bar.left(), bar.right() - g.size().x);
         p.galley(pos2(gx, rect.top()), g, tt::LIMIT);
     }
