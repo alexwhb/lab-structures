@@ -14,7 +14,8 @@ lab-series/
                                    (lead), bridge game (levels, test ramp, collapse), netlist +
                                    generators + influence lines, tower wind + sway, dynamics,
                                    ground, materials
-    crates/structures-playground   the egui app: header, router, widgets, six screens, MCP bridge
+    crates/structures-playground   the egui app: header, router, widgets, three screens (the builder,
+                                   Advanced, Series), MCP bridge
     crates/sp-shared               UI-free vocabulary shared by the app and sp-mcp (wave 2)
     crates/sp-mcp                  the MCP server binary `structures-mcp` (wave 2)
 ```
@@ -491,14 +492,15 @@ use: `Screen`, `Ctx`, `Carry`, `Command`, `Drive`, `Share`, `Badge`, `Provenance
 
 | file | what |
 |---|---|
-| `src/app.rs` | `StructuresApp`: the frame (paper ground → header → world tab row → screen body → toasts), shortcuts, Share, navigation + hand-offs, persistence; `AppOptions` (`::default()` real, `::test()` / `::at(route)` deterministic); `AppEvent` log |
+| `src/app.rs` | `StructuresApp`: the frame (paper ground → header → screen body → toasts; no world tab row in v2), shortcuts and the builder's keys, Share, navigation + hand-offs, persistence; `AppOptions` (`::default()` real, `::test()` / `::at(route)` deterministic); `AppEvent` log |
 | `src/ctx.rs` | `Ctx` (per-frame screen context), `Carry`, `Command`, `Ticker`, frame pacing |
-| `src/router.rs` | `Route` (`Bridge`, `Tower`, `Ground`, `Materials`, `Advanced`, `Series`), `Mode`; per route: tab label, default document, mockup, board size, chrome / panel height, ⌘-digit, id |
-| `src/screens/mod.rs` | the `Screen` trait, `Drive`, `Share`, `Badge`, `Provenance`, `Screens` (all six kept alive) |
-| `src/screens/{bridge,advanced,tower,ground,materials}.rs` | **owned by the screen agents** (placeholders from the shell: keep `XxxScreen::new()` + the `Screen` impl) |
+| `src/router.rs` | `Route` (`Playground` — the builder —, `Advanced`, `Series`; v1's `Bridge` / `Tower` / `Ground` / `Materials` deserialize as `Playground`), `Mode` (`route()`); per route: title, default document, mockup + reference PNG (under `docs/design/`), board size, chrome / panel height, ⌘-digit, id; `RETIRED_IDS` |
+| `src/screens/mod.rs` | the `Screen` trait, `Drive`, `Share`, `Badge`, `Provenance`, `Screens` (`builder`, `advanced`, `series`, all kept alive) |
+| `src/screens/builder.rs` + `builder/**` | SCR-1, **owned by the `screen` agent** (fold-in UI files by `time` / `lab`); `BuilderScreen { pub game: sp_engine::builder::Game, .. }` |
+| `src/screens/advanced.rs` + `advanced/**` | SCR-2 (v1 agent `advanced`; shell-owned in v2) |
 | `src/screens/series.rs` | SCR-6 (shell) |
 | `src/layout.rs` | `Column` + `columns` (the mockup's wrapping flex rows), `stage`, `graph_panel` |
-| `src/widgets/*` | the widget kit (below); `header.rs`, `tabs.rs` are the chrome |
+| `src/widgets/*` | the widget kit (below); `header.rs` is the chrome |
 | `src/launcher.rs` | the lab-series apps (`AppId`) and the injectable launcher (Series cards) |
 | `src/platform.rs` | `.str` files from Finder / the command line → Advanced (`Carry::Netlist`) |
 | `src/smoke.rs` | `--smoke <s> [--headless]` (PLAT-1) |
@@ -507,29 +509,25 @@ use: `Screen`, `Ctx`, `Carry`, `Command`, `Drive`, `Share`, `Badge`, `Provenance
 ### How a screen plugs in
 
 Each screen is `pub struct XxxScreen` with `pub fn new() -> Self` and `impl Screen`. The app
-owns one of each in `Screens` (`app.screens().bridge`, …) for the whole run, so state survives
-navigation. Only `ui` is required; everything else has a default.
+owns one of each in `Screens` (`app.screens().builder`, `.advanced`, `.series`) for the whole
+run, so state survives navigation. Only `ui` is required; everything else has a default.
 
 ```rust
-impl Screen for TowerScreen {
-    fn ui(&mut self, ctx: &mut Ctx, ui: &mut Ui) { /* the body under the chrome */ }
-    fn document(&self) -> Option<String> { None }                 // header doc name; None = Route::document()
+impl Screen for BuilderScreen {
+    fn ui(&mut self, ctx: &mut Ctx, ui: &mut Ui) { /* the body under the header */ }
+    fn document(&self) -> Option<String> { Some(self.game.level().slug()) } // header doc name; None = Route::document()
     fn drive_button(&self) -> Option<Drive> {                       // the .prim drive button
-        Some(Drive::new("Play gusts").running(self.playing))        // "Pause" + pause icon while running
+        Some(Drive::new("Run traffic").running(self.game.live()))   // "Pause" + pause icon while running
     }
-    fn drive(&mut self, ctx: &mut Ctx) { self.playing = !self.playing; } // click or Space
+    fn drive(&mut self, ctx: &mut Ctx) { self.game.toggle_run(); }  // click or Space
     fn has_reset(&self) -> bool { true }                            // show Reset (default true)
-    fn reset(&mut self, ctx: &mut Ctx) { *self = Self::new(); }
-    fn clock(&self) -> String { format!("T = {:.1} s", self.period) } // mono clock; "" = none
+    fn reset(&mut self, ctx: &mut Ctx) { self.game.clear(); }
+    fn clock(&self) -> String { "building".into() }                 // mono clock; "" = none
     fn share(&mut self, ctx: &mut Ctx) -> Option<Share> {           // NAV-6; None = "Nothing to share yet"
-        Some(Share::new(self.story_line()).toast("Copied the tower as a .story line"))
-    }
-    fn provenance(&self) -> Vec<Badge> {                            // PROV-1, right of the world tabs
-        vec![Badge::simplified("Wind + sway: simplified cantilever"),
-             Badge::illustrative("Comfort bands: illustrative"), Badge::illustrative("Game costs")]
+        Some(Share::new(self.game.share_text()))
     }
     fn tick(&mut self, ctx: &mut Ctx) { /* advance by ctx.dt(); ctx.animate() / ctx.wake_in(s) while moving */ }
-    fn command(&mut self, cmd: Command, ctx: &mut Ctx) -> bool { false } // ⌘Z, Delete, ⌘V
+    fn command(&mut self, cmd: Command, ctx: &mut Ctx) -> bool { false } // ⌘Z, Delete, ⌘V, zoom, pan, nudge, Esc
     fn enter(&mut self, ctx: &mut Ctx) {}                           // route became active (may repeat)
     fn receive(&mut self, carry: Carry, ctx: &mut Ctx) {}           // NAV-4 hand-off, right after enter
     fn describe(&self) -> String { String::new() }                  // one-line summary (MCP describe)
@@ -539,32 +537,36 @@ impl Screen for TowerScreen {
 Per frame, for the active route: `enter` (first frame on the route) → `receive` (if a hand-off
 is pending) → shortcuts / `command`s / Space → `drive` → `tick` (once per frame, not again in a
 discarded layout pass) → the header reads `document`, `drive_button`, `has_reset`, `clock` and
-calls `drive` / `reset` / `share` on a click → the world tab row reads `provenance` → `ui`.
+calls `drive` / `reset` / `share` on a click → `ui`.
 
 - **Header (NAV-1)** — drawn by the app (`widgets/header.rs`): logo mark + "Structures
   Playground" (an AccessKit `Link` → Series), `/`, the document name (a `Label`), the mode
-  switcher (`Navigation` "Mode": `Link`s Playground → last world, Advanced → Advanced; the
-  current one `selected`), then the drive button (`Button` named "Test" / "Pause" …), Reset,
-  the clock (`Label`), Share. Not on Series (it has its own Back).
-- **World tab row (NAV-2)** — `widgets/tabs.rs`, on the four worlds: `TabList` "Playground
-  worlds" with `Tab`s (current `selected`), and a `Group` "Provenance" with the screen's
-  badges (each a `Label`). Badges: `Badge::exact / simplified / illustrative(text)`,
-  `Badge::dot(text, colour)`, `Badge::plain(text)`; draw one anywhere with
-  `widgets::badge(ui, &b)` (or `badge_with(ui, &b, BadgeLook::DANGER)`).
+  switcher (`Navigation` "Mode": `Link`s Playground → the builder, Advanced → Advanced; the
+  current one `selected`), then the drive button (`Button` named "Run traffic" / "Pause" …),
+  Reset, the clock (`Label`), Share. Not on Series (it has its own Back).
+- **No world tab row (NAV-2, v2)** — screens draw their own provenance (PROV-1: the builder's
+  line under its legend, Advanced's results badges). Badges: `Badge::exact / simplified /
+  illustrative(text)`, `Badge::dot(text, colour)`, `Badge::plain(text)`, `Provenance::color()`;
+  draw one anywhere with `widgets::badge(ui, &b)` (or `badge_with(ui, &b, BadgeLook::DANGER)`).
 - **Share (NAV-6)** — the app copies `Share::text` to the clipboard (`Ctx::copy`, readable in
   tests as `app.last_copied()`) and toasts `Share::toast` (default "Copied <document> to the
   clipboard").
-- **Keys (NAV-5)** — the app handles ⌘1–⌘4 (worlds), ⌘5 (Advanced), Esc on Series (Back), and
-  Space with nothing focused (a focused button takes Space itself) → `drive` (only if
-  `drive_button()` is enabled). With no text field focused it sends `Command::Undo` (⌘Z),
-  `Command::Delete` (Delete / Backspace) and `Command::Paste(text)` (⌘V; the paste event is
-  consumed). Screens handle other keys themselves (`ui.input`), e.g. arrow keys on a selected
-  joint. Tab order is egui's: widgets in the order they are drawn (reading order).
+- **Keys (NAV-5)** — the app handles ⌘1 (Playground), ⌘2 (Advanced), Esc on Series (Back), and
+  Space with nothing focused (a focused button takes Space itself; a slider lets it through:
+  `widgets::space_passes_through`) → `drive` (only if `drive_button()` is enabled). With no
+  text field focused it sends `Command::Undo` (⌘Z, not ⌘⇧Z), `Command::Delete` (Delete /
+  Backspace) and `Command::Paste(text)` (⌘V; the paste event is consumed). **On the Playground
+  only** (BLD-2, NAV-5) also `Command::ZoomIn` (⌘= / ⌘+; instead of egui's whole-window zoom),
+  `ZoomOut` (⌘−), `ZoomFit` (⌘0), `Escape` (Esc), and the arrows as `Pan { dx, dy }` (⌥:
+  `Nudge { dx, dy }`; `dy` up) while nothing has keyboard focus or the focused widget called
+  `widgets::arrows_pass_through(ui, id)` this frame (it also locks egui's arrow-key focus
+  moves for it); otherwise the arrows move focus, egui's way. Tab order is egui's: widgets in
+  the order they are drawn (reading order).
 
 ### `Ctx` (per frame)
 
-`route()`, `last_world()`, `previous()`; `go(route)`, `go_with(route, carry)`, `back()` (to
-`previous`, else the last world); `pending()`; `toast(text)`; `copy(text)`; `save_text(name,
+`route()`, `previous()`; `go(route)`, `go_with(route, carry)`, `back()` (to `previous`, else
+the Playground); `pending()`; `toast(text)`; `copy(text)`; `save_text(name,
 contents) -> Result<Option<PathBuf>>` (native dialog in the app, the output folder in tests);
 `launch(AppId) -> Launch`; `rng_seed()` (fixed: `AppOptions::DEFAULT_SEED`, 7 in tests, NAV-7);
 `autoplay()` (off in tests); `dt()`; `text_focus()`; `body_height()` (the window under the
@@ -583,19 +585,17 @@ or `ctx.wake_in(secs)` when only the next step matters (a 30 ticks/s test ramp:
 ```rust
 pub enum Carry {
     Netlist { text: String, name: Option<String>, from: Option<Route> }, // .str text
-    Building { floors: u32, base_shear_n: f64, overturning_nm: f64 },    // Tower → Ground
-    Tower { floors: u32 },                                               // Ground → Tower
 }
-Carry::netlist(text, Some("my-bridge"), Route::Bridge)   // builder; carry.from()
+Carry::netlist(text, Some("river-level"), Route::Playground)   // carry.from()
 ```
 
 | from → to | button | call | the target does |
 |---|---|---|---|
-| Tower → Ground | "Send base reactions to Ground ›" | `ctx.go_with(Route::Ground, Carry::Building { .. })` | floors → building load; the moment as a note |
-| Ground → Tower | "‹ Back to the Tower" | `ctx.go_with(Route::Tower, Carry::Tower { floors })` | keeps its settings, takes the floors |
-| Bridge → Advanced | "Open in Advanced" | `ctx.go_with(Route::Advanced, Carry::netlist(text, Some(name), Route::Bridge))` | parses + solves it (ADV-9); `name` → document |
-| Advanced → Bridge | "Open in Playground" | `ctx.go_with(Route::Bridge, Carry::netlist(text, None, Route::Advanced))` | loads it into the Sandbox if it fits the grid |
-| Finder / CLI `.str` → Advanced | — | the app (`platform.rs`) | as Bridge → Advanced, `from: None` |
+| builder → Advanced | "Open in Advanced" | `ctx.go_with(Route::Advanced, Carry::netlist(game.share_text(), Some(slug), Route::Playground))` | parses + solves it (ADV-9); `name` → document; badge "from the Playground" |
+| Advanced → builder | "Open in Playground" | `ctx.go_with(Route::Playground, Carry::netlist(text, None, Route::Advanced))` | `game.paste_netlist(text)`: into the Sandbox if it fits the grid |
+| Finder / CLI `.str` → Advanced | — | the app (`platform.rs`) | as builder → Advanced, `from: None` |
+
+(v1's `Carry::Building` / `Carry::Tower` went with the Tower and Ground screens.)
 
 The carry is delivered at the start of the next frame, after the target's `enter`; if the
 user navigates on before that, it still reaches its target. Delivered carries are logged
@@ -619,7 +619,9 @@ user navigates on before that, it still reaches its target. Delivered carries ar
 | `Chip::new(text).part(text, colour)` | the floating measurement `.chip` | `.show_at(ui, pos, Align2)` |
 | `CodeBlock::new(text)` | mono block | |
 | `Plot::series(&values)` | line + fill + guides + playhead | `.height()`, `.playhead(Some(i))`, `.label()` |
-| `Icon::*` | every mockup icon (play, pause, restart, truss, chart, back, the Bridge's tools rail, logo) | `icon.paint(painter, rect, colour)` |
+| `Icon::*` | every mockup icon (play, pause, restart, truss, chart, back, tools, logo) | `icon.paint(painter, rect, colour)` |
+| `tensile::{rig, plot}` | the v1 Materials tensile rig and stress–strain plot (`0 0 420 560` / `0 0 560 400` viewBoxes, fitted "meet", on a `.graph` panel) | generic scenes: `RigScene::dogbone(stretch, necking, broken, necked_break, fill)` + `.readout(..)` / `.badge(..)` / `.label(..)`; `PlotScene::axes(x_max, &x_ticks, y_max, &y_ticks)` + `curve` / `done` / `marker` / `ghosts` / `labels`, `PlotScene::point(strain, stress, ..)`; `from_bench` adapters (the builder's sample drawer, LAB-1) |
+| `world::*` | the v1 Tower / Ground column widgets: `band_bar`, `compare_row`, `readout_grid`, `goal_row`, `status_pill`, `title_block`, `picture_tiles`, `stepper`, `value_row`, `challenge`, `stage_box`, `paint_path` | reused by the builder's fold-ins (CMF-1 meter, CMF-2 rows) |
 | `Toasts` | app toasts (2.6 s, bottom centre) | `ctx.toast(text)` |
 | `text::{galley, wrapped, text_top, lbl_galley, …}` | text helpers | |
 | `widgets::hit::{target, tile}`, `interact`, `set_bounds` | 44 px hit areas, AccessKit plumbing | |
@@ -630,7 +632,7 @@ shared widgets go to `shell` via PROGRESS Requests.
 
 ### Layout helpers (`src/layout.rs`)
 
-`Column` is one flex column of a body row: `Column::rail("Tools")` (76 px, the Bridge),
+`Column` is one flex column of a body row: `Column::rail("Tools")` (76 px, the builder's rail),
 `Column::parts("Parts")` (1 1 250, 220–300, border-right), `Column::main("Stage")` (999 1 560,
 padding 14 16, gap 10; `.flex(999.0, 1.0, 520.0).pad(16.0, 16.0).gap(12.0)` for Tower / Ground /
 Materials), `Column::readouts("Readouts")` (1 1 300, 260–360, border-left), plus `.flex()`,
@@ -650,18 +652,18 @@ child `Ui` for a rounded stage panel, `graph_panel_border(ui, rect)` draws its b
 Building: `harness(route)` (1440 × 900), `harness_at(route, w, h)`, `app().at(r).phone()`
 (390 × 1000) / `.board()` / `.size(w, h)` / `.launcher(l)` / `.autoplay()` / `.options(o)`
 `.build()`; `settle(&mut h)` (4 frames). State: `route(&h)`, `goto(&mut h, r)`,
-`hand_off(&mut h, r, carry)`, `events(&h)` / `carried(&h)` (`AppEvent`s), `last_copied(&h)`,
-`document(&h)`, `drive_label(&h)`, `toasts(&h)`, `step_until(&mut h, n, |h| ..)`,
-`h.state().screens().tower` (the screen's own state). Acting by AccessKit label:
-`click(&mut h, label)`, `click_button`, `click_link`, `click_tab`, `click_role(.., Role)`,
+`hand_off(&mut h, r, carry)`, `events(&h)` / `carried(&h)` / `commands(&h)` (`AppEvent`s),
+`last_copied(&h)`, `document(&h)`, `drive_label(&h)`, `toasts(&h)`, `step_until(&mut h, n, |h|
+..)`, `h.state().screens().builder.game` (the screen's own state). Acting by AccessKit label:
+`click(&mut h, label)`, `click_button`, `click_link`, `click_role(.., Role)`,
 `click_drive(&mut h)`, `click_header(&mut h, "Reset")`, `header_button(&h, label)`,
-`type_into(&mut h, label, text)`, `press(&mut h, Key)`, `press_cmd(&mut h, Key)`,
+`type_into(&mut h, label, text)`, `press(&mut h, Key)`, `press_cmd(&mut h, Key)`, `press_alt`,
 `reveal(..)` (scrolls into view). Reading: `has_label`, `has_label_containing`, `get(&h, label,
 Role)`, `pressed(&h, label)`, `selected(&h, label, Role)`, `disabled(&h, label)`,
 `focused_label(&h)`, `nodes_with_roles(&h, &[Role])`, `child_labels(..)`, `text_of(&node)`.
 Rendering: `render(&mut h)`, `screenshot(&mut h, name)` (into the test's tmp dir),
-`render_full(route, w, min_h)`, `mockup_png(route, 1440)`, `load`, `mean_diff(a, b,
-region)`.
+`render_full(route, w, min_h)`, `mockup_png(route, 1440)` (`Route::reference`: the builder's
+BridgeBuild board for the Playground), `load`, `mean_diff(a, b, region)`.
 
 `AppOptions::test()` is deterministic: seed 7, no autoplay, no persistence, no save dialog, a
 recording launcher with nothing installed, a fresh temp output folder. `app.events()` logs
@@ -669,11 +671,13 @@ recording launcher with nothing installed, a fresh temp output folder. `app.even
 hand-offs delivered and the keyboard commands with whether the screen handled them).
 
 Shell test files: `tests/nav.rs` (every route by click and key, Back / Esc, Space, Reset,
-Share, hand-offs, commands), `tests/a11y.rs` (chrome names, 44 px targets, Tab order),
-`tests/widgets.rs` (the gallery), `tests/series.rs`, `tests/pacing.rs` (PLAT-3: **every
-route at rest must ask for no frames** — a screen that animates while idle fails it),
+Share, hand-offs, commands, the builder's keys on the Playground only, no tab row),
+`tests/a11y.rs` (chrome names, 44 px targets, Tab order), `tests/widgets.rs` (the gallery,
+with the fold-in painters), `tests/series.rs`, `tests/pacing.rs` (PLAT-3: **every route at
+rest must ask for no frames** — a screen that animates while idle fails it),
 `tests/compare.rs` (chrome closeness; `scripts/compare-mockup.sh` renders `[app | mockup]`
-side by side into `target/compare/` for any screen: `scripts/compare-mockup.sh tower`).
+side by side into `target/compare/` for any screen: `scripts/compare-mockup.sh playground`),
+`tests/journeys.rs` (DONE-4), `tests/mcp_bridge.rs`, `tests/advanced*.rs`.
 
 **Perf tests (ENG-4).** `scripts/test-all.sh` runs every test target named `perf` or `*_perf`
 in release with `--include-ignored --nocapture`; it must pass, and each printed line
@@ -681,11 +685,13 @@ in release with `--include-ignored --nocapture`; it must pass, and each printed 
 
 ### Persistence (NAV-7), platform, smoke
 
-eframe keeps the window size (`persist_window`) and `Persisted { route, last_world }` (Series
-restores to the last world). A fresh start is reproducible: the seed is fixed
+eframe keeps the window size (`persist_window`) and `Persisted { route }` (Series restores to
+the Playground; a v1 save naming `Bridge` / `Tower` / `Ground` / `Materials` restores to the
+Playground, its `last_world` ignored). A fresh start is reproducible: the seed is fixed
 (`AppOptions::DEFAULT_SEED`). `structures-playground --smoke <seconds> [--headless]` opens
-the Bridge, presses its drive button, runs and prints `SMOKE route=bridge mode=… first_frame_ms=…
-frames=… frame_ms_avg=… frame_ms_max=… status=ok`. `STRUCTURES_BUNDLE=1` at build time
+the Playground on level 1 with a wood truss (`smoke::SMOKE_BUILD`), presses "Run traffic",
+runs and prints `SMOKE route=playground mode=… first_frame_ms=… frames=… run=run
+frame_ms_avg=… frame_ms_max=… status=ok` (`run=` the builder's phase at the end). `STRUCTURES_BUNDLE=1` at build time
 (`scripts/bundle-macos.sh`) leaves the checkout path out of the binary (`MANIFEST_DIR`).
 
 ## MCP (`crates/sp-shared`, `crates/sp-mcp`, the app's `control.rs`) — agent `shell`
@@ -695,53 +701,69 @@ Forked from Automata Playground's `ap-shared` / `ap-mcp` / `control.rs`, on labk
 newline-delimited JSON). Setup and the tool list for users: `crates/sp-mcp/README.md`.
 
 ```
-MCP client ──stdio──▶ structures-mcp (sp-mcp) ──Unix socket──▶ the app (control.rs) ──▶ screens' state
+MCP client ──stdio──▶ structures-mcp (sp-mcp) ──Unix socket──▶ the app (control.rs) ──▶ BuilderScreen::game
                          └─ engine tools: sp-engine in-process     both build replies with sp-shared
 ```
 
 - **`sp-shared`** (no egui): `APP_NAME`, `APP_ID`, `SOCKET_ENV` (`STRUCTURES_MCP_SOCKET`; empty or
-  `off` disables), `bridge_socket_path()`, `HOW_TO_START`; `SCREENS` / `MODES` (a test in
-  `tests/mcp_bridge.rs` keeps them equal to `Route`); `proto` — the bridge methods beyond the
-  four every app answers (`status`, `navigate`, `screenshot`, `describe`): `bridge.get`,
-  `bridge.load_netlist` (`BridgeLoadNetlist`), `bridge.test` (`BridgeTest`), `tower.set`
-  (`TowerSet` = `TowerChange` + `show`), `ground.set` (`GroundSet`), `materials.set`
-  (`MaterialsSet`), `MAX_TEST_TICKS`; `input` — checks that refuse (never clamp): `netlist`
-  (line / column diagnostics), `material`, `temperature`, `strain`, `TowerChange::apply`,
-  `GroundChange::apply`; `report` — the payloads both sides send, built from the engine:
-  `truss_report(&Netlist, x)` (on `influence::analyse_at`), `influence_report(&Netlist, id)`,
-  `tower_report(&TowerInput)`, `ground_report(&GroundInput)`, `tensile_report(kind, T, e,
-  points)` / `tensile_from_bench(&Bench, ..)`, `bridge_state(&Game)`, `run_bridge_test(&mut
-  Game, max_ticks)` (held / collapsed / refused with the game's own toast, first failure, stars).
+  `off` disables), `bridge_socket_path()`, `HOW_TO_START`; `SCREENS` (`playground`,
+  `advanced`, `series`) / `MODES` (a test in `tests/mcp_bridge.rs` keeps them equal to
+  `Route`), `RETIRED_SCREENS` + `retired_note(id)` (why `tower` isn't a screen any more);
+  `proto` — the bridge methods beyond the four every app answers (`status`, `navigate`,
+  `screenshot`, `describe`): `builder.get`, `builder.level` (`BuilderLevel`),
+  `builder.load_netlist` (`BuilderLoadNetlist`), `builder.conditions` (`BuilderConditions` =
+  `ConditionsChange` + `show`), `builder.run` (`BuilderRun`), `builder.fast_forward`
+  (`BuilderFastForward`), `sample.test` (`SampleTest`), `MAX_RUN_FRAMES`,
+  `SANDBOX_RUN_SECONDS`; `builder` — on `sp_engine::builder::Game`: arguments refused rather
+  than clamped (`level`, `scene`, `apply_conditions`, `years`, `sample_args`),
+  `builder_state(&Game) -> BuilderState`, `run_report(&Game) -> RunReport` (the banner's title
+  and sentence from the engine's view, stars, first failure, vehicles across, height / sway /
+  comfort with the CMF-1 sentence), `run_to_end` (a level to its result; the Sandbox, which
+  never ends, for 20 s), `fast_forward_report(&Game, years)` (TIME-1 headless; the Leaning
+  tower's own result), `run_sample` / `sample_report` (LAB-1 on the lab's `Sample`),
+  `place_design` (a netlist's structure built on a *level* with the editing tools, so the
+  level's rules apply and refusals come back as its toasts), `test_structure` (the engine tool);
+  `input` — `netlist` (line / column diagnostics), `material`, `temperature`, `strain`,
+  `TowerChange` / `GroundChange` (the v1 engine tools); `report` — the payloads both sides
+  send: `truss_report`, `influence_report`, `tower_report`, `ground_report`, `tensile_report`,
+  `BuilderState`, `RunReport` (+ `summary()`), `SampleReport`.
 - **`sp-mcp`** (binary `structures-mcp`, `--socket`, `--version`, `--help`): `engine.rs`
-  (`solve_truss`, `influence_line`, `tower_wind`, `ground_check`, `tensile_test`), `app.rs` (the
-  lab-series tools: `app_status`, `list_screens`, `navigate`, `screenshot`, `describe_screen`;
-  `AppLink::call` opens a fresh connection per call, so the server survives app restarts, and
-  turns "nothing listening" into "Structures Playground isn't running — open …"), `screens.rs`
-  (`bridge_load_netlist`, `bridge_test`, `set_tower`, `set_ground`, `set_material`: arguments
-  forwarded as the method's params). Tool arguments are validated against their JSON Schemas
-  by `lab-mcp` before the handler runs.
+  (`solve_truss`, `influence_line`, `builder_test`, `tower_wind`, `ground_check`,
+  `tensile_test`), `app.rs` (the lab-series tools: `app_status`, `list_screens`, `navigate`,
+  `screenshot`, `describe_screen`; `AppLink::call` opens a fresh connection per call, so the
+  server survives app restarts, and turns "nothing listening" into "Structures Playground isn't
+  running — open …"), `screens.rs` (`builder_level`, `builder_load_netlist`,
+  `builder_conditions`, `builder_run`, `builder_fast_forward`, `sample_test`: arguments
+  forwarded as the method's params; `LEVELS`, `conditions_properties()` shared with
+  `builder_test`). Tool arguments are validated against their JSON Schemas by `lab-mcp` before
+  the handler runs. The v1 `bridge_load_netlist`, `bridge_test`, `set_tower`, `set_ground`,
+  `set_material` are retired (unknown tools).
 - **The app** (`control.rs`): `AppOptions::mcp_socket` (the real app: the default socket; tests
   and the smoke run: none; `--no-mcp`); `Control::start` never fails start-up (a second
   instance logs "MCP bridge off"). `control::poll` runs first thing in every `frame`;
   `control::logic` runs from `eframe::App::logic`, also while the window is hidden, and asks for
-  a painted frame (`RequestPaintWhileHidden`) while requests wait. Screen methods act through
-  the screens' public state — `BridgeScreen::game` (`open_in_sandbox`, `pick_level`,
-  `back_to_build`, `run_test`), `TowerScreen::set_input`, `GroundScreen::set_input`,
-  `MaterialsScreen::bench_mut` — after entering a never-shown screen once
-  (`StructuresApp::enter_screen`); `show` (default) switches to it. **Screenshots and
-  descriptions are drawn offscreen** (`StructuresApp::render_offscreen`): the same `frame()` runs
-  in a second egui context (fonts + style installed) at the window's logical size, pixels per
-  point and time, `OFFSCREEN_PASSES` (3) times so measured layouts settle, with no input and the
-  per-frame work skipped (enter, hand-offs, keys, `tick`, navigation, event log): nothing moves,
-  clicks or takes focus. egui_kittest's `WgpuTestRenderer` (its own wgpu device, made on the
-  first call) renders the last pass; its AccessKit tree is the description. No painted frame is
-  needed, so a window covered by another app's (macOS gives it no frames) still answers; if no
-  frame has polled the bridge for `control::STALL` (300 ms), `control::logic` (from
-  `App::logic`) answers the queued requests itself. The PNG is encoded off the UI thread. (In
-  the offscreen frame the page shows from the top and nothing is hovered.)
-- **Tests**: `crates/sp-mcp/tests/e2e.rs` (the real binary for every tool, the real app in
-  egui_kittest on a temp socket), `crates/structures-playground/tests/mcp_bridge.rs` (the bridge
-  without the binary: errors change nothing, hidden window, a client that leaves, a second
-  instance, the shared screen table), `sp-shared` unit tests (checks, params).
+  a painted frame (`RequestPaintWhileHidden`) while requests wait. The builder methods act on
+  `app.screens_mut().builder.game` through `sp_shared::builder` — after entering the never-shown
+  Playground once (`StructuresApp::enter_screen`), so its first-visit set-up doesn't undo the
+  change; `show` (default) switches to it; the screen draws `game.view()` next frame. Refused
+  arguments change nothing. **Screenshots and descriptions are drawn offscreen**
+  (`StructuresApp::render_offscreen`): the same `frame()` runs in a second egui context (fonts +
+  style installed) at the window's logical size, pixels per point and time,
+  `OFFSCREEN_PASSES` (3) times so measured layouts settle, with no input and the per-frame work
+  skipped (enter, hand-offs, keys, `tick`, navigation, event log): nothing moves, clicks or
+  takes focus. egui_kittest's `WgpuTestRenderer` (its own wgpu device, made on the first call)
+  renders the last pass; its AccessKit tree is the description. No painted frame is needed, so
+  a window covered by another app's (macOS gives it no frames) still answers; if no frame has
+  polled the bridge for `control::STALL` (300 ms), `control::logic` (from `App::logic`) answers
+  the queued requests itself. The PNG is encoded off the UI thread. (In the offscreen frame the
+  page shows from the top and nothing is hovered.)
+- **Tests**: `crates/sp-mcp/tests/e2e.rs` (the real binary for every tool: engine tools with no
+  app — `builder_test` agrees with the engine run directly —, app tools against the real app in
+  egui_kittest on a temp socket, the GUI showing the change; argument checks; not-running
+  messages), `crates/structures-playground/tests/mcp_bridge.rs` (the bridge without the
+  binary: builder methods in the background and in front, errors change nothing, hidden window,
+  a client that leaves, a second instance, the shared screen table), `sp-shared` unit tests (a
+  netlist from the builder's Share runs on its level exactly as the game that built it; years;
+  samples; checks).
 - **Bundle**: `scripts/bundle-macos.sh` builds `structures-mcp` too and puts it in
   `Contents/MacOS/`; `scripts/check-bundle.sh` checks it is there.
