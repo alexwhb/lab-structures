@@ -10,7 +10,9 @@ use eframe::egui::{ViewportId, accesskit::Role};
 use sp_engine::builder::comfort::{self, Meter};
 use sp_engine::builder::game::Preset;
 use sp_engine::builder::longterm::{self, pisa};
-use sp_engine::builder::{Foundation, Game, LevelKey, Outcome, Phase, PieceType, Tool};
+use sp_engine::builder::{
+    Foundation, Game, LevelKey, Outcome, Phase, PieceType, Scene, Soil, Tool,
+};
 use std::time::Duration;
 use structures_playground::Route;
 use structures_playground::screens::builder::BuilderScreen;
@@ -284,4 +286,31 @@ fn the_leaning_towers_own_pieces_stay() {
     let n = g.design().members.len();
     g.delete_member("M1");
     assert_eq!(g.design().members.len(), n, "locked pieces stay");
+}
+
+#[test]
+fn the_sandbox_offers_the_fast_forward_while_building() {
+    let mut h = tall();
+    let mut d = pisa::prebuilt();
+    d.set_load(&pisa::bells_joint(), 0.0);
+    {
+        let g = &mut screen_mut(&mut h).game;
+        g.open_in_sandbox(Scene::Flat, d);
+        g.set_soil(Soil::Soft);
+    }
+    h.run_steps(3);
+    assert_eq!(game(&h).phase(), Phase::Build);
+    assert!(time_ui::Time::available(game(&h)), "the preview stands");
+    click_button(&mut h, "Fast-forward 30 years");
+    assert!(screen(&h).fold.time.playing());
+    h.run_steps(10);
+    assert!(has_label_containing(&h, "Year "));
+    skip_years(&mut h);
+    let lt = screen(&h).fold.time.long_term().unwrap().clone();
+    assert!(has_label(&h, &lt.result_line()));
+    assert!(lt.last().unwrap().max_settle > 0.1, "soft clay settles");
+    // editing drops it
+    screen_mut(&mut h).game.set_soil(Soil::Rock);
+    h.run_steps(2);
+    assert!(screen(&h).fold.time.long_term().is_none());
 }

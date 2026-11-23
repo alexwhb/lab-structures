@@ -49,6 +49,8 @@ struct Run {
     year: f64,
     /// The Leaning tower: this fast-forward is the level's run.
     years_level: bool,
+    /// Started in the Sandbox while building.
+    sandbox: bool,
     /// The Leaning tower's result, once the years have played.
     result: Option<pisa::PisaResult>,
 }
@@ -98,6 +100,19 @@ fn years_level(game: &Game) -> bool {
     game.setup().run == RunKind::Years
 }
 
+/// The Sandbox: its runs never end, so the fast-forward is offered while building, once the
+/// live preview says the structure stands.
+fn sandbox_building(game: &Game) -> bool {
+    game.setup().sandbox && game.phase() == Phase::Build
+}
+
+/// The live preview stands: nothing folds, breaks or overloads a foundation.
+fn preview_stands(game: &Game) -> bool {
+    game.preview()
+        .is_some_and(|p| p.moved <= 1.5 && !p.over_any() && p.found_over().is_empty())
+        && !game.design().members.is_empty()
+}
+
 /// A Leaning tower run the engine started (`start_years`) that has no fast-forward yet.
 fn years_running(game: &Game) -> bool {
     years_level(game) && game.phase() == Phase::Run && game.sim().is_none()
@@ -117,13 +132,16 @@ fn tilt_color(tilt: f64) -> Color32 {
 
 impl Time {
     /// Whether "Fast-forward 30 years" can start now: after a run that stood, with foundations
-    /// carrying something; on the Leaning tower while building (or when its run has begun).
+    /// carrying something; on the Leaning tower while building (or when its run has begun); in
+    /// the Sandbox (whose runs never end) while building, when the preview stands.
     pub fn available(game: &Game) -> bool {
         if !longterm::has_foundations(game.design()) {
             return false;
         }
         if years_level(game) {
             game.phase() == Phase::Build || years_running(game)
+        } else if sandbox_building(game) {
+            preview_stands(game)
         } else {
             game.phase() == Phase::Result && stood(game)
         }
@@ -156,6 +174,7 @@ impl Time {
             elapsed: Some(0.0),
             year: 0.0,
             years_level: years,
+            sandbox: sandbox_building(game),
             result: None,
         });
     }
@@ -208,23 +227,27 @@ impl Time {
             r.rev != game.revision()
                 || r.level != game.level()
                 || r.cond != *game.cond()
-                || game.phase() == Phase::Build
-                || (!r.years_level && game.phase() != Phase::Result)
+                || !Self::phase_fits(r, game)
         }) {
             self.run = None;
+        }
+    }
+
+    /// The game's phase is the one this fast-forward belongs to.
+    fn phase_fits(r: &Run, game: &Game) -> bool {
+        if r.years_level {
+            matches!(game.phase(), Phase::Run | Phase::Result)
+        } else if r.sandbox {
+            game.phase() == Phase::Build
+        } else {
+            game.phase() == Phase::Result
         }
     }
 
     /// The fast-forward to draw now (it matches the game's state).
     fn shown(&self, game: &Game) -> Option<&Run> {
         self.run.as_ref().filter(|r| {
-            r.rev == game.revision()
-                && r.level == game.level()
-                && if r.years_level {
-                    matches!(game.phase(), Phase::Run | Phase::Result)
-                } else {
-                    game.phase() == Phase::Result
-                }
+            r.rev == game.revision() && r.level == game.level() && Self::phase_fits(r, game)
         })
     }
 
