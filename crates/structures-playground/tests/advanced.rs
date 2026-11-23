@@ -199,6 +199,8 @@ fn an_error_shows_on_its_line_and_the_last_result_stays() {
         Some(false),
         "a custom netlist lights no style"
     );
+    // the results can't follow the truck while the text has errors (review: worlds)
+    assert!(disabled(&h, "Drive across"));
     // fix it: the generated example is recognised again
     replace_text(&mut h, &good);
     assert!(!has_label(&h, "1 error"));
