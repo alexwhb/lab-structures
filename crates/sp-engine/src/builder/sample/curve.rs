@@ -22,9 +22,8 @@
 
 use crate::builder::data::{PieceType, TypeSpec};
 use crate::builder::fire::{self, AMBIENT_C, Factors, FireMaterial};
-use crate::builder::sim::Constraint;
+use crate::builder::sim::{self, Constraint};
 use crate::truss::hypot;
-use std::f64::consts::PI;
 
 /// The builder's tonne: forces are shown as N / 9810 (the inspector's `N / 9810`).
 pub const N_PER_TONNE: f64 = 9810.0;
@@ -123,35 +122,25 @@ pub const STEEL_PUSH_PLATEAU: f64 = 1.875;
 /// A buckled sample bows on at a falling load: `[strain ÷ buckling strain, stress ÷ σ_cr]`.
 pub const BUCKLE_TAIL: [[f64; 2]; 1] = [[2.0, 0.85]];
 
-/// The builder's piece of `kind`, `len` metres long, at `temp_c` °C: a `Constraint` exactly as
-/// `Sim::new` makes one (capacities, stiffness), heated by [`fire::apply`]. Lengths are made safe
-/// (non-finite or ≤ 0 → 1 m).
+/// The builder's piece of `kind`, `len` metres long, at `temp_c` °C: a `Constraint` with the
+/// core's own capacities and stiffness (`sim::capacity`, what `Sim::new` uses), heated by
+/// [`fire::apply`]. Lengths are made safe (non-finite or ≤ 0 → 1 m).
 pub fn piece_at(kind: PieceType, len: f64, temp_c: f64) -> Constraint {
     let t = kind.spec();
     let lm = hypot(safe_len(len), 0.0);
-    let i = t.k * t.area * t.area;
-    let pcr = PI * PI * t.e * i / (lm * lm);
-    let crush = if t.t_only {
-        f64::INFINITY
-    } else {
-        t.area * t.f_c
-    };
+    let cap = sim::capacity(kind, lm);
     let mut c = Constraint {
         id: "S1".into(),
         a: 0,
         b: 1,
         kind,
         len: lm,
-        kk: (t.e / 15.0) * t.area / lm,
-        cap_t: t.area * t.f_t,
-        cap_c: if t.t_only {
-            f64::INFINITY
-        } else {
-            (t.area * t.f_c).min(pcr)
-        },
-        crush,
-        pcr,
-        buckles: !t.t_only && pcr < t.area * t.f_c,
+        kk: cap.kk,
+        cap_t: cap.cap_t,
+        cap_c: cap.cap_c,
+        crush: cap.crush,
+        pcr: cap.pcr,
+        buckles: cap.buckles,
         t_only: t.t_only,
         deck: t.deck,
         road: kind == PieceType::Road,
