@@ -247,6 +247,76 @@ owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample
   `longterm_pisa.rs` (the level: untouched fails, the named fix passes), `longterm_perf.rs`
   (`PERF 30-year fast-forward …`, < 300 ms); GUI `structures-playground/tests/builder_time.rs`.
 
+**Fold-ins (agent `lab`):**
+
+- **`builder::fire`** (FIRE-1) — `FireLevel::{Off, Small, Big, Inferno}` (`ALL`, `name()`,
+  `key()`, `parse(s)`, `temp_c()` 400 / 700 / 900, `reach_m()` 8 / 12 / 16, `setting()` → the
+  `Conditions::fire` °C (0 = off), `from_temp(c)`). **`fire::update(&mut Sim, dt)`** — called by
+  `Sim::frame` (`fire_hook`) every running frame: lights the fire (`Sim::fire_start`)
+  `FIRE_START_S` = 3 s into a run when Fire was set before it, 0.5 s after it is switched on
+  mid-run, Off puts it out (`None`); then for every intact piece heads `Constraint::temp` toward
+  the fire's exposure with a first-order lag (`heat::lag_s`: steel / cable 3 s, wood 4, rope 2,
+  concrete 8) and sets `strength` / `stiffness` (`fire::apply(&mut Constraint)`: steel and
+  cable follow the temperature now, the others keep the worst they reached) and `heat_mode`
+  (`break_mode(kind, strength)` → `FireBreak::{Softened, BurnedThrough}` below 90 % strength,
+  `BreakMode::from`). Returns at once on a static settle or while Fire is off and nothing is
+  hot. `light_now(&mut Sim)` / `can_light(&Sim)` ("Light it now": 0.2 s later, only while set
+  and not burning), `blaze(&Sim) -> heat::Blaze { source, growth, temp_c, reach }`
+  (`burning()`, `target(a, b)`), `source(&Sim)` (river (28, −8); open ground: mean x of the
+  founded joints at y = 0), `hottest(&Sim)`, `hud_value(&Sim)` ("650 °C"), `note(level, river)`,
+  `tip(FireBreak, kind)`, `strength_factor(FireMaterial, &Factors)` (the builder's one strength
+  factor: concrete's compressive). `fire::heat` — `plume_distance(source, a, b)` (only what is
+  at or above the fire; height counts `PLUME` = 0.5), `exposure(d, reach)` (full inside
+  `CORE` = 0.5 of the reach, linear to 0), `growth(t, start, on)` (over `GROW_S` = 5 s),
+  `full_reach(c)`, `approach(temp, target, dt, m)`. `fire::factors` — `FireMaterial::{Steel,
+  Cable, Concrete, Wood, Rope}` (`of(PieceType)`, Road / Floor → Concrete,
+  `damage_is_permanent()`, `factors(t_c)`), `Factors { strength_t, strength_c, stiffness }`,
+  the tables `STEEL_KY` / `STEEL_KE` (EN 1993-1-2 Table 3.1), `CONCRETE_KC` / `CONCRETE_EPS_C1`
+  (EN 1992-1-2 Table 3.1, siliceous), `steel_ky/ke`, `concrete_kc/kct/ke`, `interp`. Sources:
+  DATA-SOURCES § Fire.
+- **`builder::sample`** (LAB-1) — `SampleCurve::new(kind, Test::{Pull, Push}, temp_c, len)`
+  (`None` for pushing Rope / Cable): `[strain %, MPa]` corners, straight at E × k_E to the
+  builder's capacity ÷ area (`capacity_n`, `limit_mpa`, `elastic_strain`), then ductile
+  plateau / hardening / necking (`DUCTILE_STEEL` = v1's S275 shape scaled, `DUCTILE_WIRE`), a
+  brittle snap / crack, or for Push crushing (`CONCRETE_PUSH_TAIL` to 0.35 %, `WOOD_PUSH_TAIL`),
+  squashing (steel) or Euler buckling (`buckles`, `crush_n`); `failure: Failure::{Fractured,
+  Snapped, Cracked, Squashed, Crushed, Buckled, BurnedThrough}`, `stress_at(e)`, `force_at(e)`
+  (N on the builder's section), `necking(e)`, `peak_mpa()`, `break_strain()`.
+  `curve::piece_at(kind, len, temp_c) -> Constraint` (the core's piece model heated by
+  `fire::apply`) and `capacity(kind, test, len, temp_c)` = `cap_t_now()` / `cap_c_now()` — so
+  "a piece this size breaks at N t" is the builder's number. **`Sample`** (the drawer's state):
+  `new(kind)`, `open(kind)` (fresh Pull, 1 m, temperature kept), `pull()` / `push()` (start,
+  pause, a fresh sample when switching or broken), `fresh_sample()`, `pause()`,
+  `set_temp(c)` (−40…900 °C), `set_length(m)` (1 … the type's max length), `set_strain`,
+  `tick()` / `advance(dt)` (20 steps a second; the straight line in 12 steps, landing exactly on
+  the builder's limit, the rest of the fitted axis in 160), `next_tick_in()`, `run_to_end()`;
+  `status() -> Status::{Ready, Elastic, Plastic, Necking, Squashing, Bowing, PastPeak, Failed {
+  how, at }, BurnedThrough}` (`label(kind)`, `tone()`), `limit_sentence()` ("A Steel piece this
+  size breaks at 153 t." / "A 14 m Steel piece buckles at 55 t."), `explain()` (v1's voice),
+  `heat_note()`, `force_n()`, `capacity_n()`, `at_builder_limit()`, `axis_max()`, `describe()`.
+  `Sample::view() -> SampleView`: every string (status, force "153 t" / "1500 kN", limit + note,
+  temperature label / note, tiles, Pull / Push / Pause labels, push note, rig / plot labels,
+  load cell) and the drawing in v1's viewBox units: `PlotGeometry` (fitted axes and ticks, the
+  curve, the 20 °C ghost when heated, done trace, marker, the builder-limit line + label) and
+  `RigGeometry` (crosshead, dog-bone stretching / necking / tearing, or a column squashing,
+  bowing, or cracking along a diagonal; `charred`). Assumptions: DATA-SOURCES § Sample curves.
+- UI (`structures-playground/src/screens/builder/{lab,fire}.rs`, `FoldIn`s): `lab::Lab`
+  (`open_sample` → the drawer over the aside: `drawer`, `escape` / Close
+  (`lab::CLOSE` "Close the sample drawer"), `tick` paces the pull with `ctx.wake_in`, `busy`,
+  `describe`; `is_open()`, `sample()` / `sample_mut()` for MCP; the rig and plot through
+  `widgets::tensile`), `fire::Fire` (`conditions`: the Fire row — chips named `fire::CHIP_NAMES`
+  "Fire off" / "Small fire" / "Big fire" / "Inferno", "Light it now", the note; `hud` "Fire 650
+  °C"; `paint_stage`: the bed, flames, reach dome and the heat glow on hot pieces; `describe`).
+  Colours `sp_theme::fire`.
+- Tests: `sp-engine/tests/fire_factors.rs` (table points exact, monotonic, 0…1),
+  `fire_heat.rs` (only pieces in reach heat, lagging; steel recovers / wood stays charred;
+  timing and "Light it now"; a steel A-frame over a Big fire softens and breaks,
+  deterministically), `sample_curves.rs` (the straight line ends at a real `Sim`'s capacity for
+  every type, length and temperature; shapes; heat), `sample_bench.rs` (status sequence, the
+  limit step, controls, pacing, readouts, determinism); GUI
+  `structures-playground/tests/builder_lab.rs` (card → drawer → Pull to breaking, Push, sliders,
+  Esc / Close, idle pacing; the Fire row, HUD chip and glow in a run).
+
 #### The builder screen (agent `screen`)
 
 `crates/structures-playground/src/screens/builder.rs` + `builder/**`; scene colours in
