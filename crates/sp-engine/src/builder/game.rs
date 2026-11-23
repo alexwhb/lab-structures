@@ -482,6 +482,7 @@ pub struct Game {
     demo_loop: bool,
     after: u32,
     revision: u64,
+    practiced: bool,
 }
 
 impl Default for Game {
@@ -530,6 +531,7 @@ impl Game {
             demo_loop: p.demo_loop,
             after: 0,
             revision: 0,
+            practiced: false,
         };
         g.level_state(lvl, Some(sc));
         if let Some(w) = p.wind {
@@ -915,7 +917,7 @@ impl Game {
             self.refresh();
         }
     }
-    /// Earthquake, g (any time).
+    /// Earthquake: ground-motion amplitude, m (any time).
     pub fn set_quake(&mut self, v: f64) {
         if v.is_finite() {
             self.cond.quake = v;
@@ -1693,6 +1695,7 @@ impl Game {
         self.result = None;
         self.drag = None;
         self.after = 0;
+        self.practiced = self.practice();
     }
     /// "Stop" / "Back to building" (`stopRun`).
     pub fn stop_run(&mut self) {
@@ -1733,7 +1736,10 @@ impl Game {
             return false;
         }
         let cost = self.design.cost();
-        let practice = self.practice();
+        // a run is a practice run if any condition was easier than the level's at any frame
+        // (the mockup judges only the last; lab's review, BLD-10)
+        self.practiced |= self.practice();
+        let practice = self.practiced;
         let Some(sim) = self.sim.as_mut() else {
             return false;
         };

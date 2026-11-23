@@ -15,8 +15,9 @@
 //! * found J1=footing J2=footing
 //! ```
 //!
-//! [`read`] takes any netlist whose joints sit on whole metres inside a scene: the river scene
-//! when every joint fits the river's view and none is underground, else open ground (y ≥ 0).
+//! [`read`] takes any netlist whose joints sit on whole metres inside a scene: the scene its
+//! `* level … · scene …` note names when the joints fit it, else the river scene when every
+//! joint fits the river's view and none is underground, else open ground (y ≥ 0).
 //! Piece types come from the member's material (or section) name; unknown materials build in
 //! Steel. Supports become footings unless a `* found` line names a pile.
 
@@ -225,12 +226,17 @@ pub fn read(text: &str) -> Result<Imported, ReadError> {
         return Err(ReadError::TooBig(net.nodes.len()));
     }
     let mut level = None;
+    let mut named_scene = None;
     let mut cond = None;
     let mut piles: Vec<String> = Vec::new();
     for note in &net.notes {
         let note = note.trim();
         if let Some(rest) = note.strip_prefix("level ") {
             level = rest.split_whitespace().next().and_then(LevelKey::from_key);
+            named_scene = rest
+                .split_once("scene ")
+                .and_then(|(_, k)| k.split_whitespace().next())
+                .and_then(Scene::from_key);
         } else if let Some(rest) = note.strip_prefix("cond ") {
             cond = parse_cond(rest);
         } else if let Some(rest) = note.strip_prefix("found ") {
@@ -252,20 +258,33 @@ pub fn read(text: &str) -> Result<Imported, ReadError> {
             return Err(ReadError::OffGrid(n.id.clone()));
         }
     }
-    let fits_river = net.nodes.iter().all(|n| {
-        let (x, y) = (n.x.round(), n.y.round());
-        (-20.0..=76.0).contains(&x) && (-12.0..=40.0).contains(&y) && y >= Scene::River.ground(x)
-    });
-    let scene = if fits_river {
-        Scene::River
-    } else {
-        if let Some(n) = net.nodes.iter().find(|n| {
+    let fits = |scene: Scene| {
+        net.nodes.iter().all(|n| {
             let (x, y) = (n.x.round(), n.y.round());
-            !((-40.0..=240.0).contains(&x) && (0.0..=200.0).contains(&y))
-        }) {
-            return Err(ReadError::OffGrid(n.id.clone()));
+            match scene {
+                Scene::River => {
+                    (-20.0..=76.0).contains(&x)
+                        && (-12.0..=40.0).contains(&y)
+                        && y >= Scene::River.ground(x)
+                }
+                Scene::Flat => (-40.0..=240.0).contains(&x) && (0.0..=200.0).contains(&y),
+            }
+        })
+    };
+    // the `* level … · scene …` note wins when the joints fit that scene; else the river when
+    // they fit it, else open ground
+    let scene = match named_scene {
+        Some(sc) if fits(sc) => sc,
+        _ if fits(Scene::River) => Scene::River,
+        _ => {
+            if let Some(n) = net.nodes.iter().find(|n| {
+                let (x, y) = (n.x.round(), n.y.round());
+                !((-40.0..=240.0).contains(&x) && (0.0..=200.0).contains(&y))
+            }) {
+                return Err(ReadError::OffGrid(n.id.clone()));
+            }
+            Scene::Flat
         }
-        Scene::Flat
     };
     let mut nodes: Vec<Joint> = Vec::with_capacity(net.nodes.len());
     for (i, n) in net.nodes.iter().enumerate() {

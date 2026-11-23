@@ -18,7 +18,8 @@ pub struct Conditions {
     pub dir: f64,
     /// Snow, kg per metre of exposed deck.
     pub snow: f64,
-    /// Earthquake peak ground motion, g (0 = off).
+    /// Earthquake: ground-motion amplitude, m (0 = off; BLD-12: 0.15 / 0.3 / 0.5 m at 1.1 Hz,
+    /// about 0.7 / 1.5 / 2.4 g peak).
     pub quake: f64,
     /// The soil (the riverbed follows the level's own bed while this is the level's soil).
     pub soil: Soil,
@@ -105,7 +106,7 @@ pub struct Setup {
     pub dir: f64,
     /// Snow, kg/m.
     pub snow: f64,
-    /// Quake, g.
+    /// Quake: ground-motion amplitude, m.
     pub quake: f64,
     /// Fire, °C.
     pub fire: f64,

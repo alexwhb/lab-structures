@@ -82,8 +82,8 @@ owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample
   can't be deleted or retyped ("Level pieces stay put."), and their joints can't be dragged or
   nudged; a pre-built level's crates can't go below their weight ("The bells stay: fix the lean
   another way.").
-- **`builder::setup`** — `Conditions { wind, dir (±1), snow, quake, soil, traffic, fire (°C, 0 =
-  off) }` (`for_level`), `spec(key, sb_scene)` (Sandbox scene applied), `Setup` = the mockup's
+- **`builder::setup`** — `Conditions { wind, dir (±1), snow, quake (ground-motion amplitude, m),
+  soil, traffic, fire (°C, 0 = off) }` (`for_level`), `spec(key, sb_scene)` (Sandbox scene applied), `Setup` = the mockup's
   `L()`: the level with the conditions (`scene`, `soil`, `bed`, `traffic` resolved, `budget`,
   `target`, `comfort`, `sup`, `anchors`, `run`, `sandbox`; `ground(x)`, `sup_ok(x, y)`,
   `soil_at(joint)`, `sup_refusal()`), `practice(key, sb_scene, &cond)`.
@@ -148,7 +148,8 @@ owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample
   `set_dir`, `set_snow`, `set_quake`, `set_fire`, `set_soil`, `set_traffic`, `shake_now`,
   `light_fire_now` (→ `fire::light_now`). `load_design(design)` (MCP: a design on the current
   level as is), `level_crate(joint)`. Running: `start_run(slow)`, `stop_run`, `toggle_run`, `replay`,
-  `toggle_slow`, `tick()` (one 33 ms frame; result, stars and best stars at the end),
+  `toggle_slow`, `tick()` (one 33 ms frame; result, stars and best stars at the end; a run is practice if
+  any condition was easier than the level's at any frame),
   `advance(dt)` (toasts fade after 2.6 s), `run_test(max_frames) -> Option<&RunResult>`
   (headless). Netlists: `share_text()`, `paste_netlist(text)`, `open_in_sandbox(scene,
   design)`. Free: `run_headless(&Design, &Setup, &Conditions, practice, max_frames, tweak:
@@ -196,7 +197,8 @@ owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample
   `.material` per piece type used, sections from the type's area with I = k·A², foundations
   `fix=xy`, crates `.load weights … Fy=-5t`, `.load self +self`; `* level …`, `* cond …`, `*
   found J1=footing …` comment lines) and `read(text) -> Result<Imported { design, scene, level,
-  cond }, ReadError>` (whole metres; river scene when every joint fits it, else open ground).
+  cond }, ReadError>` (whole metres; the scene the `* level … · scene …` note names when the
+  joints fit it, else the river when they fit it, else open ground).
 - Tests: `tests/builder_goldens.rs` replays `tests/builder_goldens.json`, written by `node
   crates/sp-engine/tests/builder_goldens.mjs` (the mockup's `Component` run verbatim in Node);
   `tests/builder_props.rs` (random edits, NaN / huge inputs, absurd zooms never panic);

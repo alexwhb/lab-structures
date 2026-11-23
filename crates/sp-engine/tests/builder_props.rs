@@ -448,3 +448,98 @@ fn soil_and_traffic_wait_for_building() {
     assert!(g.advance(0.7));
     assert_eq!(g.toast(), None);
 }
+
+/// lab's review: an open-ground design near the origin (inside the river's frame) comes back on
+/// open ground — the `* level … · scene flat` note wins over the guess.
+#[test]
+fn an_open_ground_design_near_the_origin_round_trips_on_open_ground() {
+    let mut g = Game::new();
+    g.pick_level(LevelKey::Sandbox);
+    g.pick_scene(Scene::Flat);
+    g.delete_joint("J1");
+    g.delete_joint("J2");
+    let c = g.camera();
+    g.pick_tool(Tool::Found);
+    for x in [20.0, 28.0] {
+        g.click_surface(c.x(x), c.y(0.0));
+    }
+    g.pick_tool(Tool::Build);
+    g.pick_type(PieceType::Steel);
+    g.click_node("J3");
+    g.click_surface(c.x(20.0), c.y(4.0));
+    g.finish_line();
+    g.click_node("J4");
+    g.click_surface(c.x(28.0), c.y(4.0));
+    g.finish_line();
+    g.pick_type(PieceType::Floor);
+    g.click_node("J5");
+    g.click_node("J6");
+    g.finish_line();
+    g.pick_type(PieceType::Wood);
+    g.click_node("J3");
+    g.click_node("J6");
+    g.finish_line();
+    let kinds: Vec<PieceType> = g.design().members.iter().map(|m| m.kind).collect();
+    assert_eq!(
+        kinds,
+        [
+            PieceType::Steel,
+            PieceType::Steel,
+            PieceType::Floor,
+            PieceType::Wood
+        ]
+    );
+    let imp = read(&g.share_text()).unwrap();
+    assert_eq!(imp.scene, Scene::Flat);
+    let back: Vec<PieceType> = imp.design.members.iter().map(|m| m.kind).collect();
+    assert_eq!(back, kinds);
+    let mut h = Game::new();
+    h.paste_netlist(&g.share_text()).unwrap();
+    assert_eq!(h.scene(), Scene::Flat);
+    // a note naming a scene the joints don't fit falls back to the guess
+    let text = g.share_text().replace("scene flat", "scene river");
+    assert_eq!(read(&text).unwrap().scene, Scene::River);
+    let bed = "* x.str\n* level sandbox · scene flat\n.node A 20 -6 fix=xy\n.node B 24 -6\n";
+    assert_eq!(read(bed).unwrap().scene, Scene::River);
+}
+
+/// lab's review: easing a condition mid-run makes it a practice run (BLD-10), even when it is
+/// back to the level's by the end.
+#[test]
+fn easing_a_condition_mid_run_is_practice() {
+    let tower = || {
+        Game::with_preset(&Preset {
+            level: Some(LevelKey::T3),
+            build: Some(sp_engine::builder::PresetBuild::Tower {
+                h: 32.0,
+                bays: 2,
+                col: PieceType::Steel,
+                brace: PieceType::Wood,
+                found: Foundation::Footing,
+            }),
+            ..Preset::default()
+        })
+    };
+    let mut honest = tower();
+    let r = honest.run_test(800).cloned().unwrap();
+    assert!(!r.pass && !r.practice, "the honest run fails");
+    let mut g = tower();
+    g.set_quake(0.0);
+    g.start_run(false);
+    while g.phase() == Phase::Run && g.sim().is_some_and(|s| s.t < 17.3) {
+        g.tick();
+    }
+    g.set_quake(0.3);
+    while g.phase() == Phase::Run {
+        g.tick();
+    }
+    let r = g.result().cloned().unwrap();
+    assert!(r.practice, "{r:?}");
+    assert_eq!(r.stars, 0);
+    assert_eq!(g.best_for(LevelKey::T3), 0);
+    assert_eq!(g.view().result.unwrap().stars, "practice");
+    // a fresh run starts judging again
+    g.start_run(false);
+    let r = g.run_test(800).cloned().unwrap();
+    assert!(!r.practice);
+}

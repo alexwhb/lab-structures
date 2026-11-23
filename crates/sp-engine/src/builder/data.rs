@@ -630,7 +630,7 @@ pub const SNOWS: [(f64, &str); 4] = [
     (400.0, "Heavy"),
     (800.0, "Blizzard"),
 ];
-/// Earthquake chips (`quakes()`): g and name.
+/// Earthquake chips (`quakes()`): ground-motion amplitude, m (BLD-12), and name.
 pub const QUAKES: [(f64, &str); 4] = [
     (0.0, "Off"),
     (0.15, "Moderate"),
@@ -791,7 +791,7 @@ pub struct Level {
     pub wind: f64,
     /// Snow, kg/m.
     pub snow: f64,
-    /// Earthquake, g.
+    /// Earthquake: ground-motion amplitude, m.
     pub quake: f64,
     /// Fire, °C (0 = off).
     pub fire: f64,
