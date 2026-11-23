@@ -17,5 +17,10 @@ fn main() -> eframe::Result<()> {
             }
         }
     }
-    structures_playground::run_with(structures_playground::AppOptions::default())
+    // `--no-mcp`: no live MCP bridge (also `STRUCTURES_MCP_SOCKET=off`)
+    let mut opts = structures_playground::AppOptions::default();
+    if args.iter().any(|a| a == "--no-mcp") {
+        opts.mcp_socket = None;
+    }
+    structures_playground::run_with(opts)
 }

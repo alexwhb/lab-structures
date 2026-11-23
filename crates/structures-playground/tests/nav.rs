@@ -245,3 +245,124 @@ fn space_drives_after_a_mouse_click() {
         focused_label(&h)
     );
 }
+
+/// Two hand-offs before the next frame (two .str files opened together, a hand-off plus an MCP
+/// call) both arrive, in order (NAV-4).
+#[test]
+fn hand_offs_queue_up() {
+    let mut h = harness(Route::Tower);
+    h.state_mut().navigate_with(
+        Route::Ground,
+        Carry::Building {
+            floors: 60,
+            base_shear_n: 1.0,
+            overturning_nm: 2.0,
+        },
+    );
+    h.state_mut().navigate_with(
+        Route::Advanced,
+        Carry::netlist("* a.str", None, Route::Bridge),
+    );
+    h.state_mut().navigate_with(
+        Route::Advanced,
+        Carry::netlist("* b.str", None, Route::Bridge),
+    );
+    settle(&mut h);
+    let got: Vec<Route> = carried(&h).into_iter().map(|(r, _)| r).collect();
+    assert_eq!(got, [Route::Ground, Route::Advanced, Route::Advanced]);
+    assert_eq!(route(&h), Route::Advanced);
+}
+
+/// ⌘⇧Z (redo, not offered) is never taken as undo; ⌘Z is (NAV-5).
+#[test]
+fn command_shift_z_is_not_undo() {
+    use eframe::egui::Modifiers;
+    let mut h = harness(Route::Bridge);
+    h.key_press_modifiers(Modifiers::COMMAND | Modifiers::SHIFT, Key::Z);
+    h.step();
+    let undo = |h: &App| {
+        events(h)
+            .iter()
+            .filter(|e| {
+                matches!(
+                    e,
+                    AppEvent::Command(_, structures_playground::Command::Undo, _)
+                )
+            })
+            .count()
+    };
+    assert_eq!(undo(&h), 0);
+    press_cmd(&mut h, Key::Z);
+    assert_eq!(undo(&h), 1);
+}
+
+/// Holding Space presses the drive button once, not on every key repeat (NAV-5).
+#[test]
+fn holding_space_drives_once() {
+    use eframe::egui::{Event, Modifiers};
+    let mut h = harness(Route::Tower);
+    let key = |pressed, repeat| Event::Key {
+        key: Key::Space,
+        physical_key: None,
+        pressed,
+        repeat,
+        modifiers: Modifiers::NONE,
+    };
+    h.event(key(true, false));
+    h.step();
+    for _ in 0..5 {
+        h.event(key(true, true));
+        h.step();
+    }
+    h.event(key(false, false));
+    h.step();
+    let drives = events(&h)
+        .iter()
+        .filter(|e| matches!(e, AppEvent::Drive(_)))
+        .count();
+    assert_eq!(drives, 1);
+}
+
+/// Space presses the drive button while a slider has keyboard focus (only a text field keeps
+/// Space; NAV-5), and the slider keeps focus.
+#[test]
+fn space_drives_while_a_slider_has_focus() {
+    let mut h = harness(Route::Tower);
+    h.get_by_role_and_label(Role::Slider, "Number of floors")
+        .focus();
+    h.step();
+    press(&mut h, Key::ArrowRight);
+    settle(&mut h);
+    assert_eq!(focused_label(&h).as_deref(), Some("Number of floors"));
+    press(&mut h, Key::Space);
+    settle(&mut h);
+    let drives = events(&h)
+        .iter()
+        .filter(|e| matches!(e, AppEvent::Drive(Route::Tower)))
+        .count();
+    assert_eq!(drives, 1);
+}
+
+/// A long document name is cut with an ellipsis at 390 px: the brand stays inside the window
+/// and the full name stays readable to assistive tech (NAV-1).
+#[test]
+fn long_document_names_fit_at_390() {
+    let name = "river-crossing-warren-truss-final-v2";
+    let mut h = app().at(Route::Advanced).phone().build();
+    hand_off(
+        &mut h,
+        Route::Advanced,
+        Carry::Netlist {
+            text: format!(
+                "* {name}.str\n.material steel E=200GPa fy=250MPa rho=7850\n.section c A=100cm2 I=A^2\n.node B0 0 0 fix=xy\n.node B1 8 0 fix=y\n.node T1 4 4\n.member M1 B0 B1 c\n.member M2 B0 T1 c\n.member M3 T1 B1 c\n.load dead T1 Fy=-80\n"
+            ),
+            name: Some(name.into()),
+            from: None,
+        },
+    );
+    assert_eq!(document(&h), name);
+    let label = h.get_by_label(name).rect();
+    assert!(label.right() <= PHONE_W - 15.0, "{label:?}");
+    let brand = get(&h, "Structures Playground", Role::Link).rect();
+    assert!(brand.right() <= PHONE_W, "{brand:?}");
+}

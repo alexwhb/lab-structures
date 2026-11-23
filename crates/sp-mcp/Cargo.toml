@@ -1,0 +1,32 @@
+[package]
+name = "sp-mcp"
+description = "The Structures Playground MCP server `structures-mcp` (stdio): engine tools in-process on sp-engine, app tools on the running app over the live bridge."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "sp_mcp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "structures-mcp"
+path = "src/main.rs"
+
+[dependencies]
+sp-engine = { workspace = true }
+sp-shared = { workspace = true }
+lab-mcp = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+log = { workspace = true }
+env_logger = "0.11"
+
+[dev-dependencies]
+# The end-to-end tests run the real app in an egui_kittest harness next to the real binary.
+structures-playground = { path = "../structures-playground" }
+egui_kittest = { workspace = true }
+eframe = { workspace = true }
+image = { version = "0.25", default-features = false, features = ["png"] }

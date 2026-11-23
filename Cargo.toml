@@ -4,6 +4,8 @@ members = [
     "crates/sp-theme",
     "crates/sp-engine",
     "crates/structures-playground",
+    "crates/sp-shared",
+    "crates/sp-mcp",
 ]
 
 [workspace.package]
@@ -29,6 +31,7 @@ lab-mcp = { path = "../labkit/crates/lab-mcp", default-features = false }
 # This workspace's crates.
 sp-theme = { path = "crates/sp-theme" }
 sp-engine = { path = "crates/sp-engine" }
+sp-shared = { path = "crates/sp-shared" }
 
 [profile.dev]
 opt-level = 1

@@ -18,7 +18,7 @@ use super::buttons::{ghost, prim};
 use super::flow::{FlowItem, flow};
 use super::icons::Icon;
 use super::seg::{SegGroup, SegItem, SegStyle};
-use super::text::{galley, galley_spaced, text_top};
+use super::text::{ellipsized, galley, galley_spaced, text_top};
 use super::{hit, interact};
 use crate::router::{Mode, Route};
 use crate::screens::Drive;
@@ -139,9 +139,18 @@ pub fn header(ui: &mut Ui, model: &HeaderModel) -> (Rect, HeaderClicks) {
         -0.16,
     );
     let slash = galley(ui, "/", lab_theme::font::body(16.0), t::SLASH);
-    let doc = galley(ui, model.document, lab_theme::font::body(13.0), t::TEXT_DIM);
-    let brand_w =
-        LOGO + BRAND_GAP + word.size().x + BRAND_GAP + slash.size().x + BRAND_GAP + doc.size().x;
+    // a long document name is cut with an ellipsis so the brand fits its line (the full name
+    // stays the accessible label)
+    let before_doc = LOGO + BRAND_GAP + word.size().x + BRAND_GAP + slash.size().x + BRAND_GAP;
+    let doc_room = (inner_w - before_doc).max(40.0);
+    let doc = ellipsized(
+        ui,
+        model.document,
+        lab_theme::font::body(13.0),
+        t::TEXT_DIM,
+        doc_room,
+    );
+    let brand_w = before_doc + doc.size().x;
     let modes = mode_group(route);
     let modes_size = modes.one_row_size(ui);
     let mut actions = Vec::new();

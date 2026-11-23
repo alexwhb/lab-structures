@@ -93,6 +93,8 @@ impl<'a> Slider<'a> {
         }
         let key_step = if step > 0.0 { step } else { (hi - lo) / 100.0 };
         if resp.has_focus() {
+            // a slider has no use for Space: it still presses the drive button (NAV-5)
+            super::space_passes_through(ui, id);
             ui.memory_mut(|m| {
                 m.set_focus_lock_filter(
                     id,

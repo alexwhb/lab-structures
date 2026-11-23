@@ -31,6 +31,9 @@ pub struct AppOptions {
     pub launcher: Launcher,
     /// Restore the last route and world from eframe storage (NAV-7).
     pub load_persisted: bool,
+    /// Where the live MCP bridge listens (`None`: no bridge; see `control.rs`). The real app
+    /// listens on [`crate::control::default_socket_path`]; tests pass their own temp socket.
+    pub mcp_socket: Option<PathBuf>,
 }
 
 impl Default for AppOptions {
@@ -47,6 +50,7 @@ impl Default for AppOptions {
             save_dialog: true,
             launcher: Launcher::system(),
             load_persisted: true,
+            mcp_socket: crate::control::default_socket_path(),
         }
     }
 }
@@ -73,6 +77,7 @@ impl AppOptions {
             save_dialog: false,
             launcher: Launcher::recording(&[]),
             load_persisted: false,
+            mcp_socket: None,
         }
     }
 
@@ -121,13 +126,16 @@ pub struct StructuresApp {
     toasts: Toasts,
     services: Services,
     outbox: Outbox,
-    /// A hand-off (NAV-4) and the screen it is for, delivered at the start of the next frame.
-    pending_carry: Option<(Route, Carry)>,
+    /// Hand-offs (NAV-4) and the screens they are for, delivered in order at the start of the
+    /// next frame (two files opened together, or a hand-off and an MCP call, both arrive).
+    pending_carry: Vec<(Route, Carry)>,
     content_height: f32,
     chrome_height: f32,
     events: Vec<AppEvent>,
     /// The options it was started with.
     pub options: AppOptions,
+    /// The live MCP bridge (owned by `control.rs`).
+    pub(crate) control: crate::control::Control,
 }
 
 impl StructuresApp {
@@ -168,10 +176,11 @@ impl StructuresApp {
             toasts: Toasts::default(),
             services,
             outbox: Outbox::default(),
-            pending_carry: None,
+            pending_carry: Vec::new(),
             content_height: 0.0,
             chrome_height: 0.0,
             events: Vec::new(),
+            control: crate::control::Control::start(opts.mcp_socket.as_deref()),
             options: opts,
         }
     }
@@ -241,7 +250,7 @@ impl StructuresApp {
         // delivered after `enter`, at the start of the next frame; a navigation without one
         // that comes first doesn't drop it
         if let Some(carry) = req.carry {
-            self.pending_carry = Some((req.route, carry));
+            self.pending_carry.push((req.route, carry));
         }
     }
 
@@ -341,8 +350,24 @@ impl StructuresApp {
         )
     }
 
+    /// Runs `route`'s [`Screen::enter`](crate::Screen::enter) now, whether or not it is
+    /// showing: the MCP bridge calls it before driving a screen in the background, so the
+    /// screen's first-visit set-up doesn't undo the change later. Screens' `enter` is safe to
+    /// call again.
+    pub(crate) fn enter_screen(&mut self, route: Route, egui_ctx: &egui::Context) {
+        let body_h = (egui_ctx.content_rect().height() - self.chrome_height).max(0.0);
+        let (mut ctx, screens) = self.ctx(egui_ctx, body_h);
+        screens.get(route).enter(&mut ctx);
+    }
+
+    /// Where the live MCP bridge listens, if it is on.
+    pub fn mcp_socket(&self) -> Option<&std::path::Path> {
+        self.control.socket()
+    }
+
     /// One frame of the whole app (also called directly by tests).
     pub fn frame(&mut self, ui: &mut Ui) {
+        crate::control::poll(self, ui);
         let egui_ctx = ui.ctx().clone();
         // netlists opened from Finder / the command line go to Advanced
         crate::platform::deliver(self, &egui_ctx);
@@ -355,24 +380,25 @@ impl StructuresApp {
         let mut events = Vec::new();
         {
             let entered = self.entered;
-            let carry = self.pending_carry.take();
+            let carries = std::mem::take(&mut self.pending_carry);
             let (mut ctx, screens) = self.ctx(&egui_ctx, body_h);
             // a hand-off whose screen was left before it arrived still reaches that screen
-            let carry = match carry {
-                Some((target, c)) if target != route => {
+            let mut here = Vec::new();
+            for (target, c) in carries {
+                if target == route {
+                    here.push(c);
+                } else {
                     let other = screens.get(target);
                     other.enter(&mut ctx);
                     events.push(AppEvent::Carried(target, c.clone()));
                     other.receive(c, &mut ctx);
-                    None
                 }
-                carry => carry.map(|(_, c)| c),
-            };
+            }
             let screen = screens.get(route);
             if entered != Some(route) {
                 screen.enter(&mut ctx);
             }
-            if let Some(c) = carry {
+            for c in here {
                 events.push(AppEvent::Carried(route, c.clone()));
                 screen.receive(c, &mut ctx);
             }
@@ -518,22 +544,40 @@ fn shortcut_route(ctx: &egui::Context) -> Option<Route> {
 /// The keys the app handles this frame.
 #[derive(Debug, Default)]
 struct Keys {
-    /// Space with nothing focused: the drive button.
+    /// Space (see [`keys`]): the drive button.
     drive: bool,
     /// Esc on the Series screen: Back.
     back: bool,
     commands: Vec<Command>,
 }
 
-/// Space (no widget focused: a focused button takes Space itself) → drive; Esc on Series →
-/// Back; ⌘Z, Delete / Backspace and ⌘V (no text field focused) → [`Command`]s.
+/// Space → drive: one press (key repeats don't toggle it again), with Shift or no modifier,
+/// when no widget has focus or the focused one lets Space through (a slider:
+/// [`crate::widgets::space_passes_through`]); a focused button, tab or checkbox takes Space
+/// itself, and a text field types it. Esc on Series → Back. ⌘Z (not ⌘⇧Z), Delete / Backspace
+/// and ⌘V (no text field focused) → [`Command`]s.
 fn keys(ctx: &egui::Context, route: Route) -> Keys {
     let mut out = Keys::default();
-    let nothing_focused = ctx.memory(|m| m.focused().is_none());
+    let focused = ctx.memory(|m| m.focused());
     let typing = ctx.text_edit_focused();
+    let space_free = !typing && focused.is_none_or(|id| crate::widgets::space_passes(ctx, id));
     ctx.input_mut(|i| {
-        if nothing_focused && i.consume_key(Modifiers::NONE, Key::Space) {
-            out.drive = true;
+        if space_free {
+            let mut pressed = false;
+            i.events.retain(|e| match e {
+                egui::Event::Key {
+                    key: Key::Space,
+                    pressed: true,
+                    repeat,
+                    modifiers,
+                    ..
+                } if !(modifiers.command || modifiers.ctrl || modifiers.alt) => {
+                    pressed |= !repeat;
+                    false
+                }
+                _ => true,
+            });
+            out.drive = pressed;
         }
         if route == Route::Series && i.consume_key(Modifiers::NONE, Key::Escape) {
             out.back = true;
@@ -541,7 +585,8 @@ fn keys(ctx: &egui::Context, route: Route) -> Keys {
         if typing {
             return;
         }
-        if i.consume_key(Modifiers::COMMAND, Key::Z) {
+        // ⌘Z exactly: ⌘⇧Z is redo (not offered), never undo
+        if !i.modifiers.shift && i.consume_key(Modifiers::COMMAND, Key::Z) {
             out.commands.push(Command::Undo);
         }
         if i.consume_key(Modifiers::NONE, Key::Delete)
@@ -565,6 +610,11 @@ fn keys(ctx: &egui::Context, route: Route) -> Keys {
 }
 
 impl eframe::App for StructuresApp {
+    /// Runs even while the window is hidden; lets the MCP bridge ask for a frame (`control.rs`).
+    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        crate::control::logic(self, ctx);
+    }
+
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         self.frame(ui);
     }

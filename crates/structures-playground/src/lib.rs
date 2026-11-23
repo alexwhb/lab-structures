@@ -8,6 +8,7 @@
 //! [`screens::Screen`] and in `docs/ARCHITECTURE.md` › App.
 
 pub mod app;
+pub mod control;
 pub mod ctx;
 pub mod launcher;
 pub mod layout;

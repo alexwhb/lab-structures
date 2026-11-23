@@ -126,6 +126,22 @@ pub(crate) fn reveal_on_focus(resp: &Response) {
     }
 }
 
+fn space_key() -> Id {
+    Id::unique("sp-space-passes-through")
+}
+
+/// Call while a widget that has no use for Space (a slider) has keyboard focus: Space then
+/// still presses the header's drive button (NAV-5: only a text field keeps Space). Buttons,
+/// tabs and checkboxes don't call it — Space activates them.
+pub fn space_passes_through(ui: &Ui, id: Id) {
+    ui.data_mut(|d| d.insert_temp(space_key(), id));
+}
+
+/// Whether the focused widget `focused` lets Space through (see [`space_passes_through`]).
+pub fn space_passes(ctx: &eframe::egui::Context, focused: Id) -> bool {
+    ctx.data(|d| d.get_temp::<Id>(space_key())) == Some(focused)
+}
+
 /// Click sense when enabled, hover only when disabled.
 pub(crate) fn sense(enabled: bool) -> Sense {
     if enabled {

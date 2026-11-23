@@ -1,0 +1,15 @@
+[package]
+name = "sp-shared"
+description = "UI-free vocabulary shared by the Structures Playground app and structures-mcp: app identity, screens and modes, the bridge socket path, the Structures bridge methods and their payloads, input validation, and the engine reports both sides send."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+sp-engine = { workspace = true }
+lab-mcp = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

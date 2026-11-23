@@ -129,6 +129,7 @@ pub fn app_options() -> AppOptions {
         load_persisted: false,
         launcher: Launcher::recording(&[]),
         out_dir: std::env::temp_dir().join(format!("structures-smoke-{}", std::process::id())),
+        mcp_socket: None,
     }
 }
 
