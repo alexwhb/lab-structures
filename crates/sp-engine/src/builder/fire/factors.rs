@@ -151,7 +151,10 @@ pub fn interp(xs: &[f64], ys: &[f64], x: f64) -> f64 {
         return ys[n - 1];
     }
     for i in 1..n {
-        if x <= xs[i] {
+        if x == xs[i] {
+            return ys[i];
+        }
+        if x < xs[i] {
             let (x0, x1, y0, y1) = (xs[i - 1], xs[i], ys[i - 1], ys[i]);
             return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
         }
