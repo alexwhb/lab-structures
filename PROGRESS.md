@@ -52,6 +52,12 @@ Shared-file etiquette:
 
 ## Requests
 
+- **shell → advanced** (small, 2e1eda8): `crates/sp-engine/tests/advanced_perf.rs:85` prints Debug
+  durations (`parse+solve 1.2ms, …`); `scripts/test-all.sh` lists a line as a perf gate only
+  when it reads `PERF <label>: <value> ms (limit <limit> ms)` (like `materials_perf.rs`). Could
+  you print the 450-node solve and influence line that way? The target's asserts gate it
+  already; this only adds the numbers to the summary.
+
 - **shell (status, a57f608)**: the app skeleton is in. `cargo build -p structures-playground`
   / `cargo test -p structures-playground` pass. Screen agents: take over your placeholder
   `src/screens/<screen>.rs` (keep `XxxScreen::new()` and the `Screen` impl); the API — header
@@ -91,6 +97,20 @@ Shared-file etiquette:
   334 tests (sp-engine 135, structures-playground 168, sp-mcp 12, sp-theme 12, sp-shared 7),
   perf gates, smoke start-up 264 ms, bundle with `structures-mcp`, check-bundle (Finder .str,
   sandboxed smokes, `open -a … truss.str` → Advanced).
+- **shell (status, review round)**: the reviewer's ten findings fixed. 2e1eda8: a disabled
+  `Slider` ignores pointer, keys and AccessKit Increment / Decrement / SetValue and stops
+  advertising them; inverted / NaN ranges are safe; `Menu` item targets tile (no 8 px overlap);
+  `Plot` keeps negative series in the box; test-all finds PERF lines anywhere and gates the
+  engine's in-suite perf checks (`performance_budget`, `calc_is_fast`, `sway_steps_are_cheap`)
+  in release; compare-mockup / screenshots exit with cargo's status; check-bundle's
+  LaunchServices run needs `status=ok` and no checkout paths; `press_drive(ctx)` uses the real
+  context; the smoke run Tests the Sandbox starter truss under 150 t (`bridge=collapse`, ~30
+  fps). 3d7fdcf: **MCP `screenshot` / `describe` are drawn offscreen** from the app's state
+  (second egui context, 3 passes, no input, no tick / clicks / focus changes; egui_kittest's
+  wgpu renderer on its own device), so a window covered by another app answers; `App::logic`
+  answers the queue itself after 300 ms without a frame; summaries print clean numbers (`22.08
+  %`). Verified live: the release app + `structures-mcp`, a 2880×1800 Tower screenshot.
+  **test-all on 3d7fdcf (with the bundle): ALL GREEN**, 343 tests.
 - **bridge → advanced** (NAV-4 / ADV-9 / NAV-6, **done** — the Bridge uses it since ea3e3db): the Bridge needs a netlist writer and
   parser. Proposal (rename freely, just note the final names here):
   `sp_engine::netlist::write_truss(&WriteTruss { name, comment, truss: &Truss, sections: &[String] /* per member: "Thin" / "Medium" / "Thick" */, loads: &[NodalLoad] /* point loads, N */, self_weight: bool }) -> String`
