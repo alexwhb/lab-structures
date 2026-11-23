@@ -998,6 +998,69 @@ Shared-file etiquette:
   80 floors × quake finite, Tower / Ground / Materials at 120 × 200, 260 × 300 and 2600 × 400
   px with Play running (no panic).
 
+### v2 wave 2 — `engine` reviews `lab` and `time`
+
+Reviewed `builder/{fire,sample}/**`, `builder/{comfort,longterm}/**` and their UIs
+(`screens/builder/{lab,fire,comfort,time}.rs`) for engine misuse, model mistakes, panics, perf and
+pacing, with probes in release (random designs, NaN / huge inputs, 550-joint towers, mechanisms,
+rope networks). Clean on: hook use (fire and CMF-2 factors live in each `Sim`, nothing leaks
+between runs, headless runs never touch the `Game`), determinism (fire runs repeat bit for
+bit; Compare's as-built bar equals the live run's 271.95… mg exactly), EN 1993-1-2 / 1992-1-2
+table values, the sample's capacity = the engine's (`piece_at` = `Sim::new`'s pieces + `fire::apply`),
+no panics anywhere (sample bench / curves, `fast_forward`, `view_settled`, `compare` on random
+and degenerate structures), perf (fast-forward ≤ 38 ms for 182 joints, 1.8 ms worst on random
+designs; Compare 31 ms for the 85-joint storm tower, 215 ms for 550 joints; nothing heavy per
+frame; paced repaints only while pulling / playing years). Findings:
+
+- **engine → time** [med] `crates/sp-engine/src/builder/longterm.rs:285` (`tilt_angle`), `:306`
+  (`frame`: `max_settle` / `differential`), `:353` (`LongTerm::found`, the lean line) — every
+  joint with a foundation counts, including the level's **unused** anchors (open ground's 92 /
+  108 m footings, Bus route's back-stay piles) and ripped ones. — (a) Sandbox, open ground, soft
+  clay: a 24 m 2-bay braced steel tower built on its own footings at x = 20…36, 10 t crate top
+  right, anchors J1 / J2 left in place: 30-year tilt **0.14°** and the lean line starts at x =
+  56.8 (empty ground); delete the two unused anchors and the same tower reads **0.80°** — the
+  tilt is under-reported ~6×, so a tower can pass 5° unnoticed (no topple). (b) Bus route, the
+  steel truss preset, soft clay: J1 / J2 both settle 161 mm, the unused piles J3 / J4 stay at 0,
+  so the result reads "differential settlement 161 mm" and the sentence "One foundation sank
+  more than another, which bends everything between them." (true differential ≈ 0). — Count
+  only foundations that carry something: in `structure()` mark a joint's `found` only when an
+  unbroken piece (or a crate) is on it, or filter `found` in `tilt_angle` / `frame` /
+  `LongTerm::found` by `s.active(st)` and `!st.ripped[j]`; a test for each scenario.
+- **engine → lab** [med] `crates/sp-engine/src/builder/fire.rs:180` (`source`) — on open ground
+  the fire burns at the mean x of every founded joint, including unused anchors. — The tower of
+  the finding above (x = 20…36, anchors J1 / J2 at 92 / 108 m left unused), Fire = Big, 8 s into
+  the run: the fire sits at x = **56.8** and **0 of 42** pieces are above 100 °C; with the unused
+  anchors deleted it burns at x = 28 and 24 of 42 are. SPEC FIRE-1 "at the base of the tower".
+  — Filter `p.used` (touched by a piece) in the first `mean` (`p.sup.is_some() && !p.ripped &&
+  p.used`); the same for any caller of `heat::source_for`.
+- **engine → time** [low] `crates/sp-engine/src/builder/comfort.rs:357` (`applies`) / `:346`
+  (`run_variant` → `run_headless`) — on a Sandbox setup `Sim::check_done` never ends a run, so
+  `run_headless` returns `None` and every variant reports "fell". — `comfort::compare` on a
+  100 m 6-bay steel tower in the Sandbox (open ground, calm): all four bars "fell", `best: None`,
+  verdict "None of the four shapes rides out this storm." The app only offers Compare after a
+  result (the Sandbox never has one), but `applies` says yes and the function is public (MCP).
+  — Run the variants on `Setup { sandbox: false, ..setup.clone() }` (an 18 s test), or make
+  `applies` false for the Sandbox.
+- **engine → time** [low] `crates/structures-playground/src/screens/builder/comfort.rs:87`
+  (`Comfort::compare`) — "Same storm" uses `game.cond()` at the click, not the run's
+  conditions. — TowerStorm board, run to the result (meter 272 mg), set Wind to Hurricane
+  (allowed on the result), press Compare: the as-built bar is the 50 m/s run's value next to the
+  meter's 272 mg. — Keep the run's conditions (`game.sim().map(|s| s.cond)`, which the engine
+  holds for the result) or hide Compare once the conditions changed after the run.
+- **engine → time** [low] `crates/sp-engine/src/builder/longterm.rs:697` (`sentence`) — "Rock
+  doesn't settle: it stands exactly as built." is printed next to a non-zero tilt. — TowerBuild
+  board (one-way diagonals), soil Rock: result line "After 30 years: tilt 0.1°, settled 0 mm."
+  plus that sentence (the frame racks a little under its own weight; tilt counts it). — Say
+  "Rock doesn't settle: it doesn't sink at all." (or mention the lean when tilt ≥ 0.05°).
+- **engine → lab** [low] `crates/sp-engine/src/builder/fire.rs:141` (`strength_factor`) —
+  concrete, Road and Floor in **tension** keep the compressive factor `k_c` instead of EN
+  1992-1-2 §3.2.2.2's `k_c,t` (which `factors.rs` computes). — A Road bottom chord pulled over a
+  Big fire at 600 °C keeps 45 % of its tensile capacity (EN: 0). The core has one strength
+  factor per piece (my hook); if you want it right, I add `Constraint::strength_t` (default 1.0,
+  × `cap_t` only; your `piece_at` literal gains one field) and you set it to `k_c,t` for
+  concrete. Tell me under this finding; otherwise document the simplification in
+  DATA-SOURCES.
+
 ### v2 wave 2 — `lab` reviews `engine` (builder core) and `shell` (MCP builder tools)
 
 - **lab → engine** [med] `crates/sp-engine/src/builder/netlist.rs:229` (`read`: the notes loop
