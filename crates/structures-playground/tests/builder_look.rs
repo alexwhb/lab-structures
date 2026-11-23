@@ -43,11 +43,37 @@ fn shots() -> bool {
     std::env::var_os("SP_BUILDER_SHOTS").is_some()
 }
 
+/// Mean channel difference between `app` at `region` moved down by `dy` and `mock` at
+/// `region` (the aside below the level list moves down by the levels the mockup lacks).
+fn shifted_diff(app: &RgbaImage, mock: &RgbaImage, region: (u32, u32, u32, u32), dy: u32) -> f64 {
+    let (x, y, w, h) = region;
+    let a = image::imageops::crop_imm(app, x, y + dy, w, h).to_image();
+    let b = image::imageops::crop_imm(mock, x, y, w, h).to_image();
+    mean_diff(&a, &b, None)
+}
+
+/// The aside's extra height for level rows the mockup doesn't have (it has 6 levels and the
+/// Sandbox; TIME-3 adds "7 · Leaning tower"): 44 px per row.
+fn extra_rows_dy(app: &App) -> u32 {
+    let rows: usize = app
+        .state()
+        .screens()
+        .builder
+        .game
+        .view()
+        .level_groups
+        .iter()
+        .map(|g| g.items.len())
+        .sum();
+    (rows.saturating_sub(7) * 44) as u32
+}
+
 /// Renders board `name` at 1440 × the reference's height (the aside grows the page) and, with
-/// `SP_BUILDER_SHOTS`, saves the comparison.
-fn render_board(name: &str) -> (RgbaImage, RgbaImage) {
+/// `SP_BUILDER_SHOTS`, saves the comparison; also the aside's shift for extra level rows.
+fn render_board(name: &str) -> (RgbaImage, RgbaImage, u32) {
     let mock = board_png(name, 1440);
-    let mut app = board(name, 1440.0, mock.height() as f32);
+    let mut app = board(name, 1440.0, mock.height() as f32 + 100.0);
+    let dy = extra_rows_dy(&app);
     let img = render(&mut app);
     if shots() {
         save(
@@ -55,23 +81,23 @@ fn render_board(name: &str) -> (RgbaImage, RgbaImage) {
             &repo().join(format!("target/compare/{name}-1440.png")),
         );
     }
-    (img, mock)
+    (img, mock, dy)
 }
 
 /// LOOK-1: the stable regions of BridgeBuild stay close to the reference.
 #[test]
 fn bridge_build_is_close_to_the_reference() {
-    let (img, mock) = render_board("BridgeBuild");
-    for (name, region, bound) in [
-        ("tool rail", (0, 62, 76, 520), 4.0),
-        ("hint bar", (93, 75, 1032, 52), 8.0),
-        ("stage", (93, 138, 1032, 553), 6.0),
-        ("legend + zoom", (93, 700, 1032, 40), 8.0),
-        ("level rows", (1152, 75, 276, 380), 6.0),
-        ("goal panel", (1152, 462, 276, 210), 10.5),
-        ("conditions", (1152, 686, 276, 620), 8.0),
+    let (img, mock, dy) = render_board("BridgeBuild");
+    for (name, region, bound, below_levels) in [
+        ("tool rail", (0, 62, 76, 520), 4.0, false),
+        ("hint bar", (93, 75, 1032, 52), 8.0, false),
+        ("stage", (93, 138, 1032, 553), 6.0, false),
+        ("legend + zoom", (93, 700, 1032, 40), 8.0, false),
+        ("level rows", (1152, 75, 276, 300), 6.0, false),
+        ("goal panel", (1152, 462, 276, 210), 10.5, true),
+        ("conditions", (1152, 686, 276, 620), 8.0, true),
     ] {
-        let d = mean_diff(&img, &mock, Some(region));
+        let d = shifted_diff(&img, &mock, region, if below_levels { dy } else { 0 });
         println!("BridgeBuild {name}: mean |Δ| {d:.2}");
         assert!(d < bound, "{name}: mean |Δ| {d:.2} ≥ {bound}");
     }
@@ -81,15 +107,15 @@ fn bridge_build_is_close_to_the_reference() {
 /// Show forces) stay close to the reference.
 #[test]
 fn tower_build_is_close_to_the_reference() {
-    let (img, mock) = render_board("TowerBuild");
-    for (name, region, bound) in [
-        ("tool rail", (0, 62, 76, 520), 4.0),
-        ("hint bar", (93, 75, 1032, 52), 8.0),
-        ("stage", (93, 138, 1032, 553), 8.0),
-        ("level rows", (1152, 75, 276, 380), 6.0),
-        ("goal panel", (1152, 462, 276, 230), 9.0),
+    let (img, mock, dy) = render_board("TowerBuild");
+    for (name, region, bound, below_levels) in [
+        ("tool rail", (0, 62, 76, 520), 4.0, false),
+        ("hint bar", (93, 75, 1032, 52), 8.0, false),
+        ("stage", (93, 138, 1032, 553), 8.0, false),
+        ("level rows", (1152, 75, 276, 300), 6.0, false),
+        ("goal panel", (1152, 462, 276, 230), 10.5, true),
     ] {
-        let d = mean_diff(&img, &mock, Some(region));
+        let d = shifted_diff(&img, &mock, region, if below_levels { dy } else { 0 });
         println!("TowerBuild {name}: mean |Δ| {d:.2}");
         assert!(d < bound, "{name}: mean |Δ| {d:.2} ≥ {bound}");
     }
