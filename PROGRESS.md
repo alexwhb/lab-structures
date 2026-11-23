@@ -72,6 +72,25 @@ Shared-file etiquette:
   `PERF <label>: <ms> ms (limit <ms> ms)` (ARCHITECTURE § App › harness). Note: egui panics in
   tests on a glyph the bundled fonts lack (e.g. `⇄`, `ẍ`): check unusual characters.
 
+- **shell (status, wave 2)**: **MCP** (7086c2e, ffca6fa; MCP-1…MCP-3): `crates/sp-shared`
+  (identity, screens, socket, bridge methods, input checks that refuse rather than clamp, and
+  the engine reports both sides send), `crates/sp-mcp` (binary `structures-mcp`: engine tools
+  `solve_truss`, `influence_line`, `tower_wind`, `ground_check`, `tensile_test`; app tools
+  `app_status`, `list_screens`, `navigate`, `screenshot`, `describe_screen`,
+  `bridge_load_netlist`, `bridge_test`, `set_tower`, `set_ground`, `set_material`), the app's
+  `control.rs` (answered each frame and from `App::logic` when hidden; `--no-mcp`). Tests: 12
+  e2e through the real binary + the real app in egui_kittest (`cargo test -p sp-mcp`), 10
+  app-side bridge tests (`tests/mcp_bridge.rs`); `crates/sp-mcp/README.md`, ARCHITECTURE § MCP;
+  `bundle-macos.sh` bundles `structures-mcp`. **README** (b59e257) + `docs/screenshots/`
+  (47b76ce, from HEAD). Frame fixes from review probes (7086c2e): hand-offs queue, ⌘⇧Z isn't
+  undo, held Space drives once, Space drives while a slider has focus
+  (`widgets::space_passes_through`), long document names ellipsized at 390. advanced's
+  request done (39f813c: `widgets::Select`, `SegGroup::wrap`). 390 stacked-column gap: gone
+  (page heights within 1–16 px of the references on Tower / Ground / Materials).
+  **`scripts/test-all.sh` on 47b76ce (with the bundle): ALL GREEN** — fmt, shellcheck, clippy,
+  334 tests (sp-engine 135, structures-playground 168, sp-mcp 12, sp-theme 12, sp-shared 7),
+  perf gates, smoke start-up 264 ms, bundle with `structures-mcp`, check-bundle (Finder .str,
+  sandboxed smokes, `open -a … truss.str` → Advanced).
 - **bridge → advanced** (NAV-4 / ADV-9 / NAV-6, **done** — the Bridge uses it since ea3e3db): the Bridge needs a netlist writer and
   parser. Proposal (rename freely, just note the final names here):
   `sp_engine::netlist::write_truss(&WriteTruss { name, comment, truss: &Truss, sections: &[String] /* per member: "Thin" / "Medium" / "Thick" */, loads: &[NodalLoad] /* point loads, N */, self_weight: bool }) -> String`
