@@ -93,8 +93,8 @@ fn only_pieces_in_reach_heat_and_they_lag_the_fire() {
     let at = |t: f64| &trace[((t / FRAME).round() as usize).min(trace.len() - 1)];
 
     // Nothing heats before it lights.
-    for k in 0..((lit / FRAME) as usize) {
-        assert!(trace[k].iter().all(|&t| t == AMBIENT_C), "frame {k}");
+    for (k, temps) in trace.iter().enumerate().take((lit / FRAME) as usize) {
+        assert!(temps.iter().all(|&t| t == AMBIENT_C), "frame {k}");
     }
     // The post under mid-span heats, lagging behind the fire; the far post stays cold.
     let grown = lit + heat::GROW_S;
