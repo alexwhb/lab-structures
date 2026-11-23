@@ -266,7 +266,7 @@ fn weird_structures_do_not_panic() {
 /// Floor per level, and optionally the open-ground level's two anchors (92 / 108 m) left unused.
 fn sandbox_tower(x0: f64, bays: usize, levels: usize, crate_t: f64, anchors: bool) -> Design {
     let mut d = Design::default();
-    let mut add_joint = |d: &mut Design, x: f64, y: f64, sup: Option<Foundation>| {
+    let add_joint = |d: &mut Design, x: f64, y: f64, sup: Option<Foundation>| {
         d.n_n += 1;
         let id = format!("J{}", d.n_n);
         d.nodes.push(Joint {
