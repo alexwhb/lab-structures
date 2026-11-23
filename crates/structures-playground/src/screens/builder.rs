@@ -44,7 +44,6 @@ use eframe::egui::{Id, Ui};
 use host::FoldIns;
 use sp_engine::builder::{
     Foundation, Game, LevelKey, Phase, PieceType, Scene, Selection, Soil, Tool, TrafficSet, View,
-    netlist,
 };
 
 /// Something the player did this frame (applied after drawing, so a frame draws one state).
@@ -218,31 +217,14 @@ impl BuilderScreen {
     /// The structure as a `.str` netlist with the level and conditions as comments (Share,
     /// "Open in Advanced").
     pub fn netlist_text(&self) -> String {
-        let g = &self.game;
-        netlist::write(
-            g.design(),
-            g.level(),
-            g.scene(),
-            g.cond(),
-            &g.level().slug(),
-        )
+        self.game.share_text()
     }
 
     /// Loads a netlist into the Sandbox (⌘V, "Open in Playground"), toasting the outcome.
     fn load_netlist(&mut self, text: &str, ctx: &mut Ctx) {
-        match netlist::read(text) {
-            Ok(im) => {
-                let n = im.design.nodes.len();
-                self.game.open_in_sandbox(im.scene, im.design);
-                if let Some(c) = im.cond {
-                    let g = &mut self.game;
-                    g.set_wind(c.wind);
-                    g.set_dir(c.dir);
-                    g.set_snow(c.snow);
-                    g.set_quake(c.quake);
-                    g.set_soil(c.soil);
-                    g.set_traffic(c.traffic);
-                }
+        match self.game.paste_netlist(text) {
+            Ok(()) => {
+                let n = self.game.design().nodes.len();
                 ctx.toast(format!("Loaded a {n}-joint structure into the Sandbox"));
             }
             Err(e) => ctx.toast(format!("Couldn't load that netlist: {e}")),

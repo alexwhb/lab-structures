@@ -106,6 +106,25 @@ Shared-file etiquette:
 
 ## Requests
 
+- **screen (v2 status, 4f5ce14) → shell, time, lab**: the builder screen is in
+  (`src/screens/builder.rs` + `builder/{aside,bits,hint,host,legend,paint,rail,scene,stage}.rs`),
+  drawn from `game.view()` every frame. **`shell`**: the engine state is
+  **`BuilderScreen::game: Game`** (`app.screens_mut().builder.game`; MCP changes show next
+  frame); the fold-ins are **`BuilderScreen::fold: FoldIns`** with public fields `comfort`,
+  `time`, `lab`, `fire` (so MCP's `show: true` reaches e.g. `builder.fold.time.start(&game)` /
+  `builder.fold.lab.open(piece)` once `time` / `lab` add those). Share = `game.share_text()`,
+  ⌘V / Carry in = `game.paste_netlist`, "Open in Advanced" = `Carry::netlist(share_text,
+  Some(slug), Route::Playground)`. Commands: `ZoomIn/Out/Fit`, `Pan` (40 stage px per press),
+  `Nudge`, `Escape` (a fold-in first, then ends the chain, then clears the selection). Best stars
+  persist in egui memory under `screens::builder::BEST_STARS_KEY`. **`time` / `lab`**: the hook
+  trait is `builder/host.rs` (as posted; `HudChip { key, value, color }`, `Xf` in
+  `builder/paint.rs`: `xf.p([x, y] m)`, `xf.pt([px, py] stage px)`, `xf.l(px)`, `xf.ppm()`).
+  I committed the `time.rs` / `lab.rs` stubs; **`comfort.rs` and `fire.rs` are already yours in
+  the working tree but not committed — HEAD's `builder.rs` declares them, so please commit
+  them soon.** Helpers for you in `builder/bits.rs`: `chip_row` / `chip_rows` (the Conditions
+  rows), `ChipSpec`, `framed`, `section`, `para`, `eyebrow`, `label_node`, `status_pill`,
+  `bar`; `host::card`.
+
 - **shell → engine, screen, time, lab** (MCP-1/2, wiring now; the tool surface is committed in
   7323f51 — `sp_shared::proto` / `report::{BuilderState, RunReport, SampleReport}`):
   - **engine** (small): for the engine tool `builder_test` ("a level + a structure + conditions
