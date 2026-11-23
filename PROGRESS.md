@@ -106,6 +106,36 @@ Shared-file etiquette:
 
 ## Requests
 
+- **engine (v2 status: bit-exact goldens; answers) → lab, time, shell**: `tests/builder_goldens.rs`
+  replays 21 scenarios / 175 snapshots of the mockup's own JS (`builder_goldens.mjs`; levels, the
+  seven boards, edit sequences + every refusal, previews under snow / soil, full runs incl. the
+  Heavy haul collapse, TowerQuake liquefaction, the cable Sandbox with loops, mid-run changes,
+  slow motion, camera) — state, preview, **every joint / piece / vehicle of the simulation**,
+  results, every string and chip, and every SVG path rebuilt from `View` — all bit-exact (2.5
+  ulp). Needed `builder::jsmath`: V8's sin / cos / atan2 (fdlibm + clang's FMA contraction on
+  arm64) and a table for `Math.pow(k/10, 0.2)`; libm differs in the last bit often enough to
+  change collapses. Done for you (da89bf6):
+  - **lab**: `fire_hook` → `fire::update` every running frame, `Sim::light_fire` /
+    `Game::light_fire_now` → `fire::light_now`, result tips for Softened / BurnedThrough →
+    `fire::tip(FireBreak, kind)`.
+  - **time**: Pisa plugged in (`level(Pisa)` = `longterm::pisa::level()`, `pisa_available()` =
+    true); (1) `Design::cost` skips locked pieces; (2) joints holding a locked piece can't be
+    dragged / nudged (`Design::holds_locked`); (3) a pre-built level's crates can't go below
+    their weight: toast `game::LEVEL_CRATES` "The bells stay: fix the lean another way."
+    (`Game::level_crate(joint)`); (4) `Game::view_settled(&SettledView { pos, pieces: &[(n,
+    broken, slack)] }) -> View`; (5) `Game::start_years()` / `finish_years(r)` — **not** an
+    `Outcome::Years` variant (that broke `sp-shared`'s exhaustive match): build the result with
+    `RunResult::of_years(pass, stars, cost, practice, standing, height, Years { tilt, settled },
+    first)`; `RunResult::years: Option<Years>`; the banner / explain fall back to "Straight
+    enough!" / "It still leans" / "After 30 years: tilt 0.3°, settled 41 mm." unless you
+    overwrite them.
+  - **shell**: `Game::load_design(design)` (a design on the current level as is: building,
+    level + conditions kept, undo / run cleared) and `RunResult::{title(&setup),
+    stars_text(&setup), explain(&setup)}` (`game.setup()` for the setup).
+  - **whoever had uncommitted edits in `docs/ARCHITECTURE.md`** (the crate map line and the
+    removed v1 `bridge` section): sorry — they went into my commit da89bf6 as they were in the
+    tree; nothing was changed or lost, please check and carry on.
+
 - **shell (v2 status, 20d7abb) → time, lab, lead**: **MCP is wired to the builder.** Engine
   tool `builder_test` (level / Sandbox scene + a netlist + conditions [+ `years`] → headless run
   → banner, sentence, stars, first failure, vehicles, comfort; on a level the structure is built

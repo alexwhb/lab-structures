@@ -78,7 +78,10 @@ owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample
   Option<Foundation>, locked }>, members: Vec<Piece { id "M7", a, b, kind, locked }>, loads:
   Vec<(joint id, t)> /* first-hung order */, n_n, n_m }`: lookups, `load` / `set_load`,
   `length(piece)` (`truss::hypot` = V8 `Math.hypot`), `cost()` ($k), `top()` (highest Floor
-  joint), `has(kind)`.
+  joint), `has(kind)`, `holds_locked(joint)`. Locked pieces (a pre-built level's) cost nothing,
+  can't be deleted or retyped ("Level pieces stay put."), and their joints can't be dragged or
+  nudged; a pre-built level's crates can't go below their weight ("The bells stay: fix the lean
+  another way.").
 - **`builder::setup`** — `Conditions { wind, dir (±1), snow, quake, soil, traffic, fire (°C, 0 =
   off) }` (`for_level`), `spec(key, sb_scene)` (Sandbox scene applied), `Setup` = the mockup's
   `L()`: the level with the conditions (`scene`, `soil`, `bed`, `traffic` resolved, `budget`,
@@ -143,13 +146,18 @@ owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample
   `zoom_in`, `zoom_out`, `wheel(delta_y, px, py)`, `zoom_by`, `fit`, `pan_by(dx_px, dy_px)`,
   `set_view`. Conditions (any time; soil and traffic refused while running): `set_wind`,
   `set_dir`, `set_snow`, `set_quake`, `set_fire`, `set_soil`, `set_traffic`, `shake_now`,
-  `light_fire_now`. Running: `start_run(slow)`, `stop_run`, `toggle_run`, `replay`,
+  `light_fire_now` (→ `fire::light_now`). `load_design(design)` (MCP: a design on the current
+  level as is), `level_crate(joint)`. Running: `start_run(slow)`, `stop_run`, `toggle_run`, `replay`,
   `toggle_slow`, `tick()` (one 33 ms frame; result, stars and best stars at the end),
   `advance(dt)` (toasts fade after 2.6 s), `run_test(max_frames) -> Option<&RunResult>`
   (headless). Netlists: `share_text()`, `paste_netlist(text)`, `open_in_sandbox(scene,
   design)`. Free: `run_headless(&Design, &Setup, &Conditions, practice, max_frames, tweak:
   FnOnce(&mut Sim)) -> (Option<RunResult>, Sim)` (CMF-2's runs: `tweak` sets `drag` /
-  `shedding`), `result_of(&sim, cost, practice)`.
+  `shedding`), `result_of(&sim, cost, practice)`. `RunResult::{title(&setup),
+  stars_text(&setup), explain(&setup)}` (the banner and result sentence without a `View`).
+  TIME-3: `start_years()` (phase Run with no sim), `finish_years(RunResult::of_years(pass,
+  stars, cost, practice, standing, height, Years { tilt, settled }, first))`, `RunResult::years:
+  Option<Years>`; `run_test` returns `None` for `RunKind::Years`.
 - **`builder::view`** — `Game::view() -> View`: every shape in **stage px** (1120 × 600; the
   screen maps with one scale + offset), every string (plus world metres where a fold-in paints in world space: `MemberView::{wa, wb}`, `JointView::{pos, sup}`, `VehicleView::{x, y, ang}`, `wind_now`, `wind_dir`, `snow_now`, `quake_env`, `sim_t`). Stage: `camera`, `grid { origin, step }`,
   `terrain { scene, soil, bed, soil_poly, bed_poly, water_poly, flow, tops, edges, grains }`,
@@ -175,8 +183,14 @@ owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample
   BarTone, text, types, locked }), Joint(JointInspector { id, title, pos, founds, load, note,
   can_delete }), Materials(Vec<MaterialCard { kind, name, curve /* curveFor path */,
   curve_lines, blurb, cost }>)}`, `explain`. Helpers `fmt_t`, `curve_for`, `curve_lines`,
-  `Band::of`. Colours: the screen maps `PieceType` / `Soil` / `Band` / tones to
+  `Band::of`. `Game::view_settled(&SettledView { pos, pieces: &[(n, broken, slack)] })`: the
+  same model with the structure at given positions and forces (TIME-1 frames). Colours: the screen maps `PieceType` / `Soil` / `Band` / tones to
   `sp_theme::builder`.
+- **`builder::jsmath`** — `sin`, `cos`, `atan`, `atan2`, `pow` as V8 computes them (fdlibm,
+  with clang's `-ffp-contract=on` fused multiply-adds on arm64) and `pow02(x)` (V8's
+  `Math.pow(k/10, 0.2)` table: every wind-profile call in the builder has x = k/10; V8's pow is
+  not plain fdlibm). The platform libm differs from V8 in the last bit for 2–25 % of arguments,
+  enough to change a chaotic collapse; with these the engine matches the mockup bit for bit.
 - **`builder::netlist`** — `write(&Design, level, scene, &cond, name) -> String` (one
   `.material` per piece type used, sections from the type's area with I = k·A², foundations
   `fix=xy`, crates `.load weights … Fy=-5t`, `.load self +self`; `* level …`, `* cond …`, `*
