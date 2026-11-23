@@ -405,16 +405,35 @@ fn screen_method(
         sp::BUILDER_FAST_FORWARD => {
             let p: sp::BuilderFastForward = req.parse_params()?;
             let years = b::years(p.years).map_err(invalid)?;
-            let g = game(app, ctx, p.show);
-            to_value(&b::fast_forward_report(g, years))
+            let report = b::fast_forward_report(game(app, ctx, p.show), years);
+            if p.show {
+                // the same years on the stage: the time fold-in animates them (when the
+                // fast-forward is offered now: after a run that stood, or the Leaning tower)
+                let screen = &mut app.screens_mut().builder;
+                // (`&mut`: works whether `start` takes `&Game` or `&mut Game`)
+                #[allow(clippy::unnecessary_mut_passed)]
+                screen.fold.time.start(&mut screen.game);
+                if years < sp_engine::builder::longterm::YEARS {
+                    screen.fold.time.set_year(years);
+                }
+            }
+            to_value(&report)
         }
         sp::SAMPLE_TEST => {
             let p: sp::SampleTest = req.parse_params()?;
             let (kind, test, temp) =
                 b::sample_args(&p.piece, p.mode.as_deref(), p.temperature_c).map_err(invalid)?;
             prepare(app, ctx, Route::Playground, p.show);
-            let mut sample = sp_engine::builder::sample::Sample::new(kind);
-            to_value(&b::run_sample(&mut sample, kind, test, temp))
+            let report = if p.show {
+                // in the sample drawer, so the rig and the plot show where the numbers came from
+                let lab = &mut app.screens_mut().builder.fold.lab;
+                lab.open(kind);
+                b::run_sample(lab.sample_mut(), kind, test, temp)
+            } else {
+                let mut sample = sp_engine::builder::sample::Sample::new(kind);
+                b::run_sample(&mut sample, kind, test, temp)
+            };
+            to_value(&report)
         }
         other => Err(RemoteError::method_not_found(other)),
     }

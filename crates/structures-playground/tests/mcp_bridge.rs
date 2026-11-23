@@ -567,3 +567,55 @@ fn bad_builder_requests_change_nothing() {
     }
     assert_eq!(ok(&mut h, &p, proto::BUILDER_GET, Value::Null), before);
 }
+
+/// With `show`, a sample test runs in the sample drawer (LAB-1) and a fast-forward plays on
+/// the stage (TIME-1): the numbers are the headless ones.
+#[test]
+fn shown_samples_and_years_reach_the_fold_ins() {
+    use sp_shared::proto;
+    let sock = TempSocket::new();
+    let mut h = harness(&sock.path());
+    let p = sock.path();
+    let r = ok(
+        &mut h,
+        &p,
+        proto::SAMPLE_TEST,
+        json!({"piece": "steel", "mode": "push"}),
+    );
+    let lab = &h.state().screens().builder.fold.lab;
+    assert!(lab.is_open(), "the drawer opened");
+    assert_eq!(lab.sample().kind().key(), "steel");
+    assert_eq!(r["mode"], "push");
+    // a tower that stands on soft clay, then 12 years
+    let mut g = sp_engine::builder::game::Game::new();
+    g.pick_level(sp_engine::builder::data::LevelKey::T1);
+    g.build_preset(sp_engine::builder::game::PresetBuild::Tower {
+        h: 40.0,
+        bays: 2,
+        col: sp_engine::builder::data::PieceType::Steel,
+        brace: sp_engine::builder::data::PieceType::Wood,
+        found: sp_engine::builder::data::Foundation::Pile,
+    });
+    let text = g.share_text();
+    ok(
+        &mut h,
+        &p,
+        proto::BUILDER_LOAD_NETLIST,
+        json!({"netlist": text}),
+    );
+    ok(&mut h, &p, proto::BUILDER_RUN, json!({}));
+    let r = ok(
+        &mut h,
+        &p,
+        proto::BUILDER_FAST_FORWARD,
+        json!({"years": 12}),
+    );
+    assert_eq!(r["years"]["years"], 12.0, "{r}");
+    let (_, m) = refused(call(
+        &mut h,
+        &p,
+        proto::BUILDER_FAST_FORWARD,
+        json!({"years": 40}),
+    ));
+    assert!(m.contains("`years` must be 0 to 30"), "{m}");
+}
