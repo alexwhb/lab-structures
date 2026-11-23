@@ -273,6 +273,83 @@ fn a_steel_frame_over_a_big_fire_softens_and_breaks() {
     );
 }
 
+/// River Sandbox: a 40 m Warren truss — a Road deck in four 10 m pieces between the bank
+/// footings, Steel top chords (10 m) and diagonals — with the Sandbox's looping car, bus and
+/// truck. The fire burns on the water under mid-span.
+pub fn steel_truss_bridge() -> Design {
+    let mut nodes = vec![
+        joint("J1", 8.0, 0.0, Some(Foundation::Footing)),
+        joint("J2", 48.0, 0.0, Some(Foundation::Footing)),
+    ];
+    for (i, x) in [18.0, 28.0, 38.0].iter().enumerate() {
+        nodes.push(joint(&format!("J{}", 3 + i), *x, 0.0, None));
+    }
+    for (i, x) in [13.0, 23.0, 33.0, 43.0].iter().enumerate() {
+        nodes.push(joint(&format!("J{}", 6 + i), *x, 6.0, None));
+    }
+    let bottom = ["J1", "J3", "J4", "J5", "J2"];
+    let top = ["J6", "J7", "J8", "J9"];
+    let mut members = Vec::new();
+    let mut add = |a: &str, b: &str, k: PieceType| {
+        let id = format!("M{}", members.len() + 1);
+        members.push(piece(&id, a, b, k));
+    };
+    for w in bottom.windows(2) {
+        add(w[0], w[1], PieceType::Road);
+    }
+    for w in top.windows(2) {
+        add(w[0], w[1], PieceType::Steel);
+    }
+    for i in 0..4 {
+        add(bottom[i], top[i], PieceType::Steel);
+        add(top[i], bottom[i + 1], PieceType::Steel);
+    }
+    let n_m = members.len() as u32;
+    Design {
+        nodes,
+        members,
+        loads: vec![],
+        n_n: 9,
+        n_m,
+    }
+}
+
+fn run_bridge(fire_c: f64, secs: f64) -> Sim {
+    let mut sim = sim_for(&steel_truss_bridge(), Scene::River, fire_c);
+    for _ in 0..(secs / FRAME).round() as usize {
+        frame(&mut sim);
+    }
+    sim
+}
+
+#[test]
+fn a_steel_truss_bridge_over_a_big_fire_softens() {
+    // Cold, and over a small fire (steel keeps its strength to 400 °C), it carries the traffic.
+    for fire_c in [0.0, FireLevel::Small.setting()] {
+        let s = run_bridge(fire_c, 30.0);
+        assert!(s.first_break.is_none(), "{fire_c} °C: {:?}", s.first_break);
+        assert!(s.laps() > 0, "traffic crossed");
+    }
+    // A Big fire under mid-span softens a middle top chord.
+    let hot = run_bridge(FireLevel::Big.setting(), 30.0);
+    let fb = hot.first_break.clone().expect("it softens");
+    assert_eq!(
+        (fb.kind, fb.mode),
+        (PieceType::Steel, BreakMode::Softened),
+        "{fb:?}"
+    );
+    assert!(fb.t > hot.fire_start.unwrap() + 1.0, "{fb:?}");
+    // An Inferno gets there sooner; both are deterministic.
+    let inferno = run_bridge(FireLevel::Inferno.setting(), 30.0);
+    let fi = inferno.first_break.clone().expect("it softens");
+    assert_eq!(fi.mode, BreakMode::Softened);
+    assert!(fi.t < fb.t, "{} < {}", fi.t, fb.t);
+    assert_eq!(
+        run_bridge(FireLevel::Big.setting(), 30.0).first_break,
+        hot.first_break
+    );
+}
+
 #[test]
 fn nothing_panics_on_odd_input() {
     let mut sim = sim_for(&steel_frame(), Scene::Flat, f64::NAN);
