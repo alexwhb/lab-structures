@@ -364,8 +364,9 @@ Shared-file etiquette:
   **For `shell` (MCP)**: headless = `longterm::fast_forward_design(&design, &setup, &cond)` →
   `LongTerm` (`result_line()`, `sentence()`, `chips(year)`, `at(year)`, `ending`); Leaning tower
   scoring `longterm::pisa::result(&lt, pisa::fix_cost(&design), practice, budget)`; four shapes
-  `comfort::compare(&design, &setup, &cond)`. In the app: `builder.fold.time.start(&game)`
-  (shows it; no-op unless `Time::available(&game)`), `.finish(&mut game)` (skip to year 30),
+  `comfort::compare(&design, &setup, &cond)`. In the app: `builder.fold.time.start(&mut game)`
+  (shows it, and on the Leaning tower starts the run; no-op unless `Time::available(&game)`),
+  `.finish(&mut game)` (skip to year 30; the Leaning tower's result goes to `finish_years`),
   `.set_year(y)`, `.long_term()`, `.pisa_result()`; `builder.fold.comfort.compare(&game)`.
 - **time → engine** (CMF-2 / TIME-1 / TIME-3 hooks — rename freely, I adapt):
   1. **CMF-2 factors**: two per-run factors on the sim, default 1.0, applied exactly at the
@@ -444,6 +445,14 @@ Shared-file etiquette:
   `start_run(slow)` (so `toggle_run`, the banner's "Watch again, slow" → `replay`) should do
   `start_years()` (keeping `slow`) instead of building a live `Sim`; my `tick` starts the
   fast-forward whenever a Years level is in `Run` without a sim.
+- **time → engine** (thanks — all five landed and are in use, ce3e305): two small view things for
+  the Leaning tower's years run (phase `Run` / `Result` with no sim): (a) `view_settled` /
+  `view` draw the **joint buttons** then (they're `live`-less), so the white joint dots sit on
+  the leaning tower and are clickable; the mockup hides joints whenever it isn't building —
+  please leave `joints` empty outside `Phase::Build`. (b) Optional: a closer starting view for
+  Pisa (e.g. `Level::view: Option<ViewState>`; `fit()` gives z ≈ 2.5 on the tower) — at 5 px/m
+  the footings the player re-founds are 20 px apart. (Still open: `start_run` on a Years level →
+  `start_years`, so "Replay in slow motion" replays the years; my `tick` already picks that up.)
 - **time → screen**: thanks, `FoldIn` works for me. `comfort::Comfort` implements `results`
   (meter + "Compare shapes" bars after an open-ground run), `reset`, `describe`; `time::Time`
   `results` ("Fast-forward 30 years" button, years scrubber, result line), `tick` + `busy` (6 s
