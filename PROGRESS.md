@@ -1070,6 +1070,13 @@ frame; paced repaints only while pulling / playing years). Findings:
   only foundations that carry something: in `structure()` mark a joint's `found` only when an
   unbroken piece (or a crate) is on it, or filter `found` in `tilt_angle` / `frame` /
   `LongTerm::found` by `s.active(st)` and `!st.ripped[j]`; a test for each scenario.
+  - **time: Fixed** (f48ea85): `structure()` gives a joint its foundation only when a piece
+    uses it (`Particle::used`), so tilt line, settlement, differential and `LongTerm::found`
+    ignore unused anchors. Tests `longterm.rs::unused_anchors_do_not_count`: (a) your Sandbox
+    tower reads the same tilt with or without the 92 / 108 m anchors, its lean line starts under
+    it; (b) Bus route steel truss on soft clay: differential < 10 mm, "…sank about evenly…".
+    (Ripped foundations still count: they stay attached and move with the structure, so the
+    line stays continuous.)
 - **engine → lab** [med] `crates/sp-engine/src/builder/fire.rs:180` (`source`) — on open ground
   the fire burns at the mean x of every founded joint, including unused anchors. — The tower of
   the finding above (x = 20…36, anchors J1 / J2 at 92 / 108 m left unused), Fire = Big, 8 s into
@@ -1089,17 +1096,27 @@ frame; paced repaints only while pulling / playing years). Findings:
   result (the Sandbox never has one), but `applies` says yes and the function is public (MCP).
   — Run the variants on `Setup { sandbox: false, ..setup.clone() }` (an 18 s test), or make
   `applies` false for the Sandbox.
+  - **time: Fixed** (f48ea85): the variants run on the setup with `sandbox: false` (the
+    level's 18 s test). Test `comfort.rs::compare_shapes_works_in_the_sandbox`.
 - **engine → time** [low] `crates/structures-playground/src/screens/builder/comfort.rs:87`
   (`Comfort::compare`) — "Same storm" uses `game.cond()` at the click, not the run's
   conditions. — TowerStorm board, run to the result (meter 272 mg), set Wind to Hurricane
   (allowed on the result), press Compare: the as-built bar is the 50 m/s run's value next to the
   meter's 272 mg. — Keep the run's conditions (`game.sim().map(|s| s.cond)`, which the engine
   holds for the result) or hide Compare once the conditions changed after the run.
+  - **time: Fixed** (f48ea85): `Comfort::compare` / `comparison` use the run's `sim.setup` +
+    `sim.cond` (the current ones only without a sim); bars stay up when the chips change after
+    the run. `builder_time.rs::compare_shapes_shows_the_four_bars_and_the_verdict` sets Hurricane
+    after the result: the comparison stays, a new one's as-built bar equals the meter.
 - **engine → time** [low] `crates/sp-engine/src/builder/longterm.rs:697` (`sentence`) — "Rock
   doesn't settle: it stands exactly as built." is printed next to a non-zero tilt. — TowerBuild
   board (one-way diagonals), soil Rock: result line "After 30 years: tilt 0.1°, settled 0 mm."
   plus that sentence (the frame racks a little under its own weight; tilt counts it). — Say
   "Rock doesn't settle: it doesn't sink at all." (or mention the lean when tilt ≥ 0.05°).
+  - **time: Fixed** (f48ea85): `LongTerm::on_rock` (every used foundation on rock); on rock
+    with a tilt ≥ 0.05° the sentence says the lean is the frame giving under its own weight; a
+    soil that barely settled no longer gets the rock sentence ("It barely settled: …"). Test
+    `longterm.rs::rock_and_barely_settling_sentences`.
 - **engine → lab** [low] `crates/sp-engine/src/builder/fire.rs:141` (`strength_factor`) —
   concrete, Road and Floor in **tension** keep the compressive factor `k_c` instead of EN
   1992-1-2 §3.2.2.2's `k_c,t` (which `factors.rs` computes). — A Road bottom chord pulled over a
