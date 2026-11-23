@@ -171,8 +171,9 @@ All UI-free; numbers in SI inside, text exactly as the Advanced mockup prints it
     and unique. `parse(write(n))` gives `n` back to ~12 significant digits.
   - `netlist::set_truck(text, tonnes: Option<f64>, x: Option<f64>) -> Option<String>`: edits
     the moving-load line in place (the Truck / x sliders).
-  - `netlist::text::{to_fixed, minus_fixed, js_round, js_number, tidy}`: JavaScript's
-    `toFixed` (ties up), the mockup's `fmt` (`−1004`), `Math.round`, `String(number)`.
+  - Number text comes from the shared `sp_engine::jsnum` (`to_fixed`, `minus_fixed`,
+    `js_round`, `js_number`, `tidy`): JavaScript's `toFixed` (ties up), the mockup's `fmt`
+    (`−1004`), `Math.round`, `String(number)`.
 - **`generate`** — `generate::generate(&Params { style: Style::{Pratt, Howe, Warren}, braced,
   material: MaterialKind::{Steel, Aluminum, Glulam, CarbonFiber}, size /* 1–20 */, truck_t /*
   0–120 */, x /* 0–48 */ }) -> Generated { params, lines: Vec<Line { dir, args, comment }>,

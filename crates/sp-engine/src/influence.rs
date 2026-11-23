@@ -8,8 +8,8 @@
 //!
 //! Everything here is UI-free: the screen maps [`Tone`] and [`Level`] to `sp_theme` colours.
 
+use crate::jsnum::{js_number, js_round, minus_fixed, to_fixed};
 use crate::netlist::Netlist;
-use crate::netlist::text::{js_number, js_round, minus_fixed, to_fixed};
 use crate::truss::{FailureMode, MemberResult, NodalLoad, Solution, SolveError, Truss, check};
 use serde::{Deserialize, Serialize};
 
@@ -80,9 +80,12 @@ pub struct Report {
 }
 
 impl Report {
-    /// True when the solve has no solution or the worst member is over its limit.
+    /// True when the solve has no solution, a load hangs on nothing, or the worst member is
+    /// over its limit.
     pub fn failed(&self) -> bool {
-        !self.solution.stable || self.worst_utilisation() > 1.0
+        !self.solution.stable
+            || !self.solution.loose_loads.is_empty()
+            || self.worst_utilisation() > 1.0
     }
 
     /// The worst member's utilisation (0 when there are no members).

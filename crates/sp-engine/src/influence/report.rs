@@ -2,8 +2,8 @@
 //! `checks`), with their exact text.
 
 use super::{NEAR_ZERO_N, Report, Span, Tone, mode_word, pct};
+use crate::jsnum::{minus_fixed, to_fixed};
 use crate::netlist::Netlist;
-use crate::netlist::text::{minus_fixed, to_fixed};
 use crate::truss::{FailureMode, MemberResult, Solution, Truss};
 use serde::{Deserialize, Serialize};
 
@@ -73,6 +73,11 @@ pub enum Status {
     },
     /// The stiffness matrix is singular.
     Mechanism,
+    /// A load sits on a node no member reaches: it would fall, and the solve ignores it.
+    Loose {
+        /// The node's id.
+        node: String,
+    },
 }
 
 impl Status {
@@ -82,6 +87,7 @@ impl Status {
             Status::Holding { worst_pct, .. } => format!("Holding · worst {worst_pct}%"),
             Status::Over { member } => format!("{member} over its limit"),
             Status::Mechanism => "Mechanism".into(),
+            Status::Loose { node } => format!("Load on {node} hangs on nothing"),
         }
     }
 
@@ -264,8 +270,15 @@ pub(super) fn build(net: &Netlist, truss: Truss, solution: Solution, x: f64) -> 
     });
     let worst_ut = worst.map(|(_, r)| r.utilisation).unwrap_or(0.0);
     let failed = !ok || worst_ut > 1.0;
+    let loose = solution
+        .loose_loads
+        .first()
+        .and_then(|&n| truss.nodes.get(n))
+        .map(|n| n.id.clone());
     let status = if !ok {
         Status::Mechanism
+    } else if let Some(node) = loose {
+        Status::Loose { node }
     } else if failed {
         Status::Over {
             member: worst
@@ -410,8 +423,25 @@ pub(super) fn build(net: &Netlist, truss: Truss, solution: Solution, x: f64) -> 
     };
 
     let mass = mass(&truss, copies);
+    // MB-8: named after the material ("Aluminum weight"); "Weight" for a mix
+    let mut used: Vec<usize> = truss.members.iter().map(|m| m.material).collect();
+    used.sort_unstable();
+    used.dedup();
+    let weight_label = match used.as_slice() {
+        [one] => truss
+            .materials
+            .get(*one)
+            .map(|m| format!("{} weight", crate::generate::material_display_name(&m.name)))
+            .unwrap_or_else(|| "Weight".into()),
+        [] => truss
+            .materials
+            .first()
+            .map(|m| format!("{} weight", crate::generate::material_display_name(&m.name)))
+            .unwrap_or_else(|| "Weight".into()),
+        _ => "Weight".into(),
+    };
     let weight = check(
-        "Steel weight",
+        &weight_label,
         format!("{} t", to_fixed(mass / 1000.0, 1)),
         match copies {
             1 => "One truss, members only.".to_string(),

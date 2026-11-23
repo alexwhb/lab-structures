@@ -13,7 +13,7 @@
 //! sizes is one ulp off the `cm²` value the text shows), so results match the mockup to the
 //! last bit; parsing the text gives the same model to within that ulp.
 
-use crate::netlist::text::{js_number, to_fixed};
+use crate::jsnum::{js_number, to_fixed};
 use crate::netlist::{MovingLoad, NetMember, Netlist, Plot, Section, StaticLoad};
 use crate::truss::{Fix, G, Material, Node};
 use serde::{Deserialize, Serialize};
@@ -101,6 +101,43 @@ impl MaterialKind {
         Self::ALL.into_iter().find(|m| m.key() == key)
     }
 
+    /// The kind a netlist material name stands for: its key, or a common name (`aluminium`,
+    /// `glulam`, `carbon_fiber`, …; case and separators ignored).
+    pub fn from_name(name: &str) -> Option<MaterialKind> {
+        let n: String = name
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .map(|c| c.to_ascii_lowercase())
+            .collect();
+        Some(match n.as_str() {
+            "steel" => MaterialKind::Steel,
+            "alu" | "aluminum" | "aluminium" => MaterialKind::Aluminum,
+            "timber" | "glulam" | "wood" => MaterialKind::Glulam,
+            "cf" | "carbon" | "carbonfiber" | "carbonfibre" | "cfrp" => MaterialKind::CarbonFiber,
+            _ => return None,
+        })
+    }
+}
+
+/// How a netlist material is named on screen: the toolbar's names for the known ones
+/// ("Steel", "Aluminum", "Glulam", "Carbon fiber"), else the netlist name with `_` / `-` as
+/// spaces and a capital first letter ("my_alloy" → "My alloy").
+pub fn material_display_name(name: &str) -> String {
+    if let Some(k) = MaterialKind::from_name(name) {
+        return k.name().to_string();
+    }
+    let spaced: String = name
+        .chars()
+        .map(|c| if c == '_' || c == '-' { ' ' } else { c })
+        .collect();
+    let mut chars = spaced.trim().chars();
+    match chars.next() {
+        Some(f) => f.to_uppercase().chain(chars).collect(),
+        None => "Material".to_string(),
+    }
+}
+
+impl MaterialKind {
     /// The material (named by its netlist key): E, fy in Pa, ρ in kg/m³.
     pub fn material(self) -> Material {
         let (e, fy, rho) = match self {

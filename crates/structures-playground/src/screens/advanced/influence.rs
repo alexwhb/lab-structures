@@ -12,7 +12,7 @@ use eframe::egui::{
 };
 use lab_theme::font;
 use sp_engine::influence::{InfluenceLine, Pick, Tone, now_text};
-use sp_engine::netlist::text::js_number;
+use sp_engine::jsnum::js_number;
 use sp_theme::{self as t, advanced as a};
 
 /// What the panel did.

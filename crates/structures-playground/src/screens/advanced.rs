@@ -25,7 +25,7 @@ use eframe::egui::{Align, Layout, Rect, Ui, UiBuilder, pos2, vec2};
 use lab_ui::layout::{FlexItem, flex_lines};
 use sp_engine::generate::Params;
 use sp_engine::influence as engine_il;
-use sp_engine::netlist::text::to_fixed;
+use sp_engine::jsnum::to_fixed;
 use sp_theme::advanced as a;
 use toolbar::Action;
 

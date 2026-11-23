@@ -47,7 +47,7 @@ fn expect_engine_labels(h: &mut App, net: &netlist::Netlist, pick_key: &str) {
     let now = influence::force_kn(&r, pick.member);
     let at = format!(
         "At x = {} m: {}",
-        netlist::text::js_number(r.x),
+        sp_engine::jsnum::js_number(r.x),
         influence::now_text(now)
     );
     assert!(has_label(h, &at), "missing {at:?}");
@@ -244,7 +244,7 @@ fn drive_across_moves_the_truck() {
     // the influence-line tile follows
     assert!(has_label_containing(
         &h,
-        &format!("At x = {} m", netlist::text::js_number(x1))
+        &format!("At x = {} m", sp_engine::jsnum::js_number(x1))
     ));
     // dragging x pauses
     get(&h, "x", Role::Slider).set_value_accesskit(5.0);

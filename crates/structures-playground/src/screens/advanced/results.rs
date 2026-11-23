@@ -216,7 +216,7 @@ pub fn checks_panel(ui: &mut Ui, report: &Report) {
 
 /// The provenance badges (PROV-1), wrapping (`flex-wrap: wrap; gap: 6px`).
 pub fn badges(ui: &mut Ui, k_factor: f64) {
-    let k = sp_engine::netlist::text::tidy(k_factor);
+    let k = sp_engine::jsnum::tidy(k_factor);
     let list = [
         Badge::dot("direct stiffness · linear · small δ", t::PROV_EXACT),
         Badge::dot(format!("Euler buckling, K = {k}"), t::PROV_EXACT),

@@ -1,7 +1,7 @@
 //! In-place edits of netlist text (the toolbar's Truck and x sliders change the moving-load
 //! line without touching anything else the user wrote).
 
-use super::text::js_number;
+use crate::jsnum::js_number;
 
 /// Rewrites the moving-load line (the first `.load` with `lane=`): its weight as `<tonnes>t`
 /// and/or its `x=<m>` (inserted after the weight if missing). Everything else — spacing,

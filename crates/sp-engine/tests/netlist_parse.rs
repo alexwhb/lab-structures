@@ -290,3 +290,32 @@ fn the_truck_splits_between_lane_nodes() {
     assert!(n.truck_loads(-0.1).is_empty() && n.truck_loads(16.1).is_empty());
     assert_eq!(n.truck_loads(16.0)[1].node, 2);
 }
+
+/// MB-8: the weight check is named after the material; a load on a node no member reaches is
+/// called out instead of being silently ignored.
+#[test]
+fn weight_label_and_loose_loads() {
+    use sp_engine::influence;
+    let base = ".section s A=10cm2\n.node A 0 0 fix=xy\n.node B 4 0 fix=y\n.node C 2 2\n.member M1 A C s\n.member M2 C B s\n.member M3 A B s\n.load p C 0 -10\n";
+    for (mat, want) in [
+        (".material alu", "Aluminum weight"),
+        (".material Glulam E=12GPa fy=24MPa rho=500", "Glulam weight"),
+        (".material carbon_fiber", "Carbon fiber weight"),
+        (
+            ".material my_alloy E=70GPa fy=200MPa rho=2800",
+            "My alloy weight",
+        ),
+        (".material steel", "Steel weight"),
+    ] {
+        let net = netlist::parse(&format!("{mat}\n{base}")).unwrap();
+        let r = influence::analyse(&net).unwrap();
+        assert_eq!(r.checks[4].label, want);
+    }
+    let net = netlist::parse(&format!(
+        ".material steel\n{base}.node D 9 9\n.load q D 0 -5\n"
+    ))
+    .unwrap();
+    let r = influence::analyse(&net).unwrap();
+    assert_eq!(r.status.label(), "Load on D hangs on nothing");
+    assert!(r.failed());
+}

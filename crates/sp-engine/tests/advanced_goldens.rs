@@ -7,7 +7,8 @@
 use serde_json::Value;
 use sp_engine::generate::{self, MaterialKind, Params, Style};
 use sp_engine::influence::{self, Level, Report, Tone, UseTone};
-use sp_engine::netlist::{self, text::to_fixed};
+use sp_engine::jsnum::to_fixed;
+use sp_engine::netlist;
 
 fn goldens() -> Vec<Value> {
     let text = include_str!("golden/advanced.json");
@@ -86,6 +87,21 @@ fn rows_of(r: &Report) -> Vec<Vec<String>> {
             ]
         })
         .collect()
+}
+
+/// The mockup's checks for a state, with the one deliberate change: SPEC MB-8 names the weight
+/// check after the material ("Aluminum weight"); the mockup says "Steel weight" for every one.
+fn want_checks(case: &Value) -> Vec<Vec<String>> {
+    let mut c: Vec<Vec<String>> = case["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(strs)
+        .collect();
+    let mat = MaterialKind::from_key(case["state"]["mat"].as_str().unwrap()).unwrap();
+    assert_eq!(c[4][0], "Steel weight", "the mockup's label");
+    c[4][0] = format!("{} weight", mat.name());
+    c
 }
 
 fn checks_of(r: &Report) -> Vec<Vec<String>> {
@@ -169,12 +185,7 @@ fn report_prints_what_the_mockup_prints() {
         let want_rows: Vec<Vec<String>> =
             case["rows"].as_array().unwrap().iter().map(strs).collect();
         assert_eq!(rows_of(&r), want_rows, "{p:?}");
-        let want_checks: Vec<Vec<String>> = case["checks"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(strs)
-            .collect();
+        let want_checks = want_checks(&case);
         assert_eq!(checks_of(&r), want_checks, "{p:?}");
         assert_eq!(r.status.label(), case["statusLabel"].as_str().unwrap());
         assert_eq!(
@@ -313,12 +324,7 @@ fn parsing_the_generated_text_shows_the_same_numbers() {
             }
             c
         };
-        let want_checks: Vec<Vec<String>> = case["checks"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(strs)
-            .collect();
+        let want_checks = want_checks(&case);
         assert_eq!(tail(checks_of(&r)), tail(want_checks), "{p:?}");
         let status = |s: &str| s.replace(|c: char| c.is_ascii_digit(), "#");
         assert_eq!(

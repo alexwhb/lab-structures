@@ -55,7 +55,6 @@ use serde::{Deserialize, Serialize};
 
 mod edit;
 mod parse;
-pub mod text;
 mod write;
 
 pub use edit::set_truck;

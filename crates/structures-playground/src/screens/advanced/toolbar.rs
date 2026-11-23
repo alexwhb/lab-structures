@@ -13,7 +13,7 @@ use eframe::egui::{
 use lab_theme::font;
 use lab_ui::layout::{FlexItem, flex_lines};
 use sp_engine::generate::{MaterialKind, SIZE_RANGE, Style, TRUCK_RANGE};
-use sp_engine::netlist::text::js_number;
+use sp_engine::jsnum::js_number;
 use sp_theme as t;
 
 /// What the user changed in the toolbar.
