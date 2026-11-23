@@ -162,25 +162,25 @@ pub fn apply(c: &mut Constraint) {
     c.heat_mode = break_mode(c.kind, c.strength).map(BreakMode::from);
 }
 
-/// Where the fire burns in this simulation (see [`heat::source_for`]): the joints on intact
-/// foundations, else the used joints.
+/// Where the fire burns in this simulation (see [`heat::source_for`]): under mid-span on the
+/// river; on open ground the mean x of the joints on intact foundations, else of the used joints
+/// at ground level, else the default tower's centre line.
 pub fn source(sim: &Sim) -> [f64; 2] {
     if sim.setup.scene == Scene::River {
         return heat::RIVER_SOURCE;
     }
-    let supports: Vec<[f64; 2]> = sim
-        .p
-        .iter()
-        .filter(|p| p.sup.is_some() && !p.ripped)
-        .map(|p| [p.x0, p.y0])
-        .collect();
-    let joints: Vec<[f64; 2]> = sim
-        .p
-        .iter()
-        .filter(|p| p.used)
-        .map(|p| [p.x0, p.y0])
-        .collect();
-    source_for(Scene::Flat, &supports, &joints)
+    let mean = |pick: &dyn Fn(&crate::builder::sim::Particle) -> bool| {
+        let (sum, n) = sim
+            .p
+            .iter()
+            .filter(|p| pick(p) && p.x0.is_finite())
+            .fold((0.0, 0usize), |(s, n), p| (s + p.x0, n + 1));
+        (n > 0).then(|| sum / n as f64)
+    };
+    let x = mean(&|p| p.sup.is_some() && !p.ripped)
+        .or_else(|| mean(&|p| p.used && p.y0.abs() < 0.5))
+        .unwrap_or(heat::FLAT_DEFAULT_X);
+    [x, 0.0]
 }
 
 /// The fire in this simulation now.
@@ -208,11 +208,11 @@ pub fn update(sim: &mut Sim, dt: f64) {
             sim.t + heat::CHANGE_DELAY_S
         });
     }
-    let b = blaze(sim);
     let cold = |c: &Constraint| c.temp <= AMBIENT_C + heat::COLD_MARGIN_C;
-    if !b.burning() && sim.c.iter().all(cold) {
+    if heat::growth(sim.t, sim.fire_start, on) <= 0.0 && sim.c.iter().all(cold) {
         return;
     }
+    let b = blaze(sim);
     let p = &sim.p;
     for c in sim.c.iter_mut().filter(|c| !c.broken) {
         let (Some(pa), Some(pb)) = (p.get(c.a), p.get(c.b)) else {
