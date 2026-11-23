@@ -1,7 +1,8 @@
 # Structures Playground
 
 Structural-engineering playground + truss netlist workbench for macOS, written in Rust ("SPICE
-for things that stand up"). The fifth bench in the lab series (Breadbox, Chem Playground, Bio
+for things that stand up"). v2: the Playground is one builder for bridges and towers (pieces,
+foundations on soil, crates, traffic, wind, snow, earthquakes, fire, decades of settlement). The fifth bench in the lab series (Breadbox, Chem Playground, Bio
 Playground, Automata Playground, Structures Playground). Playground mode (Bridge · build a truss
 and break it, Tower · skyscraper in a storm, Ground · soils and foundations, Materials ·
 tensile test) and Advanced mode (the bridge as a truss netlist: stiffness results, influence
@@ -13,7 +14,8 @@ line, checks). Drivable over MCP. Educational, not for real structural design.
 |---|---|
 | [`SPEC.md`](SPEC.md) | the definition of done — every requirement has an ID |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | crate map and contracts between crates |
-| [`docs/design/`](docs/design) | the mockup: `mockup/*.dc.html` (spec: markup + CSS + the `class Component` logic), `screenshots/*-1440.png` / `*-390.png` (rendered references), `bundles/*.html` (runnable in Chrome) |
+| [`docs/design/v2/`](docs/design/v2) | **v2 mockup (current Playground)**: `mockup/Builder.dc.html` (one builder component; boards differ only in `presetDef()`), `screenshots/<Board>-1440.png` / `-390.png` / `-16s` (rendered references), `bundles/*.html` (runnable in Chrome) |
+| [`docs/design/`](docs/design) | the v1 mockup (Advanced and Series still current; v1 Playground/Tower/Ground/Materials retired): `mockup/*.dc.html` (spec: markup + CSS + the `class Component` logic), `screenshots/*-1440.png` / `*-390.png` (rendered references), `bundles/*.html` (runnable in Chrome) |
 | [`PROGRESS.md`](PROGRESS.md) | who owns what, status, open issues, requests |
 | [labkit](https://github.com/alexwhb/labkit) (checked out at `../labkit`) | shared lab-series crates (`lab-theme`, `lab-ui`, `lab-mcp`), a git dependency pinned to a commit in `Cargo.toml` — use them, never edit them from here (see "Working on labkit") |
 | [`../automata-playground`](../automata-playground) | the newest sibling and **our template**: app shell, widgets, egui_kittest harness, MCP bridge, packaging scripts. Fork its code freely (same owner, MIT); never edit it |

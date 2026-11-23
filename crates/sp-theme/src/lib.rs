@@ -22,8 +22,11 @@ pub use lab_theme::{self, Grid, font, hex, mix, rgba};
 
 pub mod advanced;
 pub mod bridge;
+pub mod builder;
+pub mod fire;
 pub mod ground;
 pub mod materials;
+pub mod time;
 pub mod tower;
 
 /// Installs the series fonts and the egui style built from [`PALETTE`].

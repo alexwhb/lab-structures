@@ -15,6 +15,7 @@
 #![warn(missing_docs)]
 
 pub mod bridge;
+pub mod builder;
 pub mod dynamics;
 pub mod generate;
 pub mod ground;

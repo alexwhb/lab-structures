@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Structures Playground — Bridge · build</title>
+<script src="2341e5a0-4432-415e-8e07-1168d50da3ef"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style></style>
+<style>
+body{margin:0;background:#0A0A0A}
+.paper{background-color:#0A0A0A;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);background-size:60px 60px,60px 60px,12px 12px,12px 12px}
+a{color:#D6C7A1}a:hover{color:#E9DFC6}
+.seg{border:0;background:transparent;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;padding:0 14px;min-height:36px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none}
+.seg:hover{color:#EAEAEA}
+.seg-on{background:#2A2A2A;color:#F5F5F5}
+.ghost{border:1px solid #2E2E2E;background:#171717;color:#D9D9D9;font:500 13px Inter,system-ui,sans-serif;min-height:36px;padding:0 12px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.ghost:hover{background:#1F1F1F;color:#F5F5F5}
+.prim{border:1px solid #4D4636;background:#24221C;color:#E9DFC6;font:600 13px Inter,system-ui,sans-serif;min-height:36px;padding:0 14px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.prim:hover{background:#2E2B23;color:#E9DFC6}
+.sw{width:36px;height:36px;border:0;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.sw:hover{background:#1C1C1C}
+.sw-on{background:#2A2A2A}
+.lbl{margin:0;font:600 11px Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#A3A3A3}
+.ptile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:84px;border:1px solid #242424;border-radius:12px;background:rgba(18,18,18,.92);color:#EAEAEA;font:600 12px/1.25 Inter,system-ui,sans-serif;cursor:pointer;padding:10px 6px;text-align:center}
+.ptile:hover{border-color:#4D4636;background:#1E1C17}
+.ptile-on{border-color:#D6C7A1;background:#1E1C17}
+.tab{display:flex;align-items:center;min-height:44px;padding:0 4px;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;text-decoration:none;border-bottom:2px solid transparent;box-sizing:border-box}
+.tab:hover{color:#F5F5F5}
+.tab-on{color:#F5F5F5;border-bottom-color:#D6C7A1}
+.panel{background:rgba(17,17,17,.88);border:1px solid #242424;border-radius:12px}
+.h{margin:0;font:600 15px 'Space Grotesk',Inter,sans-serif;letter-spacing:-.01em}
+.mono{font-family:'JetBrains Mono',monospace}
+.mut{color:#A3A3A3}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid #2E2E2E;background:#141414;font:600 12px Inter,system-ui,sans-serif}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:5px;font:500 11px 'JetBrains Mono',monospace;border:1px solid #2E2E2E;color:#D9D9D9;background:#121212}
+.bar{height:8px;border-radius:4px;background:#1E1E1E;overflow:hidden}
+.well{background:#0D0D0D;border:1px solid #242424;border-radius:8px}
+input[type=range]{accent-color:#D6C7A1;width:100%;margin:0;height:28px}
+input[type=checkbox]{accent-color:#D6C7A1;width:18px;height:18px;margin:0}
+.graph{background-color:#0B0C0E;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:120px 120px,120px 120px,24px 24px,24px 24px}
+.chip{position:absolute;transform:translate(-50%,-130%);padding:3px 8px;border-radius:6px;background:rgba(11,12,14,.92);border:1px solid #2A2D33;font:400 12px 'JetBrains Mono',monospace;color:#ECEAE6;white-space:nowrap;pointer-events:none}
+@keyframes flow{to{stroke-dashoffset:-48}}
+.flow{animation:flow 1.6s linear infinite}
+.still .flow{animation-play-state:paused}
+.tool{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:60px;min-height:56px;border:1px solid transparent;border-radius:10px;background:transparent;color:#A3A3A3;font:500 11px Inter,system-ui,sans-serif;cursor:pointer;padding:6px 0}
+.tool:hover{background:#1C1C1C;color:#EAEAEA}
+.tool-on{background:#24221C;border-color:#4D4636;color:#E9DFC6}
+.chips{display:flex;gap:4px}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 12px;border:1px solid #2E2E2E;border-radius:999px;background:#141414;color:#C9C9C9;font:500 12px Inter,system-ui,sans-serif;cursor:pointer}
+.chip:hover{color:#F5F5F5;border-color:#3A3A3A}
+.chip-on{background:#24221C;border-color:#6A604A;color:#E9DFC6}
+.chip-dim{opacity:.45}
+.surface{position:absolute;inset:0;border:0;background:transparent;padding:0;margin:0}
+.surface:focus-visible{outline:2px solid #D6C7A1;outline-offset:-2px}
+.joint{position:absolute;transform:translate(-50%,-50%);width:30px;height:30px;border:0;border-radius:50%;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.jdot{width:11px;height:11px;border-radius:50%;background:#0C0D0F;border:2px solid #D4D4D4;box-sizing:border-box}
+.joint:hover .jdot{border-color:#E9DFC6;transform:scale(1.25)}
+.j-lock .jdot{border-radius:3px;border-color:#D6C7A1}
+.j-pend .jdot{background:#D6C7A1;border-color:#E9DFC6;box-shadow:0 0 0 5px rgba(214,199,161,.25)}
+.j-sel .jdot{box-shadow:0 0 0 4px rgba(233,223,198,.35)}
+.j-bad .jdot{border-color:#E5534B;box-shadow:0 0 0 4px rgba(229,83,75,.3)}
+.mh{position:absolute;transform:translate(-50%,-50%);min-width:14px;height:14px;padding:0;border:1px solid #3A3A3A;border-radius:7px;background:rgba(12,13,15,.9);color:#D9D9D9;font:500 10px 'JetBrains Mono',monospace;cursor:pointer;white-space:nowrap}
+.mh-num{height:20px;padding:0 6px;border-radius:5px}
+.mh-sel{border-color:#D6C7A1;color:#E9DFC6}
+.mh-over{border-color:#E5534B;color:#F2B8B3}
+.ltag{position:absolute;transform:translate(-50%,0);padding:1px 6px;border-radius:4px;background:rgba(12,13,15,.85);font:500 11px 'JetBrains Mono',monospace;color:#E6D6B8;pointer-events:none;white-space:nowrap}
+.lvl{display:flex;align-items:center;justify-content:space-between;min-height:40px;padding:0 12px;border:1px solid #242424;border-radius:8px;background:#121212;color:#C9C9C9;font:500 13px Inter,system-ui,sans-serif;cursor:pointer;text-align:left}
+.lvl:hover{border-color:#3A3A3A;color:#F5F5F5}
+.lvl-on{border-color:#6A604A;background:#24221C;color:#E9DFC6}
+.still-flow{animation-play-state:paused}
+@keyframes shake{0%,100%{transform:translate(0,0)}25%{transform:translate(-3px,1px)}50%{transform:translate(3px,-1px)}75%{transform:translate(-2px,0)}}
+.shake{animation:shake .2s linear infinite}
+@keyframes snowfall{from{transform:translate(0,0)}to{transform:translate(-14px,60px)}}
+.snowfall{animation:snowfall 2.6s linear infinite}
+</style>
+</helmet>
+<div class="paper" style="min-height: 900px; display: flex; flex-direction: column; color: #EAEAEA; font-family: Inter, system-ui, sans-serif">
+  <header style="min-height: 56px; display: flex; align-items: center; gap: 12px 16px; padding: 8px 16px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.85); flex-wrap: wrap; box-sizing: border-box">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <svg width="26" height="26" sc-camel-view-box="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="6" fill="#171717" stroke="#D6C7A1" stroke-width="1.5"></rect><path d="M5 18h16M5 18l4-9h8l4 9M9 9l4 9 4-9" fill="none" stroke="#D6C7A1" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></path><circle cx="13" cy="18" r="1.8" fill="#7FB0E0"></circle></svg>
+      <span style="font: 600 16px 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.01em">Structures Playground</span>
+      <span style="color: #4A4A4A">/</span>
+      <span style="font-size: 13px; color: #D9D9D9">{{levelSlug}}</span>
+    </div>
+
+    <nav aria-label="Mode" style="display: flex; gap: 2px; padding: 3px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px">
+      <a class="seg seg-on" href="Main.dc.html" aria-current="page"><svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 11h12M1 11l3-6h6l3 6M4 5l3 6 3-6"></path></svg>Playground</a>
+      <a class="seg" href="Advanced.dc.html"><svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5v11h11"></path><path d="M3.5 4h4M3.5 6.5h6M3.5 9h3"></path></svg>Advanced</a>
+    </nav>
+
+
+    <div style="display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap">
+      <button type="button" class="prim" sc-camel-on-click="{{toggleDrive}}">
+        <sc-if value="{{playing}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><rect x="2" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect><rect x="7.4" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect></svg>Pause</sc-if>
+        <sc-if value="{{notPlaying}}" hint-placeholder-val="{{ true }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><path d="M3 1.5l7 4.5-7 4.5z" fill="currentColor"></path></svg>{{hdrRun}}</sc-if>
+      </button>
+      <button type="button" class="ghost" sc-camel-on-click="{{reset}}"><svg width="12" height="12" sc-camel-view-box="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 1 0 1.7-4"></path><path d="M2.5 2.5V6H6"></path></svg>Reset</button>
+      <span class="mono" style="font-size: 12px; color: #A3A3A3; padding: 0 8px">{{clock}}</span>
+      <button type="button" class="ghost">Share</button>
+    </div>
+  </header>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto; min-height: 0">
+
+    <nav aria-label="Tools" style="flex: 0 0 76px; border-right: 1px solid #242424; background: rgba(17,17,17,0.84); padding: 12px 8px; display: flex; flex-direction: column; gap: 6px; box-sizing: border-box">
+      <sc-for list="{{tools}}" as="t" hint-placeholder-count="5">
+        <button type="button" class="{{t.cls}}" aria-pressed="{{t.pressed}}" sc-camel-on-click="{{t.pick}}" title="{{t.tip}}">
+          <svg width="22" height="22" sc-camel-view-box="0 0 22 22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{t.d}}"></path></svg>
+          <span>{{t.name}}</span>
+        </button>
+      </sc-for>
+      <div style="height: 1px; background: #242424; margin: 6px 0"></div>
+      <button type="button" class="tool" sc-camel-on-click="{{undo}}" title="Undo the last change"><svg width="22" height="22" sc-camel-view-box="0 0 22 22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6L4 10l4 4"></path><path d="M4 10h9a5 5 0 0 1 0 10h-3"></path></svg><span>Undo</span></button>
+      <button type="button" class="tool" sc-camel-on-click="{{clearAll}}" title="Start this level again"><svg width="22" height="22" sc-camel-view-box="0 0 22 22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h14M9 6V4h4v2M6 6l1 13h8l1-13"></path></svg><span>Clear</span></button>
+    </nav>
+
+    <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; box-sizing: border-box">
+      <div class="panel" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 8px 12px; min-height: 52px; box-sizing: border-box">
+        <sc-if value="{{showTypes}}" hint-placeholder-val="{{ true }}">
+          <div class="chips" role="group" aria-label="Piece to build" style="flex-wrap: wrap"><sc-for list="{{types}}" as="c" hint-placeholder-count="6"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}" title="{{c.tip}}"><span style="width: 16px; height: {{c.h}}px; border-radius: 2px; background: {{c.sw}}"></span>{{c.name}}</button></sc-for></div>
+        </sc-if>
+        <sc-if value="{{showFounds}}" hint-placeholder-val="{{ false }}">
+          <div class="chips" role="group" aria-label="Foundation type"><sc-for list="{{founds}}" as="c" hint-placeholder-count="2"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}" title="{{c.tip}}">{{c.name}}</button></sc-for></div>
+        </sc-if>
+        <sc-if value="{{showWeights}}" hint-placeholder-val="{{ false }}">
+          <div role="group" aria-label="Weight to add" style="display: flex; align-items: center; gap: 6px"><span class="lbl">Crate</span><div class="chips"><sc-for list="{{weights}}" as="c" hint-placeholder-count="4"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}">{{c.name}}</button></sc-for></div></div>
+        </sc-if>
+        <span style="font-size: 13px; color: #BDBDBD; flex: 1 1 200px">{{hint}}</span>
+        <sc-if value="{{hasPending}}" hint-placeholder-val="{{ false }}"><button type="button" class="ghost" sc-camel-on-click="{{finish}}">Finish line</button></sc-if>
+        <button type="button" class="{{numCls}}" aria-pressed="{{numPressed}}" sc-camel-on-click="{{toggleNums}}">Show forces</button>
+      </div>
+
+      <div class="{{stageCls}}" style="position: relative; width: 100%; aspect-ratio: 1120 / 600; border: 1px solid #242424; border-radius: 12px; overflow: hidden; background: #0C0D0F; touch-action: none" sc-camel-on-pointer-move="{{onMove}}" sc-camel-on-pointer-up="{{onUp}}" sc-camel-on-pointer-leave="{{onUp}}" sc-camel-on-wheel="{{onWheel}}">
+        <svg sc-camel-view-box="0 0 1120 600" width="100%" height="100%" role="img" aria-label="{{stageLabel}}" style="position: absolute; inset: 0; display: block">
+          <defs><pattern id="sgrid" x="{{gridX}}" y="{{gridY}}" width="{{gridW}}" height="{{gridW}}" sc-camel-pattern-units="userSpaceOnUse"><circle cx="0" cy="0" r="1.3" fill="#34373C"></circle></pattern></defs>
+          <rect x="0" y="0" width="1120" height="600" fill="url(#sgrid)"></rect>
+          <path d="{{waterD}}" fill="#0B1A24"></path>
+          <path class="{{flowCls}}" d="{{flowD}}" stroke="#24546E" stroke-width="2" stroke-dasharray="18 30" fill="none"></path>
+          <path d="{{soilD}}" fill="{{soilColor}}"></path>
+          <path d="{{grainD}}" fill="#000000" fill-opacity="0.22"></path>
+          <path d="{{bedD}}" fill="{{bedColor}}"></path>
+          <path d="{{topD}}" fill="{{soilTop}}"></path>
+          <path d="{{edgeD}}" stroke="#3A3A3E" stroke-width="3" fill="none"></path>
+          <path d="{{foundD}}" fill="#6E7178" stroke="#9A9DA4" stroke-width="1"></path>
+          <path class="{{flowCls}}" d="{{windD}}" stroke="#4CC3F0" stroke-opacity="0.5" stroke-width="1.5" stroke-dasharray="20 28" fill="none"></path>
+          <path d="{{windArrowD}}" stroke="#4CC3F0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="{{backD}}" stroke="#303338" stroke-width="3" fill="none" stroke-linecap="round"></path>
+          <path d="{{ghostD}}" stroke="#D6C7A1" stroke-opacity="0.55" stroke-width="2" stroke-dasharray="6 6" fill="none"></path>
+          <path d="{{facadeD}}" fill="#1D2A36" fill-opacity="0.78" stroke="#2C3B4A" stroke-width="0.8"></path>
+          <path d="{{facadeSideD}}" fill="#15202A" fill-opacity="0.85"></path>
+          <path d="{{winD}}" stroke="#D6C7A1" stroke-opacity="0.28" stroke-width="1.2" fill="none"></path>
+          <path d="{{roadTopD}}" fill="#46474C"></path>
+          <path d="{{roadFrontD}}" fill="#2A2B2F" stroke="#1C1D20" stroke-width="0.8"></path>
+          <path d="{{snowD}}" fill="#EEF3F6" fill-opacity="0.92"></path>
+          <path d="{{roadLineD}}" stroke="#D6C7A1" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="6 8" fill="none"></path>
+          <path d="{{concreteD}}" stroke="#9C9A92" stroke-width="7" fill="none" stroke-linecap="butt"></path>
+          <path d="{{woodD}}" stroke="#8A6A43" stroke-width="6" fill="none" stroke-linecap="round"></path>
+          <path d="{{steelD}}" stroke="#7E858F" stroke-width="4.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{ropeD}}" stroke="#B59A6A" stroke-width="2.4" fill="none" stroke-linecap="round"></path>
+          <path d="{{cableD}}" stroke="#C9CED6" stroke-width="2.2" fill="none" stroke-linecap="round"></path>
+          <path d="{{t1}}" stroke="#7FB0E0" stroke-opacity="0.5" stroke-width="2.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{t2}}" stroke="#7FB0E0" stroke-opacity="0.8" stroke-width="2.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{t3}}" stroke="#9CC6F0" stroke-opacity="1" stroke-width="2.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{c1}}" stroke="#E0905E" stroke-opacity="0.5" stroke-width="2.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{c2}}" stroke="#E0905E" stroke-opacity="0.8" stroke-width="2.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{c3}}" stroke="#F0A878" stroke-opacity="1" stroke-width="2.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{z}}" stroke="#6A6A6A" stroke-opacity="1" stroke-width="2.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{x}}" stroke="#E5534B" stroke-opacity="1" stroke-width="3.5" stroke-dasharray="9 6" fill="none" stroke-linecap="round"></path>
+          
+          <path d="{{crateWireD}}" stroke="#8A8F98" stroke-width="1.2" fill="none"></path>
+          <path d="{{crateSideD}}" fill="#5A4630"></path>
+          <path d="{{crateTopD}}" fill="#9C7E55"></path>
+          <path d="{{crateD}}" fill="#7E6442" stroke="#3E3022" stroke-width="1"></path>
+          <path d="{{vCarD}}" fill="#B9C0CA" stroke="#0C0D0F" stroke-width="1"></path>
+          <path d="{{vBusD}}" fill="#C9B98F" stroke="#0C0D0F" stroke-width="1"></path>
+          <path d="{{vBoxD}}" fill="#5A5F68" stroke="#0C0D0F" stroke-width="1"></path>
+          <path d="{{vCabD}}" fill="#A89A78" stroke="#0C0D0F" stroke-width="1"></path>
+          <path d="{{vWinD}}" fill="#1B2733"></path>
+          <path d="{{vWheelD}}" fill="#111214" stroke="#6A6E75" stroke-width="1.2"></path>
+          <path d="{{supD}}" fill="#8A8F98"></path>
+          <path d="{{targetD}}" stroke="#D6C7A1" stroke-opacity="0.6" stroke-width="1.5" stroke-dasharray="10 8" fill="none"></path>
+          <path d="{{splashD}}" stroke="#C9E2F0" stroke-width="2" fill="none" stroke-linecap="round"></path>
+          <path d="{{sparkD}}" stroke="#E5534B" stroke-width="2.5" fill="none" stroke-linecap="round"></path>
+          <path d="{{badD}}" stroke="#E5534B" stroke-width="2" fill="none" stroke-dasharray="4 3"></path>
+          <path d="{{hoverD}}" fill="#D6C7A1" fill-opacity="0.6"></path>
+          <path class="{{flakeCls}}" d="{{flakeD}}" fill="#F2F6F8" fill-opacity="0.75"></path>
+        </svg>
+
+        <button type="button" class="surface" style="cursor: {{cursor}}" aria-label="{{surfaceLabel}}" sc-camel-on-click="{{onSurface}}" sc-camel-on-pointer-down="{{onSurfaceDown}}"></button>
+
+        <sc-for list="{{memHandles}}" as="m" hint-placeholder-count="0">
+          <button type="button" class="{{m.cls}}" style="left: {{m.x}}%; top: {{m.y}}%" aria-label="{{m.label}}" sc-camel-on-click="{{m.pick}}">{{m.text}}</button>
+        </sc-for>
+        <sc-for list="{{joints}}" as="j" hint-placeholder-count="2">
+          <button type="button" class="{{j.cls}}" style="left: {{j.x}}%; top: {{j.y}}%" aria-label="{{j.label}}" sc-camel-on-click="{{j.pick}}" sc-camel-on-pointer-down="{{j.down}}"><span class="jdot"></span></button>
+        </sc-for>
+        <sc-for list="{{tags}}" as="l" hint-placeholder-count="0">
+          <span class="ltag" style="left: {{l.x}}%; top: {{l.y}}%; color: {{l.c}}">{{l.text}}</span>
+        </sc-for>
+
+        <div style="position: absolute; right: 12px; top: 12px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 60%; pointer-events: none">
+          <sc-for list="{{hud}}" as="h" hint-placeholder-count="3"><span class="pill" style="background: rgba(10,10,10,.85); color: {{h.c}}"><span class="mut" style="font-weight: 500">{{h.k}}</span>{{h.v}}</span></sc-for>
+        </div>
+
+        <sc-if value="{{toastOn}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; left: 50%; top: 14px; transform: translateX(-50%); padding: 6px 12px; border-radius: 8px; background: rgba(10,10,10,.92); border: 1px solid #3A3A3A; font-size: 13px; color: #EAEAEA">{{toast}}</span></sc-if>
+
+        <sc-if value="{{running}}" hint-placeholder-val="{{ false }}">
+          <div style="position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-radius: 10px; background: rgba(10,10,10,.92); border: 1px solid #3A3A3A; font-size: 13px">
+            <span class="mono">{{runInfo}}</span>
+            <button type="button" class="ghost" sc-camel-on-click="{{toggleSlow}}" style="min-height: 30px">{{slowLabel}}</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{showResult}}" hint-placeholder-val="{{ false }}">
+          <div style="position: absolute; left: 50%; top: 14px; transform: translateX(-50%); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; padding: 10px 14px; border-radius: 12px; background: rgba(10,10,10,.94); border: 1px solid {{resultBorder}}; max-width: 92%">
+            <span style="font: 600 15px 'Space Grotesk', Inter, sans-serif; color: {{resultColor}}">{{resultTitle}}</span>
+            <span class="mono" style="font-size: 14px; color: #D6C7A1">{{stars}}</span>
+            <button type="button" class="ghost" sc-camel-on-click="{{replay}}">Watch again, slow</button>
+            <button type="button" class="prim" sc-camel-on-click="{{backToBuild}}">Back to building</button>
+          </div>
+        </sc-if>
+
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px">
+        <div style="display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: #D9D9D9">
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 4px; border-radius: 2px; background: #7FB0E0"></span>Pulled</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 4px; border-radius: 2px; background: #E0905E"></span>Pushed</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 4px; border-radius: 2px; background: #5E5E5E"></span>Slack / idle</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 0; border-top: 3px dashed #E5534B"></span>Will break</span>
+          <span class="mut">Brighter means closer to breaking.</span>
+        </div>
+        <div role="group" aria-label="Zoom" style="display: flex; align-items: center; gap: 4px">
+          <button type="button" class="ghost" sc-camel-on-click="{{zoomOut}}" aria-label="Zoom out" style="width: 36px; padding: 0">−</button>
+          <span class="mono" style="min-width: 48px; text-align: center; font-size: 12px; color: #BDBDBD">{{zoomPct}}</span>
+          <button type="button" class="ghost" sc-camel-on-click="{{zoomIn}}" aria-label="Zoom in" style="width: 36px; padding: 0">+</button>
+          <button type="button" class="ghost" sc-camel-on-click="{{fitView}}">Fit</button>
+        </div>
+      </div>
+    </main>
+
+    <aside aria-label="Level, site and inspector" style="flex: 1 1 300px; max-width: 360px; min-width: 260px; border-left: 1px solid #242424; background: rgba(17,17,17,0.84); padding: 14px 12px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box">
+      <section style="display: flex; flex-direction: column; gap: 6px">
+        <sc-for list="{{levelGroups}}" as="g" hint-placeholder-count="3">
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <h2 class="lbl" style="margin-top: 4px">{{g.name}}</h2>
+            <sc-for list="{{g.items}}" as="v" hint-placeholder-count="3">
+              <button type="button" class="{{v.cls}}" aria-pressed="{{v.pressed}}" sc-camel-on-click="{{v.pick}}"><span>{{v.name}}</span><span class="mono" style="font-size: 12px; color: #D6C7A1">{{v.best}}</span></button>
+            </sc-for>
+          </div>
+        </sc-for>
+      </section>
+
+      <section class="panel" style="padding: 12px; display: flex; flex-direction: column; gap: 10px">
+        <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #D4D4D4">{{goal}}</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{chipsInfo}}" as="v" hint-placeholder-count="3"><span class="pill" style="color: #D9D9D9">{{v}}</span></sc-for></div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+          <span class="pill" style="color: {{statusColor}}"><span class="dot" style="background: {{statusColor}}"></span>{{statusLabel}}</span>
+          <span class="mono" style="font-size: 13px; color: {{costColor}}">{{costText}}</span>
+        </div>
+        <button type="button" class="prim" sc-camel-on-click="{{toggleRun}}" style="min-height: 44px; font-size: 14px">{{runLabel}}</button>
+      </section>
+
+      <sc-if value="{{isSandbox}}" hint-placeholder-val="{{ false }}">
+        <div class="chips" role="group" aria-label="Sandbox scene" style="flex-wrap: wrap"><sc-for list="{{sbScenes}}" as="c" hint-placeholder-count="2"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}">{{c.name}}</button></sc-for></div>
+      </sc-if>
+
+      <section class="well" style="padding: 12px; display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><h2 class="lbl">Conditions · change them any time</h2><sc-if value="{{canShake}}" hint-placeholder-val="{{ false }}"><button type="button" class="ghost" sc-camel-on-click="{{shakeNow}}" style="min-height: 30px">Shake now</button></sc-if></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><span class="mut" style="font-size: 12px">Wind</span><div class="chips" role="group" aria-label="Wind" style="flex-wrap: wrap"><sc-for list="{{cWinds}}" as="c" hint-placeholder-count="5"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}">{{c.name}}</button></sc-for></div><div class="chips" role="group" aria-label="Wind direction" style="flex-wrap: wrap"><sc-for list="{{cDirs}}" as="c" hint-placeholder-count="2"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}">{{c.name}}</button></sc-for></div></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><span class="mut" style="font-size: 12px">Snow</span><div class="chips" role="group" aria-label="Snow" style="flex-wrap: wrap"><sc-for list="{{cSnows}}" as="c" hint-placeholder-count="4"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}">{{c.name}}</button></sc-for></div></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><span class="mut" style="font-size: 12px">Earthquake</span><div class="chips" role="group" aria-label="Earthquake" style="flex-wrap: wrap"><sc-for list="{{cQuakes}}" as="c" hint-placeholder-count="4"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}">{{c.name}}</button></sc-for></div></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><span class="mut" style="font-size: 12px">Soil</span><div class="chips" role="group" aria-label="Soil" style="flex-wrap: wrap"><sc-for list="{{cSoils}}" as="c" hint-placeholder-count="5"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}"><span class="dot" style="background: {{c.sw}}"></span>{{c.name}}</button></sc-for></div></div>
+        <sc-if value="{{isRiver}}" hint-placeholder-val="{{ true }}"><div style="display: flex; flex-direction: column; gap: 4px"><span class="mut" style="font-size: 12px">Traffic</span><div class="chips" role="group" aria-label="Traffic" style="flex-wrap: wrap"><sc-for list="{{cTraffic}}" as="c" hint-placeholder-count="5"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}">{{c.name}}</button></sc-for></div></div></sc-if>
+      </section>
+
+      <sc-if value="{{selMember}}" hint-placeholder-val="{{ false }}">
+        <section class="well" style="padding: 12px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between"><h2 class="h">{{mi.title}}</h2><span class="mut" style="font-size: 12px">{{mi.len}}</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><div class="bar" style="flex: 1"><div style="width: {{mi.w}}%; height: 8px; background: {{mi.color}}"></div></div><span class="mono" style="font-size: 13px">{{mi.ut}}</span></div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #D4D4D4">{{mi.text}}</p>
+          <div class="chips" role="group" aria-label="Change this piece" style="flex-wrap: wrap"><sc-for list="{{mi.types}}" as="c" hint-placeholder-count="6"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}">{{c.name}}</button></sc-for></div>
+          <button type="button" class="ghost" sc-camel-on-click="{{mi.del}}">Delete piece</button>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{selNode}}" hint-placeholder-val="{{ false }}">
+        <section class="well" style="padding: 12px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between"><h2 class="h">{{ni.title}}</h2><span class="mut mono" style="font-size: 12px">{{ni.pos}}</span></div>
+          <div class="chips" role="group" aria-label="Foundation"><sc-for list="{{ni.founds}}" as="c" hint-placeholder-count="3"><button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" sc-camel-on-click="{{c.pick}}">{{c.name}}</button></sc-for></div>
+          <div style="display: flex; align-items: center; gap: 8px"><span class="lbl">Crate</span>
+            <button type="button" class="ghost" sc-camel-on-click="{{ni.less}}" aria-label="Lighter crate" style="width: 40px">−</button>
+            <span class="mono" style="min-width: 54px; text-align: center; font-size: 14px">{{ni.load}}</span>
+            <button type="button" class="ghost" sc-camel-on-click="{{ni.more}}" aria-label="Heavier crate" style="width: 40px">+</button>
+          </div>
+          <p class="mut" style="margin: 0; font-size: 12px; line-height: 1.5">{{ni.note}}</p>
+          <sc-if value="{{ni.canDel}}" hint-placeholder-val="{{ true }}"><button type="button" class="ghost" sc-camel-on-click="{{ni.del}}">Delete joint</button></sc-if>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{selNone}}" hint-placeholder-val="{{ true }}">
+        <section style="display: flex; flex-direction: column; gap: 8px">
+          <h2 class="lbl">Materials · how each one pulls and pushes</h2>
+          <sc-for list="{{typeInfo}}" as="t" hint-placeholder-count="6">
+            <div style="display: flex; align-items: center; gap: 10px; font-size: 12px; line-height: 1.4">
+              <svg width="56" height="30" sc-camel-view-box="0 0 56 30" aria-hidden="true" style="flex: 0 0 auto; background: #0D0D0D; border: 1px solid #242424; border-radius: 4px"><path d="M28 2V28M2 15H54" stroke="#2E2E2E" stroke-width="1"></path><path d="{{t.curve}}" stroke="{{t.sw}}" stroke-width="1.8" fill="none" stroke-linejoin="round"></path></svg>
+              <span style="flex: 1"><span style="font-weight: 600; color: #EAEAEA">{{t.name}}</span> <span class="mut">{{t.blurb}}</span></span>
+              <span class="mono mut">{{t.cost}}</span>
+            </div>
+          </sc-for>
+          <p class="mut" style="margin: 0; font-size: 11px">Right of centre: pulled. Left: pushed. Taller means stronger.</p>
+        </section>
+      </sc-if>
+
+      <section style="display: flex; flex-direction: column; gap: 6px">
+        <h2 class="lbl">What’s happening</h2>
+        <p style="margin: 0; font-size: 13px; line-height: 1.55; color: #D4D4D4; text-wrap: pretty">{{explain}}</p>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  presetDef() { return null; }
+  constructor(props) {
+    super(props);
+    const P = this.presetDef(); const lvl = P ? P.level : 'river', sc = (P && P.scene) || 'river';
+    this.state = Object.assign({ sbScene: sc }, this.levelState(lvl, sc), { tool: 'build', found: 'footing', weight: 5, nums: false, best: {}, toast: '', toastAt: 0, tick: 0, slow: false, pan: null });
+    this.hist = []; this.sim = null; this.pv = null; this.pvKey = ''; this.after = 0;
+    if (P) {
+      if (P.cond) this.state.cond = Object.assign({}, this.state.cond, P.cond);
+      if (P.build) this.buildPreset(P.build);
+      if (P.tool) this.state.tool = P.tool;
+      if (P.nums) this.state.nums = true;
+      if (P.view) this.state.view = Object.assign({}, this.state.view, P.view);
+    }
+  }
+  componentDidMount() { this.timer = setInterval(() => this.tick(), 33); const P = this.presetDef(); if (P && P.run) this.kick = setTimeout(() => this.startRun(false), 700); }
+  componentWillUnmount() { clearInterval(this.timer); clearTimeout(this.kick); }
+  buildPreset(b) {
+    const st = this.state; const add = (x, y) => this.addNode(x, y).id; const mem = (t, a, c) => { st.type = t; this.addMember(a, c); };
+    if (b.kind === 'truss') {
+      const bot = ['J1']; for (let x = 16; x <= 40; x += 8) bot.push(add(x, 0)); bot.push('J2');
+      for (let i = 0; i < bot.length - 1; i++) mem('road', bot[i], bot[i + 1]);
+      const top = []; for (let x = 16; x <= 40; x += 8) top.push(add(x, 6));
+      for (let i = 0; i < top.length - 1; i++) mem(b.chord, top[i], top[i + 1]);
+      mem(b.chord, 'J1', top[0]); mem(b.chord, top[3], 'J2');
+      for (let i = 0; i < 4; i++) mem(b.chord, bot[i + 1], top[i]);
+      mem(b.chord, top[0], bot[2]); mem(b.chord, top[1], bot[3]); mem(b.chord, top[3], bot[3]);
+      st.type = 'road';
+    }
+    if (b.kind === 'cable') {
+      const pl = add(0, 0), pr = add(56, 0); st.nodes = st.nodes.map((n) => (n.id === pl || n.id === pr ? Object.assign({}, n, { sup: 'pile' }) : n));
+      const d = [16, 24, 32, 40].map((x) => add(x, 0)); const deck = ['J1'].concat(d, ['J2']);
+      for (let i = 0; i < deck.length - 1; i++) mem('road', deck[i], deck[i + 1]);
+      const tl = add(8, 10), tr = add(48, 10);
+      mem('steel', 'J1', tl); mem('steel', 'J2', tr);
+      mem('cable', tl, pl); mem('cable', tl, d[0]); mem('cable', tl, d[1]);
+      mem('cable', tr, pr); mem('cable', tr, d[3]); mem('cable', tr, d[2]);
+      st.type = 'cable';
+    }
+    if (b.kind === 'tower') {
+      st.nodes = []; st.nN = 0; st.members = []; st.nM = 0;
+      const xs = []; for (let i = 0; i <= b.bays; i++) xs.push(100 - b.bays * 4 + i * 8);
+      let below = xs.map((x) => add(x, 0)); st.nodes = st.nodes.map((n) => Object.assign({}, n, { sup: b.found }));
+      for (let y = 4; y <= b.H; y += 4) {
+        const cur = xs.map((x) => add(x, y));
+        xs.forEach((x, i) => mem(b.col, below[i], cur[i]));
+        for (let i = 0; i < b.bays; i++) mem('floor', cur[i], cur[i + 1]);
+        for (let i = 0; i < b.bays; i++) mem(b.brace, below[i], cur[i + 1]);
+        below = cur;
+      }
+      st.type = 'floor';
+    }
+  }
+
+  // ---------- data ----------
+  types() {
+    return {
+      road: { name: 'Road', A: 0.02, E: 30e9, k: 2, fT: 25e6, fC: 40e6, mpm: 600, cost: 300, maxL: 10, tOnly: false, sw: '#46474C', h: 7, scene: 'river', deck: true, blurb: 'Vehicles drive on it. Heavy, weak when pulled.', tip: 'Road deck: vehicles drive on this' },
+      floor: { name: 'Floor', A: 0.02, E: 30e9, k: 2, fT: 25e6, fC: 40e6, mpm: 350, cost: 100, maxL: 10, tOnly: false, sw: '#3A4A5C', h: 7, scene: 'flat', deck: true, blurb: 'Gives the tower height and catches the wind.', tip: 'Floor slab: counts toward height, carries people' },
+      wood: { name: 'Wood', A: 0.02, E: 12e9, k: 1, fT: 30e6, fC: 30e6, rho: 550, cost: 90, maxL: 10, tOnly: false, sw: '#8A6A43', h: 6, blurb: 'Cheap. Pushes and pulls, snaps without warning.', tip: 'Wood beam: cheap, pushes and pulls' },
+      steel: { name: 'Steel', A: 0.006, E: 200e9, k: 1.5, fT: 250e6, fC: 250e6, rho: 7850, cost: 260, maxL: 14, tOnly: false, sw: '#7E858F', h: 4, duct: true, blurb: 'Strong and stiff both ways. Bends before it breaks.', tip: 'Steel beam: strong both ways' },
+      concrete: { name: 'Concrete', A: 0.06, E: 30e9, k: 1, fT: 2.5e6, fC: 40e6, rho: 2400, cost: 110, maxL: 8, tOnly: false, sw: '#9C9A92', h: 7, blurb: 'Great at pushing, terrible at pulling. Heavy.', tip: 'Concrete: strong when pushed, cracks when pulled' },
+      rope: { name: 'Rope', A: 0.0008, E: 2e9, k: 1, fT: 100e6, fC: 0, rho: 1100, cost: 25, maxL: 40, tOnly: true, sw: '#B59A6A', h: 2, blurb: 'Only pulls. Goes slack when pushed. Weak.', tip: 'Rope: only pulls, cheap and weak' },
+      cable: { name: 'Cable', A: 0.003, E: 160e9, k: 1, fT: 1500e6, fC: 0, rho: 7850, cost: 180, maxL: 40, tOnly: true, sw: '#C9CED6', h: 2, duct: true, blurb: 'Only pulls. Very strong for its weight.', tip: 'Steel cable: only pulls, very strong' }
+    };
+  }
+  soils() {
+    return {
+      rock: { name: 'Rock', color: '#45474B', top: '#55575C', liq: false, footing: [3e7, 3e6, 5e9], pile: [4e7, 2e7, 8e9] },
+      dense: { name: 'Dense sand', color: '#7E6E4C', top: '#958360', liq: false, footing: [1.6e6, 1e5, 2e7], pile: [6e6, 3e6, 1e8] },
+      stiff: { name: 'Stiff clay', color: '#6E5141', top: '#836251', liq: false, footing: [1e6, 1.5e5, 1e7], pile: [4e6, 2.5e6, 6e7] },
+      soft: { name: 'Soft clay', color: '#544C3F', top: '#665C4C', liq: false, footing: [2.5e5, 5e4, 1.5e6], pile: [1.6e6, 1e6, 2e7] },
+      loose: { name: 'Loose wet sand', color: '#8A7C58', top: '#9F906A', liq: true, footing: [5e5, 5e4, 4e6], pile: [2.5e6, 1.5e6, 3e7] }
+    };
+  }
+  vehicles() {
+    return {
+      car: { m: 1500, len: 4.4, ht: 1.4, d: 1.4, v: 10, label: 'Car · 1.5 t' },
+      bus: { m: 12000, len: 11, ht: 3.0, d: 3.8, v: 8, label: 'Bus · 12 t' },
+      truck: { m: 30000, len: 12, ht: 3.4, d: 4.6, v: 7, label: 'Truck · 30 t' }
+    };
+  }
+  winds() { return [[0, 'Calm'], [15, 'Breezy'], [25, 'Strong'], [35, 'Storm'], [50, 'Hurricane']]; }
+  snows() { return [[0, 'None'], [150, 'Light'], [400, 'Heavy'], [800, 'Blizzard']]; }
+  quakes() { return [[0, 'Off'], [0.15, 'Moderate'], [0.3, 'Strong'], [0.5, 'Huge']]; }
+  trafficSets() { return [['level', 'Level traffic'], ['rush', 'Rush hour'], ['buses', 'Buses'], ['trucks', 'Trucks'], ['convoy', 'Convoy']]; }
+  levels() {
+    return {
+      river: { group: 'Bridges', name: '1 · First crossing', goal: 'Get three cars across. Only Road carries traffic, and on its own it hangs like a chain. Hold it up. Budget $22k.', scene: 'river', soil: 'dense', bed: 'soft', wind: 0, snow: 0, quake: 0, budget: 22, sup: 'banks', traffic: ['car', 'car', 'car'], anchors: [[8, 0, 'footing'], [48, 0, 'footing']] },
+      bus: { group: 'Bridges', name: '2 · Bus route', goal: 'A 12 t bus between two cars. Piles sit back on each bank: they hold a cable’s pull far better than a footing. Budget $30k.', scene: 'river', soil: 'dense', bed: 'soft', wind: 0, snow: 0, quake: 0, budget: 30, sup: 'banks', traffic: ['car', 'bus', 'car'], anchors: [[8, 0, 'footing'], [48, 0, 'footing'], [2, 0, 'pile'], [54, 0, 'pile']] },
+      haul: { group: 'Bridges', name: '3 · Heavy haul', goal: 'A 30 t truck in a snowstorm. You may found piers on the riverbed, but it is soft clay: a footing there will sink. Budget $45k.', scene: 'river', soil: 'dense', bed: 'soft', wind: 15, snow: 400, quake: 0, budget: 45, sup: 'any', traffic: ['car', 'truck'], anchors: [[8, 0, 'footing'], [48, 0, 'footing']] },
+      t1: { group: 'Towers', name: '4 · First tower', goal: 'Stack Floors up to the 40 m line and keep it standing through a breezy afternoon. Floors catch the wind. Budget $70k.', scene: 'flat', soil: 'dense', wind: 15, snow: 0, quake: 0, budget: 70, target: 40, comfort: 100, sup: 'any', traffic: [], anchors: [[92, 0, 'footing'], [108, 0, 'footing']] },
+      t2: { group: 'Towers', name: '5 · Storm tower', goal: 'Reach 64 m and ride out a storm without making everyone seasick. A wide base, bracing and piles all help. Budget $260k.', scene: 'flat', soil: 'stiff', wind: 35, snow: 0, quake: 0, budget: 260, target: 64, comfort: 300, sup: 'any', traffic: [], anchors: [[92, 0, 'footing'], [108, 0, 'footing']] },
+      t3: { group: 'Towers', name: '6 · Shaky ground', goal: 'A 32 m tower on loose wet sand, then a strong earthquake. Shaking turns the sand to soup under footings. Budget $65k.', scene: 'flat', soil: 'loose', wind: 0, snow: 0, quake: 0.3, budget: 65, target: 32, comfort: null, sup: 'any', traffic: [], anchors: [[92, 0, 'footing'], [108, 0, 'footing']] },
+      sandbox: { group: 'Sandbox', name: 'Sandbox', goal: 'No budget, no rules, no time limit. Build anything, change the weather while it runs, and stop when you like.', budget: null, sup: 'any', soil: 'dense', bed: 'dense', wind: 0, snow: 0, quake: 0 }
+    };
+  }
+  spec(st) {
+    const base = this.levels()[st.level];
+    if (st.level !== 'sandbox') return base;
+    const river = st.sbScene === 'river';
+    return Object.assign({}, base, { scene: st.sbScene, traffic: river ? ['car', 'bus', 'truck'] : [], target: null, comfort: null, anchors: river ? [[8, 0, 'footing'], [48, 0, 'footing']] : [[92, 0, 'footing'], [108, 0, 'footing']] });
+  }
+  L(st) {
+    st = st || this.state; const sp = this.spec(st); const c = st.cond;
+    const tr = { level: sp.traffic, rush: ['car', 'car', 'car', 'car', 'car', 'car', 'car', 'car'], buses: ['bus', 'bus', 'bus'], trucks: ['truck', 'truck'], convoy: ['car', 'bus', 'truck', 'car', 'truck'] }[c.traffic] || sp.traffic;
+    return Object.assign({}, sp, { soil: c.soil, bed: c.soil === sp.soil ? (sp.bed || sp.soil) : c.soil, wind: c.wind, dir: c.dir, snow: c.snow, quake: c.quake, traffic: sp.scene === 'river' ? tr : [] });
+  }
+  defaultView(scene) { return scene === 'flat' ? { cx: 100, cy: 40, z: 1 } : { cx: 28, cy: 4.4, z: 1 }; }
+  levelState(key, sbScene) {
+    const st = { level: key, sbScene: sbScene || (this.state && this.state.sbScene) || 'river' };
+    const sp = this.spec(st);
+    const cond = { wind: sp.wind || 0, dir: 1, snow: sp.snow || 0, quake: sp.quake || 0, soil: sp.soil, traffic: 'level' };
+    const nodes = sp.anchors.map((n, i) => ({ id: 'J' + (i + 1), x: n[0], y: n[1], sup: n[2], locked: sp.scene !== 'flat' }));
+    return { level: key, sbScene: st.sbScene, cond, view: this.defaultView(sp.scene), nodes, members: [], loads: {}, nN: nodes.length, nM: 0, pending: null, sel: null, phase: 'build', hover: null, drag: null, result: null, type: sp.scene === 'flat' ? 'floor' : 'road' };
+  }
+  cam(st) {
+    st = st || this.state; const flat = this.spec(st).scene === 'flat'; const v = st.view;
+    const base = flat ? 5 : 18; const SC = base * v.z; const g0 = flat ? 4 : 2;
+    const grid = v.z >= 2.5 ? g0 / 2 : (v.z < 0.6 ? g0 * 2 : g0);
+    return { SC, grid, X: (x) => 560 + (x - v.cx) * SC, Y: (y) => 300 - (y - v.cy) * SC, xmin: flat ? -40 : -20, xmax: flat ? 240 : 76, ymin: flat ? 0 : -12, ymax: flat ? 200 : 40, off: [Math.max(4, 14 * Math.min(1.4, SC / 18)), -Math.max(2.5, 9 * Math.min(1.4, SC / 18))] };
+  }
+  ground(x, L) { L = L || this.L(); return L.scene === 'flat' ? 0 : (x <= 8 || x >= 48 ? 0 : -12); }
+  supOk(x, y) {
+    const L = this.L();
+    if (L.scene === 'flat') return Math.abs(y) < 0.01;
+    const onBank = Math.abs(y) < 0.01 && (x <= 8 || x >= 48);
+    const onBed = Math.abs(y + 12) < 0.01 && x > 8 && x < 48;
+    return L.sup === 'banks' ? onBank : (onBank || onBed);
+  }
+  soilAt(n, L) { return L.scene === 'river' && n.y < -11 ? (L.bed || L.soil) : L.soil; }
+  cost(st) {
+    const T = this.types(); const byId = {}; st.nodes.forEach((n) => { byId[n.id] = n; });
+    let c = 0; st.members.forEach((m) => { const a = byId[m.a], b = byId[m.b]; c += Math.hypot(b.x - a.x, b.y - a.y) * T[m.type].cost; });
+    st.nodes.forEach((n) => { if (n.sup && !n.locked) c += n.sup === 'pile' ? 1500 : 300; });
+    return c / 1000;
+  }
+  practice(st) {
+    const sp = this.spec(st), c = st.cond;
+    if (st.level === 'sandbox') return false;
+    return c.wind < (sp.wind || 0) || c.snow < (sp.snow || 0) || c.quake < (sp.quake || 0) || c.soil !== sp.soil || c.traffic !== 'level';
+  }
+
+  // ---------- physics: one settling engine for everything ----------
+  makeSim(st, live) {
+    const T = this.types(), V = this.vehicles(), SO = this.soils(); const L = this.L(st);
+    const idx = {};
+    const P = st.nodes.map((n, i) => {
+      idx[n.id] = i;
+      const p = { id: n.id, x: n.x, y: n.y, px: n.x, py: n.y, vx: 0, vy: 0, m: 40 + (st.loads[n.id] || 0) * 1000, fx: 0, fy: 0, sup: n.sup || null, x0: n.x, y0: n.y, ys: n.y, used: false, R: 0, fstate: 'ok', overC: false, overT: false };
+      if (n.sup) { const so = SO[this.soilAt(n, L)]; const f = so[n.sup]; p.Qc = f[0]; p.Qt = f[1]; p.ks = f[2]; p.liq = so.liq; p.m += 800; }
+      return p;
+    });
+    const C = st.members.map((m) => {
+      const a = idx[m.a], b = idx[m.b], t = T[m.type];
+      const Lm = Math.hypot(P[b].x - P[a].x, P[b].y - P[a].y); const mass = (t.mpm || t.A * t.rho) * Lm;
+      P[a].m += mass / 2; P[b].m += mass / 2; P[a].used = true; P[b].used = true;
+      const I = t.k * t.A * t.A; const pcr = Math.PI * Math.PI * t.E * I / (Lm * Lm);
+      return { id: m.id, a, b, type: m.type, L: Lm, kk: (t.E / 15) * t.A / Lm, capT: t.A * t.fT, capC: t.tOnly ? Infinity : Math.min(t.A * t.fC, pcr), buckles: !t.tOnly && pcr < t.A * t.fC, tOnly: t.tOnly, deck: !!t.deck, road: m.type === 'road', N: 0, avg: 0, broken: false, over: false, slack: false, exposed: false };
+    });
+    // snow sits on decks and floors with nothing above them
+    C.forEach((c) => {
+      if (!c.deck) return; const a = st.nodes[c.a], b = st.nodes[c.b]; const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      c.exposed = !C.some((o) => { if (o === c || !o.deck) return false; const p = st.nodes[o.a], q = st.nodes[o.b]; return Math.min(p.x, q.x) <= mx && Math.max(p.x, q.x) >= mx && (p.y + q.y) / 2 > my + 0.5; });
+    });
+    P.forEach((p) => { p.inv = (!p.used && !st.loads[p.id] && !p.sup) || (p.sup && !p.used && !st.loads[p.id]) ? 0 : 1 / p.m; });
+    const lvL = {}, lvR = {};
+    st.members.forEach((m) => { if (m.type !== 'floor') return; [idx[m.a], idx[m.b]].forEach((i) => { const y = Math.round(st.nodes[i].y); if (y <= 0) return; if (lvL[y] === undefined || st.nodes[i].x < st.nodes[lvL[y]].x) lvL[y] = i; if (lvR[y] === undefined || st.nodes[i].x > st.nodes[lvR[y]].x) lvR[y] = i; }); });
+    const windL = Object.keys(lvL).map((y) => ({ i: lvL[y], y: Number(y) })), windR = Object.keys(lvR).map((y) => ({ i: lvR[y], y: Number(y) }));
+    const xs = st.nodes.filter((n, i) => P[i].used).map((n) => n.x); const width = xs.length ? Math.max(8, Math.max.apply(null, xs) - Math.min.apply(null, xs)) : 8;
+    let topI = -1; st.members.forEach((m) => { if (m.type !== 'floor') return; [idx[m.a], idx[m.b]].forEach((i) => { if (topI < 0 || st.nodes[i].y > st.nodes[topI].y) topI = i; }); });
+    let x0 = 2; const Vs = (L.traffic || []).map((k) => { const v = V[k]; const o = { k, m: v.m, len: v.len, ht: v.ht, d: v.d, speed: v.v, x: x0, y: 0, ang: 0, state: 'drive', vx: 0, vy: 0, ax: [null, null] }; x0 -= v.len + 12; return o; });
+    const cond = st.cond;
+    return { P, C, V: Vs, L, cond, t: 0, sparks: [], splashes: [], firstBreak: null, firstFound: null, endAt: null, windL, windR, width, topI, topY0: topI >= 0 ? st.nodes[topI].y : 0, sway: 0, peakA: 0, aS: 0, lastVx: 0, env: 0,
+      windNow: live ? 0 : 0, snowNow: live ? 0 : cond.snow, quakeStart: cond.quake > 0 ? 3 : null, lastQuake: cond.quake, sandbox: st.level === 'sandbox' };
+  }
+  support(S, x, yHint) {
+    let best = null;
+    S.C.forEach((c) => {
+      if (c.broken || !c.road) return;
+      const a = S.P[c.a], b = S.P[c.b]; const lo = Math.min(a.x, b.x), hi = Math.max(a.x, b.x);
+      if (x < lo - 0.05 || x > hi + 0.05 || hi - lo < 0.2) return;
+      const f = Math.max(0, Math.min(1, (x - a.x) / (b.x - a.x))); const y = a.y + (b.y - a.y) * f;
+      const dist = Math.abs(y - yHint); if (dist > 1.3) return;
+      if (!best || dist < best.dist) best = { c, f, y, dist };
+    });
+    if ((x <= 8 || x >= 48) && Math.abs(yHint) < 1.3 && (!best || Math.abs(yHint) < best.dist)) return { c: null, f: 0, y: 0, dist: Math.abs(yHint) };
+    return best;
+  }
+  step(S, h, damp, live) {
+    const L = S.L, cond = S.cond; const g = 9.81 * Math.min(1, S.t / (live ? 0.8 : 0.3));
+    const P = S.P;
+    P.forEach((p) => { p.fx = 0; p.fy = 0; });
+    // weather changes gradually, never in a jump
+    if (live) {
+      const wT = S.t < 1 ? 0 : cond.wind; S.windNow += (wT - S.windNow) * Math.min(1, h * 0.5);
+      const sd = cond.snow - S.snowNow; S.snowNow += Math.sign(sd) * Math.min(Math.abs(sd), 90 * h);
+      if (cond.quake !== S.lastQuake) { if (cond.quake > 0 && (S.quakeStart === null || S.t - S.quakeStart > 11)) S.quakeStart = S.t + 0.5; S.lastQuake = cond.quake; }
+    }
+    if (live) S.V.forEach((v) => {
+      if (v.state !== 'drive') return;
+      v.ax.forEach((s) => { if (s && s.c) { const W = v.m * 9.81 / 2; P[s.c.a].fy -= W * (1 - s.f); P[s.c.b].fy -= W * s.f; } });
+    });
+    if (S.snowNow > 0) S.C.forEach((c) => { if (c.broken || !c.exposed) return; const W = S.snowNow * 9.81 * c.L * Math.min(1, S.t / 0.3) / 2; P[c.a].fy -= W; P[c.b].fy -= W; });
+    if (live && S.windNow > 0.5) {
+      const W = S.windNow; const dir = cond.dir || 1;
+      const topY = Math.max(10, S.topY0); const vTop = W * Math.pow(topY / 10, 0.2); const fg = 0.12 * vTop / S.width;
+      const gust = 1 + 0.3 * Math.sin(2 * Math.PI * fg * S.t) + 0.15 * Math.sin(2 * Math.PI * 0.37 * S.t) + 0.1 * Math.sin(2 * Math.PI * 0.13 * S.t + 1);
+      (dir > 0 ? S.windL : S.windR).forEach((w) => { const v = W * Math.pow(Math.max(w.y, 4) / 10, 0.2); P[w.i].fx += dir * 0.613 * v * v * 1.3 * 4 * 4 * gust; });
+      const q10 = 0.613 * W * W;
+      S.C.forEach((c) => { if (c.broken || !c.road) return; const a = P[c.a], b = P[c.b]; const lift = q10 * 0.25 * 10 * c.L * Math.sin(2 * Math.PI * 0.45 * S.t + 0.35 * (a.x + b.x) / 2) / 2; a.fy += lift; b.fy += lift; });
+    }
+    let shake = 0; S.env = 0;
+    if (live && S.quakeStart !== null && cond.quake > 0) { const t = S.t - S.quakeStart; S.env = t < 0 ? 0 : (t < 2 ? t / 2 : (t < 7 ? 1 : (t < 9 ? (9 - t) / 2 : 0))); shake = cond.quake * S.env * Math.sin(2 * Math.PI * 1.1 * S.t); }
+    P.forEach((p) => {
+      if (p.inv === 0) return;
+      p.vx += p.fx * p.inv * h; p.vy += (-g + p.fy * p.inv) * h;
+      p.vx *= damp; p.vy *= damp;
+      p.px = p.x; p.py = p.y; p.x += p.vx * h; p.y += p.vy * h;
+    });
+    const h2 = h * h;
+    S.C.forEach((c) => {
+      if (c.broken) return;
+      const a = P[c.a], b = P[c.b]; const dx = b.x - a.x, dy = b.y - a.y; const len = Math.hypot(dx, dy) || 1e-6;
+      const Cv = len - c.L;
+      if (c.tOnly && Cv <= 0) { c.N = 0; c.slack = true; return; }
+      c.slack = false;
+      const w = a.inv + b.inv; if (w === 0) { c.N = 0; return; }
+      const at = 1 / (c.kk * h2); const dl = -Cv / (w + at);
+      const nx = dx / len, ny = dy / len;
+      a.x -= a.inv * dl * nx; a.y -= a.inv * dl * ny; b.x += b.inv * dl * nx; b.y += b.inv * dl * ny;
+      c.N = -dl / h2;
+    });
+    P.forEach((p) => {
+      if (!p.sup || p.fstate === 'ripped' || p.inv === 0) return;
+      const lf = p.liq && S.env > 0.2 ? (p.sup === 'pile' ? 0.6 : 0.15) : 1;
+      const ks = p.ks * (lf < 1 ? 0.3 : 1);
+      p.x = p.x0 + shake;
+      const Cv = p.y - p.ys; const at = 1 / (ks * h2); const dl = -Cv / (p.inv + at);
+      p.y += p.inv * dl; const R = dl / h2; p.R = p.R * 0.97 + R * 0.03;
+      p.overC = p.R > p.Qc * lf; p.overT = -p.R > p.Qt * lf;
+      if (!live) return;
+      if (p.overC && S.t > 0.5) { p.ys -= (p.R - p.Qc * lf) / ks * 0.02; if (!S.firstFound && p.y0 - p.ys > 0.3) S.firstFound = { id: p.id, mode: lf < 1 ? 'liquefied' : 'sank' }; }
+      if (p.overT && S.t > 0.5) { p.fstate = 'ripped'; p.sup = null; S.sparks.push({ x: p.x, y: p.y }); if (!S.firstFound) S.firstFound = { id: p.id, mode: 'ripped out' }; }
+    });
+    P.forEach((p) => {
+      if (p.inv === 0) return;
+      if (!p.sup) { const gr = this.ground(p.x, L); if (p.y < gr) { p.y = gr; p.px = p.x - (p.x - p.px) * 0.5; } }
+      if (p.x < -60) p.x = -60; if (p.x > 300) p.x = 300;
+      p.vx = (p.x - p.px) / h; p.vy = (p.y - p.py) / h;
+      if (L.scene === 'river' && p.y < -8) { p.vx *= 0.97; p.vy *= 0.97; }
+    });
+    S.C.forEach((c) => {
+      if (c.broken) return;
+      c.avg = c.avg * 0.96 + c.N * 0.04;
+      const over = c.avg > c.capT || -c.avg > c.capC;
+      if (!live) { c.over = over; return; }
+      if (over && S.t > 0.5) {
+        c.broken = true; const a = P[c.a], b = P[c.b];
+        S.sparks.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+        if (!S.firstBreak) S.firstBreak = { id: c.id, type: c.type, mode: c.avg > 0 ? (c.type === 'concrete' ? 'cracked' : 'snapped') : (c.buckles ? 'buckled' : 'crushed'), t: S.t };
+      }
+    });
+    if (live) S.V.forEach((v) => {
+      if (v.state === 'drive') {
+        if (S.t < 1) return;
+        v.x += v.speed * h;
+        const r = this.support(S, v.x + v.d, v.y + v.d * Math.sin(v.ang)), f = this.support(S, v.x - v.d, v.y - v.d * Math.sin(v.ang));
+        v.ax = [f, r];
+        if (!r || !f) { v.state = 'fall'; v.vx = v.speed; v.vy = 0; return; }
+        v.y = (r.y + f.y) / 2; v.ang = Math.atan2(r.y - f.y, 2 * v.d);
+        if (v.x > 70) { if (S.sandbox) { v.x = -20; v.y = 0; v.ang = 0; v.ax = [null, null]; v.laps = (v.laps || 0) + 1; } else v.state = 'done'; }
+      } else if (v.state === 'fall') {
+        v.vy -= 9.81 * h; v.x += v.vx * h; v.y += v.vy * h; v.ang = Math.max(-0.9, v.ang - 0.6 * h);
+        if (v.y < -8.5) { v.state = 'sunk'; S.splashes.push({ x: v.x, t: S.t }); v.y = -9.2; }
+        else if (v.y < this.ground(v.x, L)) { v.state = 'crashed'; v.y = this.ground(v.x, L); }
+      }
+    });
+    S.t += h;
+  }
+  preview(st) {
+    const key = JSON.stringify([st.nodes, st.members, st.loads, st.level, st.sbScene, st.cond.soil, st.cond.snow]);
+    if (key === this.pvKey && this.pv) return this.pv;
+    const S = this.makeSim(st, false);
+    const h = 1 / 400;
+    for (let i = 0; i < 520; i++) this.step(S, h, 0.985, false);
+    let moved = 0, movedId = null;
+    S.P.forEach((p, i) => { const d = Math.hypot(p.x - st.nodes[i].x, p.y - st.nodes[i].y); if (p.inv > 0 && !p.sup && d > moved) { moved = d; movedId = p.id; } });
+    const res = {}; S.C.forEach((c) => { res[c.id] = { N: c.avg, over: c.over, slack: c.slack, capT: c.capT, capC: c.capC, L: c.L, exposed: c.exposed }; });
+    const found = {}; S.P.forEach((p) => { if (p.sup) found[p.id] = { R: p.R, Qc: p.Qc, Qt: p.Qt, overC: p.overC, overT: p.overT }; });
+    this.pv = { res, found, moved, movedId }; this.pvKey = key;
+    return this.pv;
+  }
+
+  // ---------- loop ----------
+  tick() {
+    const s = this.state;
+    if (s.toast && Date.now() - s.toastAt > 2600) this.setState({ toast: '' });
+    const P = this.presetDef();
+    if (s.phase === 'result' && P && P.loop) { this.after += 1; if (this.after > 110) { this.after = 0; this.startRun(false); } return; }
+    if (s.phase !== 'run' || !this.sim) return;
+    const S = this.sim; S.cond = s.cond; const L = S.L; const dtFrame = (1 / 30) * (s.slow ? 0.3 : 1); const n = 20; const h = dtFrame / n;
+    for (let i = 0; i < n; i++) this.step(S, h, 1 - 0.4 * h, true);
+    if (S.topI >= 0 && S.t > 1.2) {
+      const p = S.P[S.topI]; S.sway = Math.max(S.sway, Math.abs(p.x - p.x0));
+      const a = (p.vx - S.lastVx) / dtFrame; S.lastVx = p.vx; S.aS = S.aS * 0.6 + Math.abs(a) * 0.4; if (S.t > 2) S.peakA = Math.max(S.peakA, S.aS);
+    }
+    let done = false;
+    if (!S.sandbox) {
+      if (L.scene === 'river') {
+        const left = S.V.filter((v) => v.state === 'drive' || v.state === 'fall').length;
+        if (left === 0 && S.endAt === null) S.endAt = S.t + 1.2;
+        done = (S.endAt !== null && S.t > S.endAt) || S.t > 45;
+      } else done = S.t > 18;
+    }
+    if (done) {
+      const cost = this.cost(s); let pass, stars = 0, info = {};
+      if (L.scene === 'river') { const crossed = S.V.filter((v) => v.state === 'done').length; pass = crossed === S.V.length && S.V.length > 0; info = { crossed, total: S.V.length }; }
+      else {
+        const top = S.topI >= 0 ? S.P[S.topI] : null; const standing = top && top.y > S.topY0 * 0.8; const reached = !L.target || S.topY0 >= L.target - 0.01; const mg = S.peakA / 9.81 * 1000; const comfy = !L.comfort || mg <= L.comfort;
+        pass = !!(standing && reached && comfy && S.topI >= 0); info = { standing, reached, mg, comfy, height: S.topY0, sway: S.sway };
+      }
+      const practice = this.practice(s);
+      if (pass && L.budget && !practice) { if (cost <= L.budget) stars = 1; if (cost <= L.budget * 0.8) stars = 2; if (cost <= L.budget * 0.6) stars = 3; }
+      const best = Object.assign({}, s.best); if (stars > (best[s.level] || 0)) best[s.level] = stars;
+      this.setState({ phase: 'result', result: Object.assign({ pass, stars, cost, practice, first: S.firstBreak, firstFound: S.firstFound }, info), best });
+      return;
+    }
+    this.setState({ tick: s.tick + 1 });
+  }
+  startRun(slow) {
+    const st = this.state; const L = this.L();
+    if (L.scene === 'river' && !st.members.some((m) => m.type === 'road')) this.say('Nothing to drive on yet: build some Road first.');
+    if (L.scene === 'flat' && !st.members.some((m) => m.type === 'floor')) this.say('No Floors yet, so there is no height to measure.');
+    this.sim = this.makeSim(st, true);
+    this.setState({ phase: 'run', slow: !!slow, sel: null, pending: null, hover: null, result: null });
+  }
+  stopRun() { this.sim = null; this.setState({ phase: 'build', result: null }); }
+
+  // ---------- view ----------
+  toWorld(e) {
+    const c = this.cam(); const v = this.state.view;
+    const r = e.currentTarget.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width * 1120, py = (e.clientY - r.top) / r.height * 600;
+    return { x: v.cx + (px - 560) / c.SC, y: v.cy - (py - 300) / c.SC, px, py };
+  }
+  snap(e) {
+    const c = this.cam(); const w = this.toWorld(e);
+    const x = Math.round(w.x / c.grid) * c.grid, y = Math.round(w.y / c.grid) * c.grid;
+    return { x: Math.max(c.xmin, Math.min(c.xmax, x)), y: Math.max(c.ymin, Math.min(c.ymax, y)) };
+  }
+  zoomBy(f, px, py) {
+    const v = this.state.view; const c = this.cam(); const z = Math.max(0.35, Math.min(5, v.z * f));
+    px = px === undefined ? 560 : px; py = py === undefined ? 300 : py;
+    const wx = v.cx + (px - 560) / c.SC, wy = v.cy - (py - 300) / c.SC;
+    const SC2 = c.SC / v.z * z;
+    this.setState({ view: { z, cx: wx - (px - 560) / SC2, cy: wy + (py - 300) / SC2 } });
+  }
+  fit() {
+    const s = this.state; const sp = this.spec(s);
+    if (!s.nodes.length) { this.setState({ view: this.defaultView(sp.scene) }); return; }
+    const xs = s.nodes.map((n) => n.x), ys = s.nodes.map((n) => n.y).concat([sp.scene === 'river' ? -12 : 0, sp.target || 0]);
+    const x0 = Math.min.apply(null, xs) - 6, x1 = Math.max.apply(null, xs) + 6, y0 = Math.min.apply(null, ys) - 4, y1 = Math.max.apply(null, ys) + 6;
+    const base = sp.scene === 'flat' ? 5 : 18; const z = Math.max(0.35, Math.min(5, Math.min(1000 / ((x1 - x0) * base), 520 / ((y1 - y0) * base))));
+    this.setState({ view: { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, z } });
+  }
+
+  // ---------- editing ----------
+  push() { const s = this.state; this.hist.push(JSON.stringify({ nodes: s.nodes, members: s.members, loads: s.loads, nN: s.nN, nM: s.nM })); if (this.hist.length > 40) this.hist.shift(); }
+  say(t) { this.setState({ toast: t, toastAt: Date.now() }); }
+  addNode(x, y) {
+    const s = this.state;
+    if (y < this.ground(x) - 0.01) { this.say('That spot is underground.'); return null; }
+    const ex = s.nodes.find((n) => n.x === x && n.y === y); if (ex) return ex;
+    const n = { id: 'J' + (s.nN + 1), x, y, sup: null, locked: false };
+    this.state.nodes = s.nodes.concat([n]); this.state.nN = s.nN + 1; return n;
+  }
+  addMember(a, b) {
+    const s = this.state; const T = this.types()[s.type];
+    if (a === b) return false;
+    const A = s.nodes.find((n) => n.id === a), B = s.nodes.find((n) => n.id === b);
+    const len = Math.hypot(B.x - A.x, B.y - A.y);
+    if (len > T.maxL + 0.01) { this.say(T.name + ' pieces can be at most ' + T.maxL + ' m. Add a joint in between.'); return false; }
+    const dup = s.members.find((m) => (m.a === a && m.b === b) || (m.a === b && m.b === a));
+    if (dup) { this.state.members = s.members.map((m) => (m === dup ? Object.assign({}, m, { type: s.type }) : m)); return true; }
+    this.state.members = s.members.concat([{ id: 'M' + (s.nM + 1), a, b, type: s.type }]); this.state.nM = s.nM + 1; return true;
+  }
+  delNode(id) {
+    const s = this.state; const n = s.nodes.find((q) => q.id === id); if (!n || n.locked) { this.say('Level foundations stay put.'); return; }
+    this.push(); const loads = Object.assign({}, s.loads); delete loads[id];
+    this.setState({ nodes: s.nodes.filter((q) => q.id !== id), members: s.members.filter((m) => m.a !== id && m.b !== id), loads, sel: null, pending: s.pending === id ? null : s.pending });
+  }
+  delMember(id) { this.push(); this.setState({ members: this.state.members.filter((m) => m.id !== id), sel: null }); }
+  setFound(id, f) {
+    const s = this.state; const n = s.nodes.find((q) => q.id === id);
+    if (n.locked) { this.say('Level foundations stay put.'); return; }
+    if (f && !this.supOk(n.x, n.y)) { this.say(this.L().scene === 'flat' ? 'Foundations go on the ground.' : (this.L().sup === 'banks' ? 'Foundations go on a riverbank in this level.' : 'Foundations go on a bank or the riverbed.')); return; }
+    this.push(); this.setState({ nodes: s.nodes.map((q) => (q.id === id ? Object.assign({}, q, { sup: f }) : q)) });
+  }
+  addLoad(id, t) {
+    const loads = Object.assign({}, this.state.loads); const nv = Math.max(0, Math.min(100, (loads[id] || 0) + t));
+    this.push(); if (nv === 0) delete loads[id]; else loads[id] = nv; this.setState({ loads });
+  }
+  building() { return this.state.phase === 'build'; }
+  clickNode(n) {
+    const s = this.state; if (!this.building()) return;
+    if (s.tool === 'select') { this.setState({ sel: { k: 'node', id: n.id } }); return; }
+    if (s.tool === 'build') {
+      if (!s.pending) { this.setState({ pending: n.id }); return; }
+      if (s.pending === n.id) { this.setState({ pending: null }); return; }
+      this.push(); const ok = this.addMember(s.pending, n.id); this.setState({ pending: ok ? n.id : s.pending, members: this.state.members, nM: this.state.nM }); return;
+    }
+    if (s.tool === 'anchor') { this.setFound(n.id, n.sup === s.found ? null : s.found); return; }
+    if (s.tool === 'weight') { this.addLoad(n.id, s.weight); return; }
+    if (s.tool === 'erase') this.delNode(n.id);
+  }
+  clickSurface(e) {
+    const s = this.state; if (!this.building()) return;
+    const p = this.snap(e);
+    if (s.tool === 'build') {
+      if (s.pending) { const A = s.nodes.find((n) => n.id === s.pending); const T = this.types()[s.type]; if (Math.hypot(p.x - A.x, p.y - A.y) > T.maxL + 0.01) { this.say(T.name + ' pieces can be at most ' + T.maxL + ' m.'); return; } }
+      this.push(); const n = this.addNode(p.x, p.y); if (!n) return;
+      if (s.pending) this.addMember(s.pending, n.id);
+      this.setState({ nodes: this.state.nodes, nN: this.state.nN, members: this.state.members, nM: this.state.nM, pending: n.id }); return;
+    }
+    if (s.tool === 'anchor') {
+      const n0 = s.nodes.find((n) => n.x === p.x && n.y === p.y); if (n0) { this.clickNode(n0); return; }
+      if (!this.supOk(p.x, p.y)) { this.say('Foundations go on the ground.'); return; }
+      this.push(); const n = this.addNode(p.x, p.y); if (n) { this.state.nodes = this.state.nodes.map((q) => (q.id === n.id ? Object.assign({}, q, { sup: s.found }) : q)); this.setState({ nodes: this.state.nodes, nN: this.state.nN }); } return;
+    }
+    if (s.tool === 'select') this.setState({ sel: null });
+  }
+  curveFor(t) {
+    const M = 4500e3; const hT = 13 * Math.sqrt(t.A * t.fT / M), hC = t.tOnly ? 0 : 13 * Math.sqrt(t.A * t.fC / M);
+    const pull = t.duct ? 'M28 15 L36 ' + (15 - hT) + ' L50 ' + (15 - hT * 1.08) : 'M28 15 L38 ' + (15 - hT) + ' L39 15';
+    const push = t.tOnly ? ' M28 15 L6 15' : (t.duct ? ' M28 15 L20 ' + (15 + hC) + ' L6 ' + (15 + hC * 1.05) : ' M28 15 L18 ' + (15 + hC) + ' L16 ' + (15 + hC * 0.4));
+    return pull + push;
+  }
+
+  // ---------- render ----------
+  renderVals() {
+    const s = this.state; const T = this.types(), VD = this.vehicles(), SO = this.soils(), LV = this.levels(); const L = this.L(); const sp = this.spec(s);
+    const cam = this.cam(); const SC = cam.SC, OX = cam.off[0], OY = cam.off[1]; const X = cam.X, Y = cam.Y;
+    const live = (s.phase === 'run' || s.phase === 'result') && this.sim;
+    const pv = live ? null : this.preview(s);
+    const S = live ? this.sim : null;
+    const pos = {}; s.nodes.forEach((n, i) => { pos[n.id] = live ? [S.P[i].x, S.P[i].y] : [n.x, n.y]; });
+    const cinfo = {};
+    if (live) S.C.forEach((c) => { cinfo[c.id] = { N: c.avg, broken: c.broken, slack: c.slack, capT: c.capT, capC: c.capC, over: false, L: c.L, exposed: c.exposed }; });
+    else Object.keys(pv.res).forEach((id) => { cinfo[id] = Object.assign({ broken: false }, pv.res[id]); });
+    const f1 = (v) => v.toFixed(1);
+    const pt = (p, ox, oy) => f1(X(p[0]) + (ox || 0)) + ' ' + f1(Y(p[1]) + (oy || 0));
+    const O = { t1: '', t2: '', t3: '', c1: '', c2: '', c3: '', z: '', x: '' };
+    const U = { woodD: '', steelD: '', concreteD: '', ropeD: '', cableD: '' };
+    let backD = '', roadTopD = '', roadFrontD = '', roadLineD = '', facadeD = '', facadeSideD = '', winD = '', snowD = '';
+    const utOf = (q) => (!q ? 0 : (q.N >= 0 ? q.N / q.capT : (q.capC === Infinity ? 0 : -q.N / q.capC)));
+    const design = {}; s.nodes.forEach((n) => { design[n.id] = n; });
+    const snowNow = live ? S.snowNow : s.cond.snow;
+    const snowPx = Math.min(10, snowNow / 800 * Math.max(3, 0.6 * SC));
+    s.members.forEach((m) => {
+      const q = cinfo[m.id]; if (q && q.broken) return;
+      const a = pos[m.a], b = pos[m.b]; if (!a || !b) return;
+      let line = 'M' + pt(a) + ' L' + pt(b) + ' ';
+      const t = T[m.type];
+      if (t.tOnly) {
+        const len = Math.hypot(b[0] - a[0], b[1] - a[1]); const L0 = q && q.L ? q.L : Math.hypot(design[m.b].x - design[m.a].x, design[m.b].y - design[m.a].y);
+        if (live && len < L0 * 0.995) { const sag = Math.sqrt(Math.max(0, L0 * L0 - len * len)) / 2; line = 'M' + pt(a) + ' Q' + pt([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - sag]) + ' ' + pt(b) + ' '; }
+        U[m.type + 'D'] += line;
+      } else if (t.deck) {
+        const th = m.type === 'floor' ? Math.max(3, 0.5 * SC) : Math.max(4, 0.33 * SC);
+        roadTopD += 'M' + pt(a) + ' L' + pt(b) + ' L' + pt(b, OX, OY) + ' L' + pt(a, OX, OY) + ' Z ';
+        roadFrontD += 'M' + pt(a) + ' L' + pt(b) + ' L' + pt(b, 0, th) + ' L' + pt(a, 0, th) + ' Z ';
+        if (m.type === 'road') roadLineD += 'M' + pt(a, OX / 2, OY / 2) + ' L' + pt(b, OX / 2, OY / 2) + ' ';
+        if (m.type === 'floor') {
+          const fh = 3.6;
+          facadeD += 'M' + pt(a) + ' L' + pt(b) + ' L' + pt([b[0], b[1] + fh]) + ' L' + pt([a[0], a[1] + fh]) + ' Z ';
+          const right = a[0] > b[0] ? a : b; facadeSideD += 'M' + pt(right) + ' L' + pt(right, OX, OY) + ' L' + pt([right[0], right[1] + fh], OX, OY) + ' L' + pt([right[0], right[1] + fh]) + ' Z ';
+          winD += 'M' + pt([a[0], a[1] + 2]) + ' L' + pt([b[0], b[1] + 2]) + ' ';
+        }
+        if (snowPx > 0.4 && q && q.exposed) { const top = m.type === 'floor' ? 3.6 : 0; snowD += 'M' + pt([a[0], a[1] + top], OX * 0.2, OY * 0.2) + ' L' + pt([b[0], b[1] + top], OX * 0.2, OY * 0.2) + ' L' + pt([b[0], b[1] + top], OX * 0.2, OY * 0.2 - snowPx) + ' L' + pt([a[0], a[1] + top], OX * 0.2, OY * 0.2 - snowPx) + ' Z '; }
+      } else {
+        U[m.type + 'D'] += line; backD += 'M' + pt(a, OX, OY) + ' L' + pt(b, OX, OY) + ' ';
+      }
+      if (!q) return;
+      const ut = utOf(q);
+      let k;
+      if (q.over || ut > 1) k = 'x'; else if (q.slack || Math.abs(q.N) < 500) k = 'z'; else k = (q.N > 0 ? 't' : 'c') + (ut < 0.35 ? 1 : (ut < 0.7 ? 2 : 3));
+      if (k === 'z') return;
+      O[k] += line;
+    });
+
+    // terrain, drawn in world coordinates so it zooms with everything else
+    const soil = SO[L.soil], bed = SO[L.bed || L.soil];
+    const poly = (pts) => 'M' + pts.map((p) => f1(X(p[0])) + ' ' + f1(Y(p[1]))).join(' L') + ' Z ';
+    let waterD = '', flowD = '', soilD, bedD = '', topD, edgeD, grainD = '';
+    if (L.scene === 'river') {
+      soilD = poly([[-300, 0], [8, 0], [7.6, -12], [48.4, -12], [48, 0], [400, 0], [400, -90], [-300, -90]]);
+      bedD = poly([[7.6, -12], [48.4, -12], [48.4, -14], [7.6, -14]]);
+      waterD = poly([[8, -8], [48, -8], [48.4, -12], [7.6, -12]]);
+      flowD = 'M' + f1(X(10)) + ' ' + f1(Y(-8.8)) + ' H' + f1(X(46)) + ' M' + f1(X(12)) + ' ' + f1(Y(-10)) + ' H' + f1(X(47)) + ' M' + f1(X(9)) + ' ' + f1(Y(-11.2)) + ' H' + f1(X(45));
+      topD = 'M' + f1(X(-300)) + ' ' + f1(Y(0)) + ' H' + f1(X(8)) + ' l' + OX + ' ' + OY + ' H' + f1(X(-300)) + ' Z M' + f1(X(48)) + ' ' + f1(Y(0)) + ' H' + f1(X(400)) + ' v' + OY + ' H' + f1(X(48) + OX) + ' Z';
+      edgeD = 'M' + f1(X(-300)) + ' ' + f1(Y(0)) + ' H' + f1(X(8)) + ' M' + f1(X(48)) + ' ' + f1(Y(0)) + ' H' + f1(X(400));
+    } else {
+      soilD = poly([[-400, 0], [600, 0], [600, -90], [-400, -90]]);
+      topD = 'M' + f1(X(-400)) + ' ' + f1(Y(0)) + ' H' + f1(X(600)) + ' v' + OY + ' H' + f1(X(-400)) + ' Z';
+      edgeD = 'M' + f1(X(-400)) + ' ' + f1(Y(0)) + ' H' + f1(X(600));
+    }
+    const span = L.scene === 'river' ? [-20, 76, 0.6] : [-40, 240, 2.5];
+    for (let i = 0; i < 160; i++) { const wx = span[0] + ((i * 37.3) % (span[1] - span[0])), wy = -1 - ((i * 13.7) % 30); if (L.scene === 'river' && wx > 7.5 && wx < 48.5 && wy > -12) continue; grainD += 'M' + f1(X(wx)) + ' ' + f1(Y(wy)) + 'h2v2h-2Z'; }
+    // foundations
+    let foundD = '', supD = '';
+    s.nodes.forEach((n, i) => {
+      const sup = live ? (S.P[i].fstate === 'ripped' ? null : n.sup) : n.sup; if (!sup) return;
+      const p = pos[n.id]; const x = X(p[0]), y = Y(p[1]);
+      const pw = Math.max(12, 4 * SC), ph = Math.max(4, 1 * SC);
+      foundD += 'M' + f1(x - pw / 2) + ' ' + f1(y) + ' h' + f1(pw) + ' v' + f1(ph) + ' h' + f1(-pw) + ' Z ';
+      if (sup === 'pile') { const pl = 14 * SC; const w = Math.max(4, 0.8 * SC); foundD += 'M' + f1(x - w / 2) + ' ' + f1(y + ph) + ' h' + f1(w) + ' v' + f1(pl) + ' h' + f1(-w) + ' Z '; }
+      supD += 'M' + f1(x) + ' ' + f1(y - 1) + ' L' + f1(x - 6) + ' ' + f1(y + 6) + ' H' + f1(x + 6) + ' Z ';
+    });
+    // crates
+    let crateD = '', crateTopD = '', crateSideD = '', crateWireD = ''; const tags = [];
+    const cs = Math.max(0.5, Math.min(1.6, SC / 18));
+    Object.keys(s.loads).forEach((id) => {
+      if (!pos[id]) return; const t = s.loads[id]; const x = X(pos[id][0]), y = Y(pos[id][1]); const w = (12 + Math.sqrt(t) * 4) * cs, h = w * 0.8, top = y + 9 * cs;
+      crateWireD += 'M' + f1(x) + ' ' + f1(y + 3) + ' V' + f1(top) + ' ';
+      crateD += 'M' + f1(x - w / 2) + ' ' + f1(top) + ' h' + f1(w) + ' v' + f1(h) + ' h' + f1(-w) + ' Z ';
+      crateTopD += 'M' + f1(x - w / 2) + ' ' + f1(top) + ' l6 -4 h' + f1(w) + ' l-6 4 Z ';
+      crateSideD += 'M' + f1(x + w / 2) + ' ' + f1(top) + ' l6 -4 v' + f1(h) + ' l-6 4 Z ';
+      tags.push({ text: t + ' t', x: (x / 1120 * 100).toFixed(2), y: ((top + h + 10) / 600 * 100).toFixed(2), c: '#E6D6B8' });
+    });
+    // vehicles
+    const V = { vCarD: '', vBusD: '', vBoxD: '', vCabD: '', vWinD: '', vWheelD: '' };
+    const vList = L.scene === 'river' ? (live ? S.V : this.makeSim(s, false).V) : [];
+    vList.forEach((v) => {
+      if (v.state === 'done' && v.x > 64) return;
+      const ca = Math.cos(v.ang), sa = Math.sin(v.ang);
+      const P2 = (u, w) => pt([v.x + u * ca - w * sa, v.y + 0.35 + u * sa + w * ca]);
+      const rect = (u0, w0, u1, w1) => 'M' + P2(u0, w0) + ' L' + P2(u1, w0) + ' L' + P2(u1, w1) + ' L' + P2(u0, w1) + ' Z ';
+      const hl = v.len / 2;
+      if (v.k === 'car') { V.vCarD += rect(-hl, 0.2, hl, 0.8) + rect(-hl * 0.5, 0.8, hl * 0.45, v.ht); V.vWinD += rect(-hl * 0.4, 0.9, hl * 0.35, v.ht - 0.12); }
+      if (v.k === 'bus') { V.vBusD += rect(-hl, 0.25, hl, v.ht); for (let i = 0; i < 6; i++) { const u = -hl + 0.8 + i * (v.len - 1.6) / 6; V.vWinD += rect(u, 1.6, u + 1.2, 2.6); } }
+      if (v.k === 'truck') { V.vBoxD += rect(-hl, 0.4, hl - 2.6, v.ht); V.vCabD += rect(hl - 2.4, 0.3, hl, 2.6); V.vWinD += rect(hl - 1.3, 1.5, hl - 0.15, 2.4); }
+      [-v.d, v.d].forEach((u) => { const c = P2(u, 0.35).split(' ').map(Number); const r = 0.42 * SC; V.vWheelD += 'M' + f1(c[0] + r) + ' ' + f1(c[1]) + ' a' + f1(r) + ' ' + f1(r) + ' 0 1 0 ' + f1(-2 * r) + ' 0 a' + f1(r) + ' ' + f1(r) + ' 0 1 0 ' + f1(2 * r) + ' 0 Z '; });
+    });
+    // weather
+    const windNow = live ? S.windNow : s.cond.wind; const dir = s.cond.dir || 1;
+    let windArrowD = '', windD = '';
+    if (windNow > 0.5) {
+      const zTop = L.scene === 'flat' ? Math.max(L.target || 0, ...s.nodes.map((n) => n.y), 24) : 14;
+      const step = L.scene === 'flat' ? 12 : 4;
+      for (let z = (L.scene === 'flat' ? 8 : 2); z <= zTop + 4; z += step) {
+        const vz = windNow * Math.pow(Math.max(z, 2) / 10, 0.2); const len = Math.min(220, vz * vz / 6); const y = Y(z); if (y < 0 || y > 600) continue;
+        const x0 = dir > 0 ? 12 : 1108, x1 = x0 + dir * len;
+        windArrowD += 'M' + x0 + ' ' + f1(y) + ' H' + f1(x1) + ' M' + f1(x1 - dir * 7) + ' ' + f1(y - 5) + ' L' + f1(x1) + ' ' + f1(y) + ' L' + f1(x1 - dir * 7) + ' ' + f1(y + 5) + ' ';
+        windD += dir > 0 ? 'M' + (260 + (z * 37) % 120) + ' ' + f1(y - 8) + ' C 500 ' + f1(y - 30) + ' 800 ' + f1(y + 20) + ' 1120 ' + f1(y - 4) + ' ' : 'M' + (860 - (z * 37) % 120) + ' ' + f1(y - 8) + ' C 620 ' + f1(y - 30) + ' 320 ' + f1(y + 20) + ' 0 ' + f1(y - 4) + ' ';
+      }
+    }
+    let flakeD = '';
+    if (s.cond.snow > 0) { const nfl = s.cond.snow >= 800 ? 220 : (s.cond.snow >= 400 ? 140 : 70); for (let i = 0; i < nfl; i++) { const x = (i * 61.7) % 1120, y = ((i * 97.1) % 660) - 60; flakeD += 'M' + f1(x) + ' ' + f1(y) + ' a1.6 1.6 0 1 0 0.01 0 '; } }
+    const targetD = L.target ? 'M0 ' + f1(Y(L.target)) + ' H1120' : '';
+    let sparkD = '', splashD = '';
+    if (live) {
+      S.sparks.forEach((k) => { const x = X(k.x), y = Y(k.y); sparkD += 'M' + f1(x - 6) + ' ' + f1(y - 6) + ' L' + f1(x + 6) + ' ' + f1(y + 6) + ' M' + f1(x + 6) + ' ' + f1(y - 6) + ' L' + f1(x - 6) + ' ' + f1(y + 6) + ' '; });
+      S.splashes.forEach((k) => { const age = S.t - k.t; if (age > 1.6) return; const x = X(k.x), y = Y(-8), r = (8 + age * 30) * cs; splashD += 'M' + f1(x - r) + ' ' + f1(y) + ' q' + f1(r / 2) + ' ' + f1(-r * 0.9) + ' ' + f1(r) + ' 0 q' + f1(r / 2) + ' ' + f1(-r * 0.9) + ' ' + f1(r) + ' 0 '; });
+    }
+    let badD = '';
+    const wobbly = !live && pv.moved > 1.5 && s.members.length > 0;
+    const foundOver = !live ? Object.keys(pv.found).filter((id) => pv.found[id].overC || pv.found[id].overT) : [];
+    const ring = (id) => { if (!pos[id]) return ''; const x = X(pos[id][0]), y = Y(pos[id][1]); return 'M' + f1(x + 13) + ' ' + f1(y) + ' a13 13 0 1 0 -26 0 a13 13 0 1 0 26 0 Z '; };
+    if (wobbly) badD += ring(pv.movedId);
+    foundOver.forEach((id) => { badD += ring(id); });
+    let ghostD = '', hoverD = '';
+    if (s.phase === 'build' && s.hover && (s.tool === 'build' || s.tool === 'anchor')) {
+      const hx = X(s.hover.x), hy = Y(s.hover.y); hoverD = 'M' + f1(hx + 5) + ' ' + f1(hy) + ' a5 5 0 1 0 -10 0 a5 5 0 1 0 10 0 Z';
+      if (s.tool === 'build' && s.pending && pos[s.pending]) ghostD = 'M' + pt(pos[s.pending]) + ' L' + f1(hx) + ' ' + f1(hy);
+    }
+    const onScreen = (p) => { const x = X(p[0]), y = Y(p[1]); return x > -20 && x < 1140 && y > -20 && y < 620; };
+
+    // handles and joints
+    const fmtT = (v) => (v < 0 ? '−' : '+') + Math.abs(v / 9810).toFixed(Math.abs(v / 9810) < 10 ? 1 : 0) + ' t';
+    const showHandles = s.phase === 'build' && (s.tool === 'select' || s.tool === 'erase' || s.nums);
+    const memHandles = !showHandles ? [] : s.members.filter((m) => onScreen([(pos[m.a][0] + pos[m.b][0]) / 2, (pos[m.a][1] + pos[m.b][1]) / 2])).map((m) => {
+      const a = pos[m.a], b = pos[m.b]; const q = cinfo[m.id]; const sel = s.sel && s.sel.k === 'member' && s.sel.id === m.id;
+      const over = q && (q.over || utOf(q) > 1);
+      return { x: (X((a[0] + b[0]) / 2) / 1120 * 100).toFixed(2), y: (Y((a[1] + b[1]) / 2) / 600 * 100).toFixed(2),
+        text: s.nums && q ? (q.slack ? 'slack' : fmtT(q.N)) : '', cls: 'mh' + (s.nums ? ' mh-num' : '') + (sel ? ' mh-sel' : '') + (over ? ' mh-over' : ''),
+        label: T[m.type].name + ' ' + m.id + (q ? ', ' + Math.round(utOf(q) * 100) + '% of its limit' : ''),
+        pick: () => { if (!this.building()) return; if (this.state.tool === 'erase') this.delMember(m.id); else this.setState({ sel: { k: 'member', id: m.id }, tool: 'select' }); } };
+    });
+    const joints = live ? [] : s.nodes.filter((n) => onScreen(pos[n.id])).map((n) => {
+      const p = pos[n.id]; const sel = s.sel && s.sel.k === 'node' && s.sel.id === n.id;
+      const bad = (wobbly && pv.movedId === n.id) || foundOver.indexOf(n.id) >= 0;
+      return { x: (X(p[0]) / 1120 * 100).toFixed(2), y: (Y(p[1]) / 600 * 100).toFixed(2),
+        cls: 'joint' + (n.sup ? ' j-lock' : '') + (s.pending === n.id ? ' j-pend' : '') + (sel ? ' j-sel' : '') + (bad ? ' j-bad' : ''),
+        label: 'Joint ' + n.id + (n.sup ? ', on a ' + n.sup : '') + (s.loads[n.id] ? ', carrying a ' + s.loads[n.id] + ' t crate' : ''),
+        pick: () => this.clickNode(n),
+        down: () => { if (this.building() && this.state.tool === 'select' && !n.locked) { this.push(); this.setState({ drag: n.id, sel: { k: 'node', id: n.id } }); } } };
+    });
+
+    // status
+    const cost = this.cost(s);
+    let worstId = null, worstUt = 0; Object.keys(cinfo).forEach((id) => { const u = utOf(cinfo[id]); if (u > worstUt) { worstUt = u; worstId = id; } });
+    const overAny = !live && Object.keys(pv.res).some((id) => pv.res[id].over);
+    const floorNodes = s.nodes.filter((n) => s.members.some((m) => m.type === 'floor' && (m.a === n.id || m.b === n.id)));
+    const designTop = floorNodes.length ? Math.max.apply(null, floorNodes.map((n) => n.y)) : 0;
+    let statusLabel = 'Nothing built yet', statusColor = '#A3A3A3';
+    if (s.members.length) {
+      if (wobbly) { statusLabel = 'Sags and folds'; statusColor = '#E5534B'; }
+      else if (overAny) { statusLabel = s.cond.snow ? 'Breaks under its weight and snow' : 'Breaks under its own weight'; statusColor = '#E5534B'; }
+      else if (foundOver.length) { statusLabel = 'A foundation is overloaded'; statusColor = '#E5534B'; }
+      else if (worstUt > 0.7) { statusLabel = 'Stands, but strained'; statusColor = '#D8B86A'; }
+      else { statusLabel = 'Stands up'; statusColor = '#5FBF8A'; }
+    }
+    if (s.phase === 'run') { statusLabel = S && S.env > 0.2 ? 'The ground is shaking' : (S && S.windNow > 20 ? 'Riding out the wind' : (L.scene === 'river' ? 'Traffic is crossing' : 'Under test')); statusColor = '#D6C7A1'; }
+    const r = s.result; const fb = r ? r.first : null, ff = r ? r.firstFound : null;
+    const tip = (f) => (f.type === 'rope' ? 'Rope is cheap but weak: swap it for Cable where the pull is big.' : (f.type === 'concrete' && f.mode === 'cracked' ? 'Concrete cracks when pulled. Use it only where things push: columns, arches, struts.' : (f.mode === 'buckled' ? 'Long pieces that get pushed bow sideways. Make them shorter, use Steel, or brace them halfway.' : (f.mode === 'snapped' ? 'It was pulled apart. Steel or a Cable takes far more pull.' : 'It was squeezed past its strength.'))));
+    const ftip = (f) => (f.mode === 'liquefied' ? 'The shaking turned the wet sand to soup and the footing sank. Piles reach down to firmer layers and keep most of their grip.' : (f.mode === 'sank' ? 'Too much weight for this soil, so the footing pushed down into it. Spread the load over more foundations, or use a pile.' : 'It was pulled straight out of the ground. Footings barely resist pulling; a pile grips the soil along its whole length.'));
+    let explain;
+    if (s.phase === 'result') {
+      const pr = r.practice ? ' This was a practice run: the conditions were easier than the level asks, so no stars.' : '';
+      if (r.pass) explain = (L.scene === 'river' ? 'Everyone made it. ' : 'It stood through the whole test. ') + (L.budget && !r.practice ? (r.cost <= L.budget ? (r.stars < 3 ? 'Under budget. Trim it for more stars: delete pieces that show almost no force.' : 'Three stars. Nicely done.') : 'Over budget though, so no stars.') : '') + pr;
+      else if (L.scene === 'river') explain = r.crossed + ' of ' + r.total + ' made it. ' + (ff ? 'Foundation ' + ff.id + ' ' + ff.mode + ' first. ' + ftip(ff) : (fb ? fb.id + ' (' + T[fb.type].name.toLowerCase() + ') ' + fb.mode + ' first. ' + tip(fb) : 'Nothing broke: a vehicle ran out of road. Make sure the Road runs all the way across.')) + pr;
+      else if (!r.reached) explain = 'It stood, but the top floor is at ' + r.height.toFixed(0) + ' m. The goal is ' + L.target + ' m.' + pr;
+      else if (!r.standing) explain = 'It came down. ' + (ff ? 'Foundation ' + ff.id + ' ' + ff.mode + ' first. ' + ftip(ff) : (fb ? fb.id + ' (' + T[fb.type].name.toLowerCase() + ') ' + fb.mode + ' first. ' + tip(fb) : '')) + pr;
+      else explain = 'It stood, but the top floor swayed hard enough to feel ' + r.mg.toFixed(0) + ' milli-g (the limit is ' + L.comfort + '). A wider base, diagonal bracing or a heavy crate hung on a rope near the top (a pendulum damper) all calm it down.' + pr;
+    } else if (s.phase === 'run') explain = S.firstFound ? 'Foundation ' + S.firstFound.id + ' ' + S.firstFound.mode + '!' : (S.firstBreak ? S.firstBreak.id + ' just ' + S.firstBreak.mode + '!' : 'Change the weather while it runs: the wind builds up gradually, snow piles up on decks and roofs, and you can set off a quake at any time.' + (L.scene === 'river' && S.windNow > 20 ? ' Strong wind makes light road decks flutter.' : ''));
+    else if (!s.members.length) explain = L.scene === 'river' ? 'Pick Road and click from the left foundation across, joint by joint. Road alone hangs like a chain, so hold it up: Wood or Steel triangles, Concrete where it pushes, or hang it from Rope and Cable, which only pull. Zoom in for finer joints.' : 'Build up from the foundations: Steel or Concrete for columns, Wood or Steel diagonals for bracing, and a Floor across every level you want to count. Reach the dashed line.';
+    else if (wobbly) explain = 'Under its own weight this shape folds: joint ' + pv.movedId + ' drops ' + pv.moved.toFixed(1) + ' m. Pin-jointed pieces need triangles, or something to hang from.';
+    else if (overAny) explain = 'Something breaks just holding itself up' + (s.cond.snow ? ' with this much snow on it' : '') + ' (red dashes). Make it shorter, or swap in Steel or Cable.';
+    else if (foundOver.length) { const f = pv.found[foundOver[0]]; explain = 'Foundation ' + foundOver[0] + ' is ' + (f.overT ? 'being pulled up harder than it can hold, so it would rip out' : 'pushing on the soil harder than ' + soil.name.toLowerCase() + ' can take, so it would sink') + '. Try a Pile, or add more foundations to share the load.'; }
+    else if (L.scene === 'river' && !s.members.some((m) => m.type === 'road')) explain = 'It stands, but there is no Road on it, so the vehicles have nothing to drive on.';
+    else if (L.scene === 'flat' && L.target && designTop < L.target) explain = 'It holds its own weight. The top floor is at ' + designTop + ' m; keep going to the ' + L.target + ' m line.';
+    else explain = 'It holds its own weight' + (s.cond.snow ? ' and the snow' : '') + '. Busiest piece: ' + worstId + ' at ' + Math.round(worstUt * 100) + '% of its limit. Now run it.';
+
+    const sel = s.sel; let mi = null, ni = null;
+    if (sel && sel.k === 'member' && !live) {
+      const m = s.members.find((q) => q.id === sel.id);
+      if (m) { const q = cinfo[m.id]; const ut = utOf(q); const t = T[m.type];
+        mi = { title: t.name + ' · ' + m.id, len: q && q.L ? q.L.toFixed(1) + ' m' : '',
+          w: Math.min(100, ut * 100).toFixed(0), ut: Math.round(ut * 100) + '%', color: q && (q.over || ut > 1) ? '#E5534B' : (q && q.N >= 0 ? '#7FB0E0' : '#E0905E'),
+          text: !q ? '' : (q.slack ? 'Slack: it is being pushed, so it carries nothing. Ropes and cables only pull.' : (Math.abs(q.N) < 500 ? 'Doing almost nothing. A candidate to delete.' : (q.N >= 0 ? 'Pulled with ' + (q.N / 9810).toFixed(1) + ' t of force. It breaks at ' + (q.capT / 9810).toFixed(0) + ' t.' : 'Pushed with ' + (-q.N / 9810).toFixed(1) + ' t of force. It gives way at ' + (q.capC / 9810).toFixed(0) + ' t.'))) + (q.exposed && s.cond.snow ? ' Snow is piling on it.' : '') + ' Running the test adds more.',
+          types: Object.keys(T).filter((k) => !T[k].scene || T[k].scene === L.scene).map((k) => ({ name: T[k].name, cls: 'chip' + (m.type === k ? ' chip-on' : ''), pressed: m.type === k ? 'true' : 'false', pick: () => { const A = design[m.a], B = design[m.b]; if (Math.hypot(B.x - A.x, B.y - A.y) > T[k].maxL + 0.01) { this.say(T[k].name + ' pieces can be at most ' + T[k].maxL + ' m.'); return; } this.push(); this.setState({ members: this.state.members.map((x) => (x.id === m.id ? Object.assign({}, x, { type: k }) : x)) }); } })),
+          del: () => this.delMember(m.id) };
+      }
+    }
+    if (sel && sel.k === 'node' && !live) {
+      const n = s.nodes.find((q) => q.id === sel.id);
+      if (n) { const can = this.supOk(n.x, n.y); const f = pv.found[n.id]; const soilN = SO[this.soilAt(n, L)]; const fs = n.sup === 'pile' ? soilN.pile : soilN.footing;
+        ni = { title: 'Joint ' + n.id + (n.locked ? ' · level foundation' : ''), pos: 'x ' + n.x + ' m · y ' + n.y + ' m',
+          founds: [[null, 'None'], ['footing', 'Footing'], ['pile', 'Pile']].map((o) => ({ name: o[1], cls: 'chip' + (n.sup === o[0] ? ' chip-on' : '') + ((o[0] && !can) || n.locked ? ' chip-dim' : ''), pressed: n.sup === o[0] ? 'true' : 'false', pick: () => this.setFound(n.id, o[0]) })),
+          load: (s.loads[n.id] || 0) + ' t', less: () => this.addLoad(n.id, -s.weight), more: () => this.addLoad(n.id, s.weight),
+          note: n.sup ? soilN.name + ' under a ' + n.sup + ': holds up to ' + (fs[0] / 9810).toFixed(0) + ' t pushing down and ' + (fs[1] / 9810).toFixed(0) + ' t pulling up.' + (f ? ' Carrying ' + (f.R / 9810).toFixed(1) + ' t right now.' : '') : (can ? 'On the ground: you can put a foundation here.' : 'In the air.'),
+          canDel: !n.locked, del: () => this.delNode(n.id) };
+      }
+    }
+
+    const toolDefs = [
+      ['select', 'Select', 'M5 3l12 7-5 1.5L9.5 17z', 'Select pieces, drag joints, drag empty space to pan'],
+      ['build', 'Build', 'M4 18L18 4M4 18a1.6 1.6 0 1 0 0.01 0M18 4a1.6 1.6 0 1 0 0.01 0', 'Build pieces joint to joint'],
+      ['anchor', 'Found', 'M11 5L4 13H18Z M8 13V20M14 13V20M3 13H19', 'Put foundations in the ground'],
+      ['weight', 'Crate', 'M5 9h12v9H5ZM5 9l2-3h12l-2 3M17 18l2-3V6M11 2v4', 'Hang a crate on a joint'],
+      ['erase', 'Erase', 'M6 6l10 10M16 6L6 16', 'Delete joints and pieces']
+    ];
+    const hints = { select: 'Click a piece or joint to inspect it. Drag joints to reshape, drag empty space to pan.', build: s.pending ? 'Click the next joint, or empty grid to place one. Click the glowing joint to stop.' : 'Click a joint or the grid to start. Zoom in for a finer grid.', anchor: 'Click the ground to place a foundation. Footings are cheap; piles grip deeper and resist pulling.', weight: 'Click a joint to hang a crate. A crate on a rope near the top of a tower acts as a damper.', erase: 'Click a joint or a piece’s dot to delete it.' };
+    const starsTxt = (n) => '★★★'.slice(0, n) + '☆☆☆'.slice(0, 3 - n);
+    const running = s.phase === 'run';
+    const groups = ['Bridges', 'Towers', 'Sandbox'].map((gname) => ({ name: gname, items: Object.keys(LV).filter((k) => LV[k].group === gname).map((k) => ({ name: LV[k].name, best: LV[k].budget ? starsTxt(s.best[k] || 0) : '', cls: 'lvl' + (s.level === k ? ' lvl-on' : ''), pressed: s.level === k ? 'true' : 'false', pick: () => { this.sim = null; this.hist = []; this.setState(this.levelState(k)); } })) }));
+    const practice = this.practice(s);
+    const chipsInfo = [];
+    if (L.scene === 'river') (L.traffic || []).forEach((k) => chipsInfo.push(VD[k].label)); else if (L.target) chipsInfo.push('Reach ' + L.target + ' m');
+    if (practice) chipsInfo.push('Practice: easier than the level');
+    const hud = [];
+    if (L.scene === 'flat') {
+      const nowTop = live && S.topI >= 0 ? S.P[S.topI].y : designTop;
+      hud.push({ k: 'Height ', v: nowTop.toFixed(0) + ' m' + (L.target ? ' / ' + L.target : ''), c: L.target && designTop >= L.target ? '#5FBF8A' : '#EAEAEA' });
+      if (live) { const mg = S.peakA / 9.81 * 1000; hud.push({ k: 'Sway ', v: S.sway.toFixed(2) + ' m', c: '#EAEAEA' }); hud.push({ k: 'Comfort ', v: mg.toFixed(0) + ' mg', c: L.comfort && mg > L.comfort ? '#E8A39E' : '#EAEAEA' }); }
+    }
+    if (windNow > 0.5) hud.push({ k: 'Wind ', v: windNow.toFixed(0) + ' m/s ' + (dir > 0 ? '→' : '←'), c: '#8FD3EE' });
+    if (snowNow > 1) hud.push({ k: 'Snow ', v: snowNow.toFixed(0) + ' kg/m', c: '#E6EEF3' });
+    if (live && S.env > 0.05) hud.push({ k: 'Shaking ', v: Math.round(S.env * 100) + '%', c: '#E7A47C' });
+    if (live && L.scene === 'river' && S.sandbox) { const laps = S.V.reduce((a, v) => a + (v.laps || 0), 0); hud.push({ k: 'Crossings ', v: String(laps), c: '#EAEAEA' }); }
+    const crossedNow = live && L.scene === 'river' ? S.V.filter((v) => v.state === 'done').length : 0;
+    const runName = L.scene === 'river' ? 'Run traffic' : 'Run the test';
+    const setCond = (o) => { this.setState({ cond: Object.assign({}, this.state.cond, o) }); };
+    const chipRow = (list, cur, key) => list.map((o) => ({ name: o[1], cls: 'chip' + (cur === o[0] ? ' chip-on' : ''), pressed: cur === o[0] ? 'true' : 'false', pick: () => { const u = {}; u[key] = o[0]; setCond(u); } }));
+    const resultTitle = !r ? '' : (L.scene === 'river' ? (r.pass ? (L.budget && r.cost > L.budget ? 'All across, but over budget' : 'All across!') : (r.crossed + ' of ' + r.total + ' made it')) : (r.pass ? (L.budget && r.cost > L.budget ? 'It stood, but over budget' : 'It stood!') : (!r.standing ? 'It came down' : (!r.reached ? 'Too short' : 'Too wobbly to live in'))));
+    return Object.assign(O, U, V, {
+      backD, roadTopD, roadFrontD, roadLineD, facadeD, facadeSideD, winD, snowD, flakeD, supD, foundD, crateD, crateTopD, crateSideD, crateWireD, sparkD, splashD, badD, ghostD, hoverD, targetD, windArrowD, windD,
+      waterD, flowD, soilD, bedD, topD, edgeD, grainD, soilColor: soil.color, soilTop: soil.top, bedColor: bed.color,
+      gridX: f1(X(0)), gridY: f1(Y(0)), gridW: f1(cam.grid * SC),
+      tags, memHandles, joints, hud,
+      stageCls: running && S && S.env > 0.2 ? 'shake' : '',
+      flowCls: running ? 'flow' : 'flow still-flow', flakeCls: 'snowfall',
+      cursor: s.phase !== 'build' ? 'default' : (s.tool === 'build' || s.tool === 'anchor' ? 'crosshair' : (s.tool === 'select' ? 'grab' : 'default')),
+      surfaceLabel: 'Building grid', stageLabel: (L.scene === 'river' ? 'Bridge' : 'Tower') + ' with ' + s.nodes.length + ' joints and ' + s.members.length + ' pieces. ' + statusLabel + '.',
+      onSurface: (e) => { if (this.state.panMoved) { this.setState({ panMoved: false }); return; } this.clickSurface(e); },
+      onSurfaceDown: (e) => { const st = this.state; if (st.tool === 'select' || st.phase !== 'build') { const w = this.toWorld(e); this.setState({ pan: { px: w.px, py: w.py, cx: st.view.cx, cy: st.view.cy }, panMoved: false }); } },
+      onWheel: (e) => { const w = this.toWorld(e); this.zoomBy(e.deltaY < 0 ? 1.15 : 1 / 1.15, w.px, w.py); },
+      onMove: (e) => { const st = this.state;
+        if (st.pan) { const w = this.toWorld(e); const SCn = this.cam().SC; const dx = w.px - st.pan.px, dy = w.py - st.pan.py; if (Math.abs(dx) + Math.abs(dy) > 3) this.setState({ view: Object.assign({}, st.view, { cx: st.pan.cx - dx / SCn, cy: st.pan.cy + dy / SCn }), panMoved: true }); return; }
+        if (st.phase !== 'build') return; const p = this.snap(e);
+        if (st.drag) { if (p.y < this.ground(p.x) || st.nodes.some((n) => n.id !== st.drag && n.x === p.x && n.y === p.y)) return;
+          const nodes = st.nodes.map((n) => (n.id === st.drag ? Object.assign({}, n, { x: p.x, y: p.y, sup: n.sup && this.supOk(p.x, p.y) ? n.sup : null }) : n));
+          const byId = {}; nodes.forEach((n) => { byId[n.id] = n; });
+          if (st.members.some((m) => (m.a === st.drag || m.b === st.drag) && Math.hypot(byId[m.b].x - byId[m.a].x, byId[m.b].y - byId[m.a].y) > T[m.type].maxL + 0.01)) return;
+          this.setState({ nodes, hover: null }); return; }
+        if ((st.tool === 'build' || st.tool === 'anchor') && (!st.hover || st.hover.x !== p.x || st.hover.y !== p.y)) this.setState({ hover: p }); },
+      onUp: () => { const st = this.state; if (st.drag || st.pan) this.setState({ drag: null, pan: null }); },
+      zoomIn: () => this.zoomBy(1.3), zoomOut: () => this.zoomBy(1 / 1.3), fitView: () => this.fit(), zoomPct: Math.round(s.view.z * 100) + '%',
+      tools: toolDefs.map((t) => ({ name: t[1], d: t[2], tip: t[3], cls: 'tool' + (s.tool === t[0] ? ' tool-on' : ''), pressed: s.tool === t[0] ? 'true' : 'false', pick: () => this.setState({ tool: t[0], pending: null, hover: null }) })),
+      hint: s.phase === 'build' ? hints[s.tool] : 'Building is paused while it runs. You can still change the conditions, zoom and pan.',
+      showTypes: s.tool === 'build',
+      types: Object.keys(T).filter((k) => !T[k].scene || T[k].scene === L.scene).map((k) => ({ name: T[k].name, sw: T[k].sw, h: Math.max(3, T[k].h), tip: T[k].tip, cls: 'chip' + (s.type === k ? ' chip-on' : ''), pressed: s.type === k ? 'true' : 'false', pick: () => this.setState({ type: k }) })),
+      showFounds: s.tool === 'anchor',
+      founds: [['footing', 'Footing · $0.3k', 'A concrete pad: cheap, weak when pulled'], ['pile', 'Pile · $1.5k', 'A deep shaft: carries more, grips when pulled']].map((o) => ({ name: o[1], tip: o[2], cls: 'chip' + (s.found === o[0] ? ' chip-on' : ''), pressed: s.found === o[0] ? 'true' : 'false', pick: () => this.setState({ found: o[0] }) })),
+      showWeights: s.tool === 'weight',
+      weights: [1, 5, 10, 25].map((w) => ({ name: w + ' t', cls: 'chip' + (s.weight === w ? ' chip-on' : ''), pressed: s.weight === w ? 'true' : 'false', pick: () => this.setState({ weight: w }) })),
+      hasPending: !!s.pending && s.phase === 'build', finish: () => this.setState({ pending: null }),
+      numCls: 'chip' + (s.nums ? ' chip-on' : ''), numPressed: s.nums ? 'true' : 'false', toggleNums: () => this.setState({ nums: !this.state.nums }),
+      toastOn: !!s.toast, toast: s.toast,
+      running, runInfo: S && S.sandbox ? 't = ' + S.t.toFixed(0) + ' s · runs until you stop' : (L.scene === 'river' ? crossedNow + ' / ' + (L.traffic || []).length + ' across' : 't = ' + (S ? S.t.toFixed(1) : '0') + ' / 18 s'), slowLabel: s.slow ? 'Normal speed' : 'Slow motion', toggleSlow: () => this.setState({ slow: !this.state.slow }),
+      showResult: s.phase === 'result', resultTitle,
+      resultColor: r && r.pass ? '#5FBF8A' : '#E5534B', resultBorder: r && r.pass ? '#2B5A3C' : '#5C2A25',
+      stars: r && L.budget && r.pass && !r.practice ? starsTxt(r.stars) : (r && r.practice ? 'practice' : ''),
+      replay: () => this.startRun(true),
+      backToBuild: () => this.stopRun(),
+      toggleRun: () => { if (this.state.phase === 'build') this.startRun(false); else this.stopRun(); },
+      runLabel: s.phase === 'build' ? runName : (s.phase === 'run' ? 'Stop' : 'Back to building'),
+      levelGroups: groups, goal: L.goal, chipsInfo, statusLabel, statusColor,
+      costText: '$' + cost.toFixed(1) + 'k' + (L.budget ? ' / $' + L.budget + 'k' : ''), costColor: L.budget && cost > L.budget ? '#E8A39E' : '#EAEAEA',
+      isSandbox: s.level === 'sandbox', isRiver: L.scene === 'river',
+      sbScenes: [['river', 'River crossing'], ['flat', 'Open ground']].map((o) => ({ name: o[1], cls: 'chip' + (s.sbScene === o[0] ? ' chip-on' : ''), pressed: s.sbScene === o[0] ? 'true' : 'false', pick: () => { if (this.state.sbScene !== o[0]) { this.sim = null; this.hist = []; this.setState(this.levelState('sandbox', o[0])); } } })),
+      cWinds: chipRow(this.winds(), s.cond.wind, 'wind'),
+      cDirs: [[1, 'From the left →'], [-1, '← From the right']].map((o) => ({ name: o[1], cls: 'chip' + (dir === o[0] ? ' chip-on' : ''), pressed: dir === o[0] ? 'true' : 'false', pick: () => setCond({ dir: o[0] }) })),
+      cSnows: chipRow(this.snows(), s.cond.snow, 'snow'),
+      cQuakes: chipRow(this.quakes(), s.cond.quake, 'quake'),
+      cSoils: Object.keys(SO).map((k) => ({ name: SO[k].name, sw: SO[k].top, cls: 'chip' + (s.cond.soil === k ? ' chip-on' : '') + (running ? ' chip-dim' : ''), pressed: s.cond.soil === k ? 'true' : 'false', pick: () => { if (this.state.phase === 'run') { this.say('Soil can only change while building.'); return; } setCond({ soil: k }); } })),
+      cTraffic: this.trafficSets().map((o) => ({ name: o[1], cls: 'chip' + (s.cond.traffic === o[0] ? ' chip-on' : '') + (running ? ' chip-dim' : ''), pressed: s.cond.traffic === o[0] ? 'true' : 'false', pick: () => { if (this.state.phase === 'run') { this.say('Traffic changes on the next run.'); return; } setCond({ traffic: o[0] }); } })),
+      canShake: running && s.cond.quake > 0,
+      shakeNow: () => { if (this.sim) this.sim.quakeStart = this.sim.t + 0.2; },
+      selMember: !!mi, mi: mi || { types: [] }, selNode: !!ni, ni: ni || { founds: [] }, selNone: !mi && !ni,
+      typeInfo: Object.keys(T).filter((k) => !T[k].scene || T[k].scene === L.scene).map((k) => ({ name: T[k].name, sw: T[k].sw, curve: this.curveFor(T[k]), blurb: T[k].blurb + ' Max ' + T[k].maxL + ' m.', cost: '$' + T[k].cost + '/m' })),
+      explain,
+      undo: () => { if (!this.building() || !this.hist.length) return; const h = JSON.parse(this.hist.pop()); this.setState(Object.assign(h, { sel: null, pending: null })); },
+      clearAll: () => { this.sim = null; this.hist = []; this.setState(this.levelState(this.state.level)); },
+      playing: running, notPlaying: !running, hdrRun: runName,
+      toggleDrive: () => { if (this.state.phase === 'build') this.startRun(false); else this.stopRun(); },
+      reset: () => { this.sim = null; this.hist = []; this.setState(this.levelState(this.state.level)); },
+      levelSlug: s.level === 'sandbox' ? 'sandbox' : s.level + '-level',
+      clock: s.phase === 'build' ? 'building' : (live ? 't = ' + S.t.toFixed(1) + ' s' : '')
+    });
+  }
+}
+</script>
+
+
+</body></html>

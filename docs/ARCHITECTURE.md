@@ -50,7 +50,13 @@ Units SI (m, N, Pa, kg); forces positive in tension. No panics on any input.
   `Truss::mass(removed)`, `Truss::determinacy()` (`m + r − 2j`), `node_index`, `member_index`,
   `length`, `validate`. `truss::G = 9.81`, `truss::ZERO_FORCE_N = 500`.
 
-### `bridge` (agent `bridge`)
+### `builder` (v2; agents `engine`, `time`, `lab`)
+
+TODO (owners fill in): the builder core (data, levels, camera, editing, the settling engine,
+preview, running, results, text) and the hooks for the fold-ins; `comfort`, `longterm`
+(agent `time`); `sample`, `fire` (agent `lab`).
+
+### `bridge` (v1, retiring in v2 wave 2; agent `bridge`)
 
 The Playground › Bridge game: `Playground.dc.html`'s `class Component` without the drawing,
 **bit-exact with the mockup** (golden test below). The screen owns nothing but pixels.

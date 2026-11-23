@@ -8,6 +8,46 @@
 | 1 | app shell + Series + packaging · Bridge · Advanced · Tower + Ground · Materials | done |
 | 2 | MCP · e2e journeys · README · independent reviews (advanced → bridge, worlds → advanced, materials → worlds + shell) + fixes · lead's live MCP e2e against the bundle | done (2026-11-22): `scripts/test-all.sh` ALL GREEN; see "Lead verification" below |
 
+## v2 — the builder (started 2026-11-23)
+
+The user's updated mockup (`docs/design/v2/`) turns the Playground into one builder for bridges
+and towers. Decisions (user + lead):
+- The v1 Bridge, Tower, Ground and Materials screens are **retired** (no study tabs). Their
+  engines (`sp_engine::{tower, ground, materials}`) stay for MCP and the fold-ins; the v1 bridge
+  engine (`sp_engine::bridge`) is removed once nothing uses it (wave 2).
+- Three ideas from the retired screens are folded into the builder: the comfort meter + "same
+  storm, four shapes" (CMF), settlement over 30 years + a Leaning tower level (TIME), the sample
+  lab + Fire (LAB, FIRE). SPEC "Builder" and "Fold-ins".
+- Advanced and Series are unchanged; NAV/MCP/DONE updated in SPEC.
+
+| v2 wave | Work | Status |
+|---|---|---|
+| 0 | v2 mockup + references, SPEC v2, module stubs | done (lead) |
+| 1 | builder engine · builder screen · app frame + MCP + removals · time + comfort · lab + fire | in progress |
+| 2 | integration, e2e journeys, visual pass, reviews + fixes, docs | not started |
+
+### Ownership (v2 wave 1)
+
+| Agent | Owns |
+|---|---|
+| `engine` | `crates/sp-engine/src/builder.rs` (core; keep the four `pub mod` fold-in lines) and `crates/sp-engine/src/builder/**` except the four fold-in files below; `crates/sp-engine/tests/builder*.{rs,mjs,json}` |
+| `screen` | `crates/structures-playground/src/screens/builder.rs` + `src/screens/builder/**` except the fold-in UI files below; `crates/structures-playground/tests/builder*.rs`; `crates/sp-theme/src/builder.rs` |
+| `shell` | everything else in `crates/structures-playground/**` (app, router, ctx, widgets, control, removals of the retired screens and their tests, journeys), `crates/sp-shared/**`, `crates/sp-mcp/**`, `scripts/**` (except `render-mockup*.mjs`, `mockup-goldens.mjs`), README, `docs/screenshots/**` |
+| `time` | `crates/sp-engine/src/builder/{comfort,longterm}.rs` (+ submodules), `crates/sp-engine/tests/{comfort,longterm}*.rs`; UI `crates/structures-playground/src/screens/builder/{comfort,time}.rs`; `crates/sp-theme/src/time.rs` |
+| `lab` | `crates/sp-engine/src/builder/{sample,fire}.rs` (+ submodules), `crates/sp-engine/tests/{sample,fire}*.rs`; UI `crates/structures-playground/src/screens/builder/{lab,fire}.rs`; `crates/sp-theme/src/fire.rs`; `docs/DATA-SOURCES.md` |
+| lead | `SPEC.md`, `PROGRESS.md` status, `docs/ARCHITECTURE.md` skeleton, `docs/design/**`, `scripts/render-mockup*.mjs`, root `Cargo.toml`, `crates/sp-theme/src/lib.rs`, `crates/sp-engine/src/{lib,linalg,truss}.rs` |
+
+Hook points (agreed up front, details in ARCHITECTURE § builder):
+- `engine` builds the fold-in hooks into the core: per-piece strength and stiffness factors in
+  the simulation (default 1.0) that `fire::update` sets each frame when Fire is on; a `fire`
+  field in the conditions; wind drag and shedding factors (default 1.0) for CMF-2's variants; a
+  static settle with per-foundation settlement offsets for TIME-1; a level table that `time`
+  can add the Leaning tower to (`pisa`), and break-mode names "softened" / "burned through".
+- `screen` exposes the places the fold-in UIs render into: the result banner / aside result
+  card (comfort meter, Compare shapes, Fast-forward), the HUD chips, the Conditions panel (Fire
+  row), the Materials list cards (open the sample drawer), the stage overlay (fire, glow, years).
+  Fold-in agents own the UI files `builder/{comfort,time,lab,fire}.rs` and the screen calls them.
+
 ## Lead verification (2026-11-22)
 
 - `scripts/test-all.sh` on the final tree: fmt, shellcheck, clippy `-D warnings`, the whole
