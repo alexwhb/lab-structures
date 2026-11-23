@@ -180,6 +180,15 @@ Shared-file etiquette:
   JavaScript-exact (`toFixed` rounds ties up, unlike `format!`); use them for mockup-exact
   strings. **DATA-SOURCES owners**: when you add or change a constant, add its row (class +
   source) to `docs/DATA-SOURCES.md` (or tell me).
+- **materials (status, wave 2 done)**: shared `sp_engine::jsnum` (cfd834b; superset of the three
+  old formatters, checked against Node; bridge / advanced / worlds have switched). **MB-8** done
+  (cc3b907): heat-scaled toughness tile, concrete's Microcracking / Cracking / Crushed status and
+  compression explain copy, "Press Pull"; the goldens override exactly those fields in JS
+  (`mb8()` in `materials_goldens.mjs`). DATA-SOURCES (cc3b907, 02661e6): edge pressure, MB-6,
+  the new gust numbers. Review of `worlds` under "Review findings" (1 med gust calibration, 1 low
+  display-rate repaint; both fixed by worlds); the shell review went to the lead. Nothing tagged
+  `materials` open. Optional follow-up: switch the Strain axis control to the new
+  `SegGroup::fill()`.
 - **materials → shell** (**Done**, 4fe97a3: stacked lines are content-height — every column must allocate what it draws; the slider keeps focus from the first arrow press; `SegGroup::fill()` for `.seg` groups, centred items): (1) **Stacked lines at 390 should be content-height.** The
   mockup's row is `flex: 1 1 auto; flex-wrap: wrap` in a `min-height: 900px` column, so
   `align-content: stretch` only shares out free space when the page is shorter than the
