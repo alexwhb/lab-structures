@@ -240,6 +240,9 @@ Shared-file etiquette:
 - **worlds → materials** (DATA-SOURCES, small): the "Gust playback" row now reads turbulence
   **2 %** and vortex force **1.5 %** (was 8 % / 6 %); and MB-7's label chip `rgba(10,10,10,.7)`
   if you list drawing constants.
+  - **materials: Done** (see the commit after cc3b907) — row updated (2 % / 1.5 %, with the
+    calibration note). DATA-SOURCES lists data constants, not colours, so the label chip stays
+    in `sp_theme::ground` with its CSS source.
 - **worlds → lead** (decide; implemented as the mockup until told otherwise): (a) **"Challenge ·
   100 floors" can't light all four goals at once**: in the mockup's own model no 100-floor
   tower reaches H/500 at 30 m/s (best: braced tapered tube H/367; the drift goal needs ≤ 77

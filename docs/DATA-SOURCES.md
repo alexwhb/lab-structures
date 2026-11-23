@@ -174,7 +174,7 @@ Game materials (one material per structure, "Built from"):
 | Cost | $1M per floor × system × shape factor, + $6M damper; challenge budget $160M | Game | system ×1, 1.2, 1.3, 1.45; shape ×1, 0.95, 1.18, 1.1 (`DAMPER_COST`, `BUDGET`) |
 | Floors, wind, exaggeration | 5–120 floors; V10 5–50 m/s (default 30); sway drawn × 1–150 (default 40) | Game / Drawing | |
 | m/s → mph | × 2.237 | Exact (2.23694) | `MPH` |
-| Gust playback | modal mass factor 33/140, turbulence 8 %, vortex force 6 %, mean lean 0.85, 48 steps per period, playback 0.55 Hz | Illustrative / Drawing | `dynamics` (owner: `worlds`) |
+| Gust playback | modal mass factor 33/140 (exact for the tip-load mode shape), turbulence 2 %, vortex force 1.5 % of the mean force at full lock-in, gust correlation time 1 period, mean lean 0.85, 48 steps per period, playback 0.55 Hz | Illustrative (calibrated so 3σ of the swing ≈ the mockup's dynamic amplitude) / Drawing | `tower::{TURBULENCE, VORTEX_FORCE, MEAN_LEAN, MODAL_MASS_FACTOR}`, `dynamics` (owner: `worlds`) |
 | Challenge | 100 floors at V10 = 30 m/s, drift better than H/350 (SPEC MB-6; the tile keeps "aim H/500"), under 10 milli-g, under $160M; rung 7 / 12 | Game | `CHALLENGE_FLOORS`, `CHALLENGE_V10`, `DRIFT_GOAL`, `CHALLENGE_RUNG` |
 
 ## Ground (`Ground.dc.html` `defs()`, `calc()`) — `sp_engine::ground`
