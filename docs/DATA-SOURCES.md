@@ -113,6 +113,9 @@ Public standards and textbooks; the figures quoted are the commonly published on
   (first-term approximation).
 - **[Burland]** J. B. Burland, M. Jamiolkowski, C. Viggiani, "Leaning Tower of Pisa: behaviour
   after stabilization operations" (2009): tilt ≈ 5.5° before 1990, ≈ 4° (3.97°) after 2001.
+- **[Burland2003]** J. B. Burland, M. B. Jamiolkowski, C. Viggiani, "The stabilisation of the
+  Leaning Tower of Pisa", *Soils and Foundations* 43(5), 2003: ≈ 5.5° by 1990; 600 t of lead
+  counterweights (1993) and soil extraction (1999–2001) brought it back to ≈ 4°.
 
 ---
 
@@ -243,15 +246,25 @@ comfort rows below).
 
 ### Comfort and settlement fold-ins (CMF, TIME; agent `time`)
 
-From SPEC CMF-1 / CMF-2 / TIME-1 and `time`'s notes in PROGRESS; `time` owns these constants
-(`builder::comfort`, `builder::longterm`) and may refine the rows.
+From SPEC CMF-1 / CMF-2 / TIME-1…3 and `time`'s rows in PROGRESS; `time` owns these constants
+(`builder::comfort`, `builder::longterm` incl. `statics` and `pisa`, as committed in 6bb9f43 /
+06752bb).
 
 | Constant | Value | Class | Note |
 |---|---|---|---|
+| Comfort value | the engine's peak smoothed top-floor acceleration of the run (live: so far) | Simplified | the meter shows exactly the HUD chip's number |
 | Comfort bands | v1's 5 / 10 / 20 milli-g × 15 for the builder's game scale (`comfort::GAME_SCALE`): 75 / 150 / 300 mg, meter 0–450+ | Illustrative | [ISO10137] for the real-world bands; the ×15 maps the mockup's comfort number onto them |
-| Same storm, four shapes | Tapered: each joint's x drawn toward the centre line in proportion to height, top 60 % as wide; Twisted: drag × 1.15/1.3, shedding × 0.45; Hollow core: drag × 1.0/1.3, shedding × 0.55 | Illustrative | factors from v1's tower model (`sp_engine::tower` Cd and cross-wind factors) |
+| Same storm, four shapes — shapes | Tapered: each joint's x drawn toward the centre line in proportion to height, top 60 % as wide; Twisted: drag × 1.15/1.3, shedding × 0.45; Hollow core: drag × 1.0/1.3, shedding × 0.55 | Illustrative | factors from v1's tower model (`sp_engine::tower` Cd and cross-wind factors) |
+| Same storm, four shapes — runs | four headless 18 s open-ground tests at the run's level and conditions (the as-built bar equals the live run) | Simplified | `comfort::compare` |
 | Consolidation time τ | dense sand 0.3 yr, stiff clay 3 yr, soft clay 9 yr, loose wet sand 0.5 yr, rock none | Illustrative | as v1's Ground; [Terzaghi] first-term 1 − e^(−t/τ) |
-| Toppling | a tower leaning past 5° | Game | |
+| Long-term stiffness | `k_long = ks / ratio`, `ratio = 1 kPa/mm ÷ ks_ground` (v1 Ground ks): soft clay 1.67, loose wet sand 0.67, stiff clay 0.25, dense sand 0.125, rock 0 | Illustrative | so the final consolidation settlement is the first (immediate) one × ratio: soft clay settles tens of cm, sand millimetres, rock nothing (`longterm::consolidation`) |
+| Overload creep | + 3 × (R − Qc) / k_long when a foundation is pushed past its capacity | Illustrative | `longterm::OVERLOAD_CREEP` |
+| Consolidation stepping | every 0.5 yr: s ← s∞ + (s − s∞)·e^(−Δt/τ) for the current reaction (exact for a constant load), never rebounding | Simplified | [Terzaghi] first term; `longterm::STEP` |
+| Long-term loads | self-weight (joint masses as the settling engine's) and crates; no wind, snow, quakes, traffic | Simplified | they come and go |
+| Settled state | exact static equilibrium of the builder's springs (pieces E/15·A/L, foundations ks vertical and pinned horizontally), geometry updated each step (P-Δ); ropes slack, resting joints lift, foundations rip out past Qt, pieces break past capacity | Exact for the model | `longterm::statics` (energy minimisation; the preview's 520 steps don't converge the rocking mode on soft soil) |
+| Tilt | angle between vertical and the foundations' centroid → top floor's centroid line, from the line as built; bridges: largest differential settlement | Exact (geometry) | SPEC TIME-2 |
+| Toppling | a tower leaning past 5° | Game | `longterm::TOPPLE_DEG` |
+| 7 · Leaning tower | soft clay; 2 bays × 8 storeys (8 m × 32 m), Concrete walls + diagonals, Floors, all locked; three footings; 8 t bells top right; goal under 0.5° after 30 years; budget $8k | Game | left alone 0.6° → 4.3° in 30 years; piles under all three footings 0.16° ($4.5k, three stars); an 8 t counterweight top left 0.0°. The real tower leaned ≈ 5.5° by 1990; 600 t of lead counterweights (1993) and soil extraction (1999–2001) took it back to ≈ 4° [Burland2003] |
 
 ## Fire (FIRE-1) — `sp_engine::builder::fire` (owner `lab`)
 
