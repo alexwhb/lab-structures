@@ -14,6 +14,7 @@
 //! - [`preview`] — the live preview and the static settle with settlement offsets.
 //! - [`game`] — the state machine: tools, editing rules and toasts, undo, runs, results.
 //! - [`view`] — everything the screen draws ([`Game::view`]).
+//! - [`jsmath`] — V8's `Math.sin` / `cos` / `atan2` / `pow` bit for bit.
 //! - [`netlist`] — the design as a `.str` netlist and back (Share, "Open in Advanced", ⌘V).
 //!
 //! Owners (PROGRESS.md): the core is agent `engine`; [`comfort`] and [`longterm`] are agent
@@ -34,6 +35,7 @@ pub mod camera;
 pub mod data;
 pub mod design;
 pub mod game;
+pub mod jsmath;
 pub mod netlist;
 pub mod preview;
 pub mod setup;
@@ -52,7 +54,8 @@ pub use data::{
 };
 pub use design::{Design, Joint, Piece};
 pub use game::{
-    Game, Outcome, Phase, Preset, PresetBuild, RunResult, Selection, Tool, result_of, run_headless,
+    Game, Outcome, Phase, Preset, PresetBuild, RunResult, Selection, Tool, Years, result_of,
+    run_headless,
 };
 pub use preview::{FoundForce, PieceForce, SettleOptions, Settled, preview, settle};
 pub use setup::{Conditions, Setup};

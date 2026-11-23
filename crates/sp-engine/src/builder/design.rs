@@ -94,15 +94,22 @@ impl Design {
             _ => 0.0,
         }
     }
+    /// Whether a locked piece meets this joint (it can't be moved or deleted then).
+    pub fn holds_locked(&self, id: &str) -> bool {
+        self.members
+            .iter()
+            .any(|m| m.locked && (m.a == id || m.b == id))
+    }
     /// Whether the design has a piece of this type.
     pub fn has(&self, kind: PieceType) -> bool {
         self.members.iter().any(|m| m.kind == kind)
     }
-    /// The cost in $k (`cost()`): Σ length × $/m, plus $300 per footing and $1 500 per pile
+    /// The cost in $k (`cost()`): Σ length × $/m of the pieces that aren't locked (a level's
+    /// own pieces cost nothing; the mockup has none), plus $300 per footing and $1 500 per pile
     /// that isn't locked, / 1000.
     pub fn cost(&self) -> f64 {
         let mut c = 0.0;
-        for m in &self.members {
+        for m in self.members.iter().filter(|m| !m.locked) {
             c += self.length(m) * m.kind.spec().cost;
         }
         for n in &self.nodes {

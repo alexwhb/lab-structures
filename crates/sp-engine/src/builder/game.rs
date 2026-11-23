@@ -170,6 +170,15 @@ pub enum Outcome {
     },
 }
 
+/// The Leaning tower's 30-year result (SPEC TIME-3; filled by `longterm`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Years {
+    /// Tilt after 30 years, degrees.
+    pub tilt: f64,
+    /// Largest settlement, m.
+    pub settled: f64,
+}
+
 /// The result of a run (`state.result`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct RunResult {
@@ -187,6 +196,43 @@ pub struct RunResult {
     pub first_found: Option<FirstFound>,
     /// Per scene.
     pub outcome: Outcome,
+    /// A years run (Leaning tower): its tilt and settlement (`outcome` then holds the tower's
+    /// standing / height).
+    pub years: Option<Years>,
+}
+
+impl RunResult {
+    /// A years run's result (SPEC TIME-3, for `longterm`): `outcome` is a tower that reached
+    /// its height, `standing` as given.
+    #[allow(clippy::too_many_arguments)]
+    pub fn of_years(
+        pass: bool,
+        stars: u8,
+        cost: f64,
+        practice: bool,
+        standing: bool,
+        height: f64,
+        years: Years,
+        first: Option<FirstBreak>,
+    ) -> RunResult {
+        RunResult {
+            pass,
+            stars,
+            cost,
+            practice,
+            first,
+            first_found: None,
+            outcome: Outcome::Tower {
+                standing,
+                reached: true,
+                mg: 0.0,
+                comfy: true,
+                height,
+                sway: 0.0,
+            },
+            years: Some(years),
+        }
+    }
 }
 
 /// The result of a finished simulation (`tick()`'s result block).
@@ -229,6 +275,7 @@ pub fn result_of(sim: &Sim, cost: f64, practice: bool) -> RunResult {
         first: sim.first_break.clone(),
         first_found: sim.first_found.clone(),
         outcome,
+        years: None,
     }
 }
 
@@ -767,6 +814,50 @@ impl Game {
         self.refresh();
     }
 
+    /// Puts a design on the current level as it is (MCP `builder_test`): building, the level
+    /// and conditions kept, undo and any run cleared.
+    pub fn load_design(&mut self, design: Design) {
+        self.sim = None;
+        self.hist.clear();
+        self.design = design;
+        self.phase = Phase::Build;
+        self.pending = None;
+        self.sel = None;
+        self.hover = None;
+        self.drag = None;
+        self.result = None;
+        self.revision += 1;
+        self.refresh();
+    }
+
+    /// The level's own crate on a joint, t (a pre-built level's crates can't go lower).
+    pub fn level_crate(&self, id: &str) -> f64 {
+        spec(self.level, self.sb_scene)
+            .prebuilt
+            .map_or(0.0, |d| d.load(id))
+    }
+
+    /// The Leaning tower's run starts (SPEC TIME-3, driven by `longterm`): running with no
+    /// simulation — editing paused, the selection and chain cleared.
+    pub fn start_years(&mut self) {
+        self.sim = None;
+        self.phase = Phase::Run;
+        self.sel = None;
+        self.pending = None;
+        self.hover = None;
+        self.result = None;
+        self.drag = None;
+    }
+
+    /// The Leaning tower's run is over: the result shows and best stars update (as `tick`).
+    pub fn finish_years(&mut self, r: RunResult) {
+        if r.stars > self.best_for(self.level) {
+            self.best.insert(self.level, r.stars.min(3));
+        }
+        self.result = Some(r);
+        self.phase = Phase::Result;
+    }
+
     // ---------- tools and chips ----------
 
     /// Picks a rail tool (ends a member chain).
@@ -1069,6 +1160,11 @@ impl Game {
             return;
         }
         let nv = 0f64.max(super::data::MAX_CRATE_T.min(self.design.load(id) + t));
+        let floor = self.level_crate(id);
+        if nv < floor {
+            self.say(LEVEL_CRATES);
+            return;
+        }
         self.push();
         self.design.set_load(id, nv);
     }
@@ -1307,7 +1403,7 @@ impl Game {
         let Some(n) = self.design.node(id) else {
             return;
         };
-        if n.locked {
+        if n.locked || self.design.holds_locked(id) {
             return;
         }
         self.push();
@@ -1429,7 +1525,7 @@ impl Game {
         let Some(n) = self.design.node(&id) else {
             return;
         };
-        if n.locked {
+        if n.locked || self.design.holds_locked(&id) {
             return;
         }
         if !(dx.is_finite() && dy.is_finite()) {
@@ -1711,3 +1807,5 @@ impl Game {
 
 /// The toast for editing a level's own (locked) piece (Leaning tower; not in the mockup).
 pub const LOCKED_PIECE: &str = "Level pieces stay put.";
+/// The toast for taking a level's own crate below its weight (the Leaning tower's bells).
+pub const LEVEL_CRATES: &str = "The bells stay: fix the lean another way.";

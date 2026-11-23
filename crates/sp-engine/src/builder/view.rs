@@ -17,7 +17,7 @@ use super::data::{
     DIRS, FIRES, Foundation, Group, LevelKey, PieceType, QUAKES, SNOWS, Scene, Soil, TrafficSet,
     VehicleKind, WEIGHTS, WINDS, levels, stars_text,
 };
-use super::game::{Game, Outcome, Phase, Selection, Tool};
+use super::game::{Game, Outcome, Phase, RunResult, Selection, Tool};
 use super::setup::{Setup, spec};
 use super::sim::{Sim, Splash as SimSplash, VehicleState, utilisation};
 use crate::jsnum::{round, to_fixed, to_string};
@@ -628,7 +628,7 @@ pub struct View {
     pub vehicles: Vec<VehicleView>,
     /// Wind arrows and streaks (wind > 0.5 m/s).
     pub wind: Vec<WindArrow>,
-    /// Snowflakes: dots of radius 1.6 px centred here (snow set).
+    /// Snowflakes (snow set): dots of radius 1.6 px whose top is here (centre `y + 1.6`).
     pub flakes: Vec<Pt>,
     /// The target height's dashed line, y px (open ground levels).
     pub target_y: Option<f64>,
@@ -697,6 +697,16 @@ pub struct View {
     pub inspector: Inspector,
     /// "What's happening".
     pub explain: String,
+}
+
+/// Positions and forces to draw the structure at ([`Game::view_settled`]).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SettledView<'a> {
+    /// Each joint's world position, m, in the design's joint order (missing: as designed).
+    pub pos: &'a [[f64; 2]],
+    /// Each piece's axial force N (+ tension), broken and slack flags, in the design's piece
+    /// order (missing: no force).
+    pub pieces: &'a [(f64, bool, bool)],
 }
 
 /// `fmtT`: "+2.4 t" / "−12 t" (one decimal under 10 t).
@@ -781,8 +791,14 @@ impl Info {
 }
 
 fn tip(kind: PieceType, mode: super::sim::BreakMode) -> &'static str {
+    use super::fire::FireBreak;
     use super::sim::BreakMode::*;
-    if kind == PieceType::Rope && !matches!(mode, Softened | BurnedThrough) {
+    match mode {
+        Softened => return super::fire::tip(FireBreak::Softened, kind),
+        BurnedThrough => return super::fire::tip(FireBreak::BurnedThrough, kind),
+        _ => {}
+    }
+    if kind == PieceType::Rope {
         return "Rope is cheap but weak: swap it for Cable where the pull is big.";
     }
     match mode {
@@ -793,12 +809,6 @@ fn tip(kind: PieceType, mode: super::sim::BreakMode) -> &'static str {
             "Long pieces that get pushed bow sideways. Make them shorter, use Steel, or brace them halfway."
         }
         Snapped => "It was pulled apart. Steel or a Cable takes far more pull.",
-        Softened => {
-            "Steel keeps only about half its strength at 600 °C. Real steel frames are wrapped in fireproofing."
-        }
-        BurnedThrough => {
-            "Wood and rope burn: by 300 °C there is little left. Keep them away from the fire, or use Steel or Concrete."
-        }
         _ => "It was squeezed past its strength.",
     }
 }
@@ -825,6 +835,19 @@ fn add(p: Pt, d: Pt) -> Pt {
 impl Game {
     /// The render model (`renderVals()`).
     pub fn view(&self) -> View {
+        self.view_with(None)
+    }
+
+    /// The render model with the structure drawn at given positions and forces instead of the
+    /// preview's (SPEC TIME-1: the 30-year fast-forward's frames; agent `time`). Pieces get
+    /// their bands from `pieces[i].n` against their capacities; broken ones are not drawn;
+    /// joints, handles, foundations, crates and rings follow `pos`. Everything else is as
+    /// [`Game::view`].
+    pub fn view_settled(&self, s: &SettledView) -> View {
+        self.view_with(Some(s))
+    }
+
+    fn view_with(&self, over: Option<&SettledView>) -> View {
         let setup = self.setup();
         let sp = spec(self.level(), self.sb_scene());
         let design = self.design();
@@ -841,9 +864,15 @@ impl Game {
         let building = phase == Phase::Build;
 
         // positions (world) and piece info
-        let pos: Vec<[f64; 2]> = match sim {
-            Some(s) => s.p.iter().map(|p| [p.x, p.y]).collect(),
-            None => design.nodes.iter().map(|n| [n.x, n.y]).collect(),
+        let pos: Vec<[f64; 2]> = match (over, sim) {
+            (Some(o), _) => design
+                .nodes
+                .iter()
+                .enumerate()
+                .map(|(i, n)| o.pos.get(i).copied().unwrap_or([n.x, n.y]))
+                .collect(),
+            (None, Some(s)) => s.p.iter().map(|p| [p.x, p.y]).collect(),
+            (None, None) => design.nodes.iter().map(|n| [n.x, n.y]).collect(),
         };
         let pos_of = |id: &str| design.node_index(id).and_then(|i| pos.get(i).copied());
         let infos: Vec<(String, Info)> = match (sim, pv) {
@@ -888,6 +917,35 @@ impl Game {
                 })
                 .collect(),
             _ => vec![],
+        };
+        let infos = match over {
+            None => infos,
+            Some(o) => design
+                .members
+                .iter()
+                .enumerate()
+                .map(|(i, m)| {
+                    let len = design.length(m);
+                    let cap = super::sim::capacity(m.kind, len);
+                    let base = infos.iter().find(|(k, _)| *k == m.id).map(|(_, q)| *q);
+                    let (n, broken, slack) =
+                        o.pieces.get(i).copied().unwrap_or((0.0, false, false));
+                    (
+                        m.id.clone(),
+                        Info {
+                            n,
+                            broken,
+                            slack,
+                            cap_t: base.map_or(cap.cap_t, |q| q.cap_t),
+                            cap_c: base.map_or(cap.cap_c, |q| q.cap_c),
+                            over: false,
+                            len,
+                            exposed: base.is_some_and(|q| q.exposed),
+                            temp: 20.0,
+                        },
+                    )
+                })
+                .collect(),
         };
         let info = |id: &str| infos.iter().find(|(k, _)| k == id).map(|(_, q)| *q);
         let px = |p: [f64; 2]| cam.px(p);
@@ -1081,7 +1139,7 @@ impl Game {
             let mut guard = 0;
             while z <= z_top + 4.0 && guard < 1000 {
                 guard += 1;
-                let vz = wind_now * (z.max(2.0) / 10.0).powf(0.2);
+                let vz = wind_now * super::jsmath::pow02(z.max(2.0) / 10.0);
                 let len = 220f64.min(vz * vz / 6.0);
                 let y = cam.y(z);
                 if (0.0..=600.0).contains(&y) {
@@ -1127,7 +1185,7 @@ impl Game {
             };
             for i in 0..nfl {
                 let i = i as f64;
-                flakes.push([(i * 61.7) % 1120.0, ((i * 97.1) % 660.0) - 60.0 + 1.6]);
+                flakes.push([(i * 61.7) % 1120.0, ((i * 97.1) % 660.0) - 60.0]);
             }
         }
         let target_y = setup.target.filter(|&t| t != 0.0).map(|t| cam.y(t));
@@ -1585,48 +1643,10 @@ impl Game {
         };
         let run_name = if river { "Run traffic" } else { "Run the test" };
         let budget = setup.budget.filter(|&b| b != 0.0);
-        let result = r.map(|r| {
-            let over = budget.is_some_and(|b| r.cost > b);
-            let title = match &r.outcome {
-                Outcome::River { crossed, total } => {
-                    if r.pass {
-                        if over {
-                            "All across, but over budget".to_string()
-                        } else {
-                            "All across!".to_string()
-                        }
-                    } else {
-                        format!("{crossed} of {total} made it")
-                    }
-                }
-                Outcome::Tower {
-                    standing, reached, ..
-                } => if r.pass {
-                    if over {
-                        "It stood, but over budget"
-                    } else {
-                        "It stood!"
-                    }
-                } else if !standing {
-                    "It came down"
-                } else if !reached {
-                    "Too short"
-                } else {
-                    "Too wobbly to live in"
-                }
-                .to_string(),
-            };
-            ResultView {
-                title,
-                pass: r.pass,
-                stars: if budget.is_some() && r.pass && !r.practice {
-                    stars_text(r.stars)
-                } else if r.practice {
-                    "practice".into()
-                } else {
-                    String::new()
-                },
-            }
+        let result = r.map(|r| ResultView {
+            title: r.title(&setup),
+            pass: r.pass,
+            stars: r.stars_text(&setup),
         });
         let level_groups = Group::ALL
             .into_iter()
@@ -1850,95 +1870,8 @@ impl Game {
         let river = setup.scene == Scene::River;
         let cond = self.cond();
         let design = self.design();
-        let budget = setup.budget.filter(|&b| b != 0.0);
-        let fb_text = |fb: &super::sim::FirstBreak| {
-            format!(
-                "{} ({}) {} first. {}",
-                fb.id,
-                fb.kind.name().to_lowercase(),
-                fb.mode.text(),
-                tip(fb.kind, fb.mode)
-            )
-        };
-        let ff_text = |ff: &super::sim::FirstFound| {
-            format!(
-                "Foundation {} {} first. {}",
-                ff.id,
-                ff.mode.text(),
-                ftip(ff.mode)
-            )
-        };
         match self.phase() {
-            Phase::Result => {
-                let Some(r) = self.result() else {
-                    return String::new();
-                };
-                let pr = if r.practice {
-                    " This was a practice run: the conditions were easier than the level asks, so no stars."
-                } else {
-                    ""
-                };
-                if r.pass {
-                    let lead = if river {
-                        "Everyone made it. "
-                    } else {
-                        "It stood through the whole test. "
-                    };
-                    let mid = match budget {
-                        Some(b) if !r.practice => {
-                            if r.cost <= b {
-                                if r.stars < 3 {
-                                    "Under budget. Trim it for more stars: delete pieces that show almost no force."
-                                } else {
-                                    "Three stars. Nicely done."
-                                }
-                            } else {
-                                "Over budget though, so no stars."
-                            }
-                        }
-                        _ => "",
-                    };
-                    return format!("{lead}{mid}{pr}");
-                }
-                let why = match (&r.first_found, &r.first) {
-                    (Some(ff), _) => ff_text(ff),
-                    (None, Some(fb)) => fb_text(fb),
-                    _ => String::new(),
-                };
-                match &r.outcome {
-                    Outcome::River { crossed, total } => format!(
-                        "{crossed} of {total} made it. {}{pr}",
-                        if why.is_empty() {
-                            "Nothing broke: a vehicle ran out of road. Make sure the Road runs all the way across.".to_string()
-                        } else {
-                            why
-                        }
-                    ),
-                    Outcome::Tower {
-                        standing,
-                        reached,
-                        mg,
-                        height,
-                        ..
-                    } => {
-                        if !reached {
-                            format!(
-                                "It stood, but the top floor is at {} m. The goal is {} m.{pr}",
-                                to_fixed(*height, 0),
-                                setup.target.map_or("null".into(), to_string)
-                            )
-                        } else if !standing {
-                            format!("It came down. {why}{pr}")
-                        } else {
-                            format!(
-                                "It stood, but the top floor swayed hard enough to feel {} milli-g (the limit is {}). A wider base, diagonal bracing or a heavy crate hung on a rope near the top (a pendulum damper) all calm it down.{pr}",
-                                to_fixed(*mg, 0),
-                                setup.comfort.map_or("null".into(), to_string)
-                            )
-                        }
-                    }
-                }
-            }
+            Phase::Result => self.result().map_or(String::new(), |r| r.explain(setup)),
             Phase::Run => {
                 let Some(s) = sim else { return String::new() };
                 if let Some(ff) = &s.first_found {
@@ -2011,6 +1944,166 @@ impl Game {
                         if snowy { " and the snow" } else { "" },
                         worst_id.unwrap_or("null"),
                         to_string(round(worst_ut * 100.0))
+                    )
+                }
+            }
+        }
+    }
+}
+
+fn fb_text(fb: &super::sim::FirstBreak) -> String {
+    format!(
+        "{} ({}) {} first. {}",
+        fb.id,
+        fb.kind.name().to_lowercase(),
+        fb.mode.text(),
+        tip(fb.kind, fb.mode)
+    )
+}
+
+fn ff_text(ff: &super::sim::FirstFound) -> String {
+    format!(
+        "Foundation {} {} first. {}",
+        ff.id,
+        ff.mode.text(),
+        ftip(ff.mode)
+    )
+}
+
+impl RunResult {
+    /// The result banner's title (`resultTitle`): "All across!", "5 of 8 made it", "It stood!",
+    /// "It came down", "Too short", "Too wobbly to live in", "…, but over budget".
+    pub fn title(&self, setup: &Setup) -> String {
+        let over = setup
+            .budget
+            .filter(|&b| b != 0.0)
+            .is_some_and(|b| self.cost > b);
+        if self.years.is_some() {
+            return if self.pass {
+                if over {
+                    "Straight enough, but over budget"
+                } else {
+                    "Straight enough!"
+                }
+            } else {
+                "It still leans"
+            }
+            .to_string();
+        }
+        match &self.outcome {
+            Outcome::River { crossed, total } => {
+                if self.pass {
+                    if over {
+                        "All across, but over budget".to_string()
+                    } else {
+                        "All across!".to_string()
+                    }
+                } else {
+                    format!("{crossed} of {total} made it")
+                }
+            }
+            Outcome::Tower {
+                standing, reached, ..
+            } => if self.pass {
+                if over {
+                    "It stood, but over budget"
+                } else {
+                    "It stood!"
+                }
+            } else if !standing {
+                "It came down"
+            } else if !reached {
+                "Too short"
+            } else {
+                "Too wobbly to live in"
+            }
+            .to_string(),
+        }
+    }
+
+    /// The banner's star row: "★★☆" for a passing level run, "practice", or empty.
+    pub fn stars_text(&self, setup: &Setup) -> String {
+        if setup.budget.is_some_and(|b| b != 0.0) && self.pass && !self.practice {
+            stars_text(self.stars)
+        } else if self.practice {
+            "practice".into()
+        } else {
+            String::new()
+        }
+    }
+
+    /// "What's happening" after the run (`explain` in the result phase).
+    pub fn explain(&self, setup: &Setup) -> String {
+        let river = setup.scene == Scene::River;
+        let budget = setup.budget.filter(|&b| b != 0.0);
+        if let Some(y) = self.years {
+            return format!(
+                "After 30 years: tilt {}°, settled {} mm.",
+                to_fixed(y.tilt, 1),
+                to_fixed(y.settled * 1000.0, 0)
+            );
+        }
+        let pr = if self.practice {
+            " This was a practice run: the conditions were easier than the level asks, so no stars."
+        } else {
+            ""
+        };
+        if self.pass {
+            let lead = if river {
+                "Everyone made it. "
+            } else {
+                "It stood through the whole test. "
+            };
+            let mid = match budget {
+                Some(b) if !self.practice => {
+                    if self.cost <= b {
+                        if self.stars < 3 {
+                            "Under budget. Trim it for more stars: delete pieces that show almost no force."
+                        } else {
+                            "Three stars. Nicely done."
+                        }
+                    } else {
+                        "Over budget though, so no stars."
+                    }
+                }
+                _ => "",
+            };
+            return format!("{lead}{mid}{pr}");
+        }
+        let why = match (&self.first_found, &self.first) {
+            (Some(ff), _) => ff_text(ff),
+            (None, Some(fb)) => fb_text(fb),
+            _ => String::new(),
+        };
+        match &self.outcome {
+            Outcome::River { crossed, total } => format!(
+                "{crossed} of {total} made it. {}{pr}",
+                if why.is_empty() {
+                    "Nothing broke: a vehicle ran out of road. Make sure the Road runs all the way across.".to_string()
+                } else {
+                    why
+                }
+            ),
+            Outcome::Tower {
+                standing,
+                reached,
+                mg,
+                height,
+                ..
+            } => {
+                if !reached {
+                    format!(
+                        "It stood, but the top floor is at {} m. The goal is {} m.{pr}",
+                        to_fixed(*height, 0),
+                        setup.target.map_or("null".into(), to_string)
+                    )
+                } else if !standing {
+                    format!("It came down. {why}{pr}")
+                } else {
+                    format!(
+                        "It stood, but the top floor swayed hard enough to feel {} milli-g (the limit is {}). A wider base, diagonal bracing or a heavy crate hung on a rope near the top (a pendulum damper) all calm it down.{pr}",
+                        to_fixed(*mg, 0),
+                        setup.comfort.map_or("null".into(), to_string)
                     )
                 }
             }
@@ -2105,7 +2198,7 @@ fn terrain(cam: &Camera, setup: &Setup, off: Pt) -> Terrain {
 }
 
 fn vehicle_view(v: &super::sim::Vehicle, cam: &Camera) -> VehicleView {
-    let (ca, sa) = (v.ang.cos(), v.ang.sin());
+    let (ca, sa) = (super::jsmath::cos(v.ang), super::jsmath::sin(v.ang));
     let p2 = |u: f64, w: f64| cam.px([v.x + u * ca - w * sa, v.y + 0.35 + u * sa + w * ca]);
     let rect = |u0: f64, w0: f64, u1: f64, w1: f64| -> Quad {
         [p2(u0, w0), p2(u1, w0), p2(u1, w1), p2(u0, w1)]

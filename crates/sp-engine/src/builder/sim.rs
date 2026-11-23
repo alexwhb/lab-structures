@@ -15,6 +15,7 @@
 
 use super::data::{Foundation, PieceType, Scene, VehicleKind};
 use super::design::Design;
+use super::jsmath;
 use super::setup::{Conditions, Setup};
 use crate::jsnum::round;
 use crate::truss::hypot;
@@ -734,20 +735,20 @@ impl Sim {
                 cond.dir
             };
             let top_y = 10f64.max(self.top_y0);
-            let v_top = w * (top_y / 10.0).powf(0.2);
+            let v_top = w * jsmath::pow02(top_y / 10.0);
             let fg = 0.12 * v_top / self.width;
             let t = self.t;
             let gust = 1.0
-                + 0.3 * self.shedding * (2.0 * PI * fg * t).sin()
-                + 0.15 * (2.0 * PI * 0.37 * t).sin()
-                + 0.1 * (2.0 * PI * 0.13 * t + 1.0).sin();
+                + 0.3 * self.shedding * jsmath::sin(2.0 * PI * fg * t)
+                + 0.15 * jsmath::sin(2.0 * PI * 0.37 * t)
+                + 0.1 * jsmath::sin(2.0 * PI * 0.13 * t + 1.0);
             let list = if dir > 0.0 {
                 &self.wind_l
             } else {
                 &self.wind_r
             };
             for wj in list {
-                let v = w * (wj.y.max(4.0) / 10.0).powf(0.2);
+                let v = w * jsmath::pow02(wj.y.max(4.0) / 10.0);
                 self.p[wj.i].fx += dir * 0.613 * v * v * 1.3 * 4.0 * 4.0 * gust * self.drag;
             }
             let q10 = 0.613 * w * w;
@@ -760,7 +761,7 @@ impl Sim {
                     * 0.25
                     * 10.0
                     * c.len
-                    * (2.0 * PI * 0.45 * t + 0.35 * (ax + bx) / 2.0).sin()
+                    * jsmath::sin(2.0 * PI * 0.45 * t + 0.35 * (ax + bx) / 2.0)
                     / 2.0;
                 self.p[c.a].fy += lift;
                 self.p[c.b].fy += lift;
@@ -784,7 +785,7 @@ impl Sim {
             } else {
                 0.0
             };
-            shake = cond.quake * self.env * (2.0 * PI * 1.1 * self.t).sin();
+            shake = cond.quake * self.env * jsmath::sin(2.0 * PI * 1.1 * self.t);
         }
         for p in &mut self.p {
             if p.inv == 0.0 {
@@ -962,8 +963,8 @@ impl Sim {
                             v.x += v.speed * h;
                             (v.x, v.y, v.ang, v.d)
                         };
-                        let r = self.support(x + d, y + d * ang.sin());
-                        let f = self.support(x - d, y - d * ang.sin());
+                        let r = self.support(x + d, y + d * jsmath::sin(ang));
+                        let f = self.support(x - d, y - d * jsmath::sin(ang));
                         let sandbox = self.sandbox;
                         let v = &mut self.v[vi];
                         v.ax = [f, r];
@@ -974,7 +975,7 @@ impl Sim {
                             continue;
                         };
                         v.y = (r.y + f.y) / 2.0;
-                        v.ang = (r.y - f.y).atan2(2.0 * v.d);
+                        v.ang = jsmath::atan2(r.y - f.y, 2.0 * v.d);
                         if v.x > 70.0 {
                             if sandbox {
                                 v.x = -20.0;
@@ -1073,9 +1074,10 @@ impl Sim {
         self.v.iter().map(|v| v.laps).sum()
     }
 
-    /// Lights the fire now ("Light it now").
+    /// "Light it now": a fire that is set but not burning yet lights 0.2 s from now
+    /// ([`super::fire::light_now`]).
     pub fn light_fire(&mut self) {
-        self.fire_start = Some(self.t);
+        super::fire::light_now(self);
     }
 }
 
@@ -1133,5 +1135,7 @@ fn js_sign(x: f64) -> f64 {
 }
 
 /// The fire hook: heats pieces and sets their strength / stiffness factors (agent `lab`,
-/// `builder::fire`). Until `fire::update` lands it does nothing.
-fn fire_hook(_sim: &mut Sim, _dt: f64) {}
+/// [`super::fire::update`]; it returns at once while Fire is off and nothing is hot).
+fn fire_hook(sim: &mut Sim, dt: f64) {
+    super::fire::update(sim, dt);
+}

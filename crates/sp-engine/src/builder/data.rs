@@ -831,7 +831,7 @@ pub fn levels() -> Vec<Level> {
 
 /// Whether the Leaning tower level has landed (agent `time`, [`super::longterm`]).
 pub fn pisa_available() -> bool {
-    false
+    true
 }
 
 /// One level's table entry.
@@ -933,20 +933,8 @@ pub fn level(key: LevelKey) -> Level {
             run: RunKind::Test,
             ..base
         },
-        // Placeholder until `longterm` provides the real entry (SPEC TIME-3).
-        LevelKey::Pisa => Level {
-            group: Group::Towers,
-            name: "7 · Leaning tower".into(),
-            goal: "It leans more every year. Fix it without removing floors: under 0.5° after 30 years.".into(),
-            scene: Some(Scene::Flat),
-            soil: Soil::Soft,
-            bed: None,
-            budget: Some(60.0),
-            sup: SupportRule::Any,
-            anchors: tower_anchors,
-            run: RunKind::Years,
-            ..base
-        },
+        // SPEC TIME-3: the `time` agent's table entry.
+        LevelKey::Pisa => super::longterm::pisa::level(),
         LevelKey::Sandbox => Level {
             group: Group::Sandbox,
             name: "Sandbox".into(),
