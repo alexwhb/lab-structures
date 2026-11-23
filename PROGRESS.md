@@ -189,24 +189,37 @@ Shared-file etiquette:
   drive button reaches the brand in a few presses (mode links, then the brand), or raise the
   cap to ~150. (My PROV-1 line is now the group "Where the numbers come from", so
   `nav.rs::chrome_follows_the_route` passes.)
-- **screen (v2 status, 4f5ce14) → shell, time, lab**: the builder screen is in
-  (`src/screens/builder.rs` + `builder/{aside,bits,hint,host,legend,paint,rail,scene,stage}.rs`),
-  drawn from `game.view()` every frame. **`shell`**: the engine state is
-  **`BuilderScreen::game: Game`** (`app.screens_mut().builder.game`; MCP changes show next
-  frame); the fold-ins are **`BuilderScreen::fold: FoldIns`** with public fields `comfort`,
-  `time`, `lab`, `fire` (so MCP's `show: true` reaches e.g. `builder.fold.time.start(&game)` /
-  `builder.fold.lab.open(piece)` once `time` / `lab` add those). Share = `game.share_text()`,
-  ⌘V / Carry in = `game.paste_netlist`, "Open in Advanced" = `Carry::netlist(share_text,
-  Some(slug), Route::Playground)`. Commands: `ZoomIn/Out/Fit`, `Pan` (40 stage px per press),
-  `Nudge`, `Escape` (a fold-in first, then ends the chain, then clears the selection). Best stars
-  persist in egui memory under `screens::builder::BEST_STARS_KEY`. **`time` / `lab`**: the hook
-  trait is `builder/host.rs` (as posted; `HudChip { key, value, color }`, `Xf` in
-  `builder/paint.rs`: `xf.p([x, y] m)`, `xf.pt([px, py] stage px)`, `xf.l(px)`, `xf.ppm()`).
-  I committed the `time.rs` / `lab.rs` stubs; **`comfort.rs` and `fire.rs` are already yours in
-  the working tree but not committed — HEAD's `builder.rs` declares them, so please commit
-  them soon.** Helpers for you in `builder/bits.rs`: `chip_row` / `chip_rows` (the Conditions
-  rows), `ChipSpec`, `framed`, `section`, `para`, `eyebrow`, `label_node`, `status_pill`,
-  `bar`; `host::card`.
+- **screen (v2 wave-1 status, 2352798) → all**: the builder screen is done for BLD-1…BLD-15
+  (screen side) — `src/screens/builder.rs` + `builder/{aside,bits,hint,host,legend,paint,rail,
+  scene,stage}.rs`, colours `sp_theme::builder`, API and hooks in ARCHITECTURE § builder › "The
+  builder screen". `BuilderScreen { pub game: Game, pub fold: FoldIns }` (MCP:
+  `app.screens_mut().builder.game`); Share = `game.share_text()`, ⌘V / Carry in =
+  `game.paste_netlist`. Fold-ins plug in through `builder/host.rs::FoldIn` (comfort, time, lab,
+  fire all implement it now). Keyboard building: the focused grid shows the hover dot at the
+  stage centre, Enter builds there, arrows pan, ⌥ arrows nudge, Esc ends a chain.
+  **Tests** (all green in the shared tree, ~1 s): `tests/builder.rs` 11 journeys (level 1 by
+  clicks → all across with stars + best on the row + replay in slow motion; placement toasts;
+  inspectors; palette / foundations / crates / Sandbox scenes; zoom / pan / fit by buttons, ⌘
+  keys, wheel, drag; conditions while running, Shake now, refusals, slow motion; Share / ⌘V /
+  hand-offs; ⌘Z / Delete / Esc / nudge / Reset; dragging + keyboard building; pacing: idle
+  asks for no frame, a run ~30 fps; best stars survive a restart), `tests/builder_look.rs` (4:
+  closeness, 1440 / 390 without overlapping controls, `SP_BUILDER_SHOTS=1` gallery of all seven
+  boards incl. the running ones 16 s in), `tests/builder_perf.rs` (`PERF builder app frame
+  (TowerStorm running)` ≈ 1.5–4.7 ms, limit 16), unit tests in `paint` / `scene` / `legend`,
+  `sp-theme` contrast tests. **Closeness** (mean |Δ| per region vs the references, boards
+  rebuilt with `Preset::board`): BridgeBuild — rail 3.0, hint bar 7.9, stage 0.7, legend + zoom
+  7.3, level rows 3.5, goal panel 9.7, Conditions 7.3; TowerBuild — rail 3.0, hint bar 5.5, stage
+  4.3, level rows 3.5, goal panel 8.6 (regions under the level list are compared one row lower:
+  the mockup has no "7 · Leaning tower"). Remaining differences: Inter advances a hair wider in
+  egui than in Chrome (drift along the chip rows; paragraphs wrap with 2 px slack); the aside is
+  300.5 px wide by CSS flex and Chrome snaps it differently.
+  **Decisions (lead, please confirm or overrule)**: (a) the water / wind dashes, snowfall and
+  the shake move only while running — the mockup's CSS snowfall also falls while building, but
+  PLAT-3 asks 0 % idle; (b) the result banner says "Replay in slow motion" (SPEC BLD-10), not the
+  mockup's "Watch again, slow"; (c) level-row stars are painted five-point stars (MB-2); (d) an
+  arrow press pans 40 stage px; (e) the PROV-1 line is one quiet row of dot + text under the
+  legend (group "Where the numbers come from"); (f) "Open in Advanced" is a full-width ghost
+  under the Materials list / inspector (not in the mockup; NAV-4).
 
 - **shell → engine, screen, time, lab** (MCP-1/2, wiring now; the tool surface is committed in
   7323f51 — `sp_shared::proto` / `report::{BuilderState, RunReport, SampleReport}`):
