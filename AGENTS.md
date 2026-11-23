@@ -15,7 +15,7 @@ line, checks). Drivable over MCP. Educational, not for real structural design.
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | crate map and contracts between crates |
 | [`docs/design/`](docs/design) | the mockup: `mockup/*.dc.html` (spec: markup + CSS + the `class Component` logic), `screenshots/*-1440.png` / `*-390.png` (rendered references), `bundles/*.html` (runnable in Chrome) |
 | [`PROGRESS.md`](PROGRESS.md) | who owns what, status, open issues, requests |
-| [`../labkit`](../labkit) | shared lab-series crates (`lab-theme`, `lab-ui`, `lab-mcp`) — use them, never edit them |
+| [labkit](https://github.com/alexwhb/labkit) (checked out at `../labkit`) | shared lab-series crates (`lab-theme`, `lab-ui`, `lab-mcp`), a git dependency pinned to a commit in `Cargo.toml` — use them, never edit them from here (see "Working on labkit") |
 | [`../automata-playground`](../automata-playground) | the newest sibling and **our template**: app shell, widgets, egui_kittest harness, MCP bridge, packaging scripts. Fork its code freely (same owner, MIT); never edit it |
 | [`../breadbox`](../breadbox), [`../chem-playground`](../chem-playground) | older siblings — read for patterns; never edit them |
 
@@ -29,6 +29,17 @@ line, checks). Drivable over MCP. Educational, not for real structural design.
 - **labkit and the sister apps are other people's live work.** Never edit anything outside this
   repo. If labkit fails to compile, it's probably mid-edit: wait a minute and retry. Anything
   that should move into labkit goes under "Candidates for labkit" in `PROGRESS.md`.
+- **Working on labkit**: this repo is public (github.com/alexwhb/lab-structures) and builds
+  labkit from GitHub at the pinned `rev`. To try it against the local `../labkit` checkout,
+  create `.cargo/config.toml` (gitignored) and delete it when done:
+  ```toml
+  [patch."https://github.com/alexwhb/labkit"]
+  lab-theme = { path = "../labkit/crates/lab-theme" }
+  lab-ui = { path = "../labkit/crates/lab-ui" }
+  lab-mcp = { path = "../labkit/crates/lab-mcp" }
+  ```
+  To move to a newer labkit: it must be pushed first; bump all three `rev`s together, then run
+  `scripts/test-all.sh`.
 - **Commits**: commit only your own paths (`git add <paths> && git commit -m "..." -- <paths>`);
   retry if `.git/index.lock` is busy. Small, frequent commits with clear messages. End commit
   messages with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.

@@ -4,6 +4,7 @@ description = "Structures Playground visual tokens: the series greys with the sa
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]

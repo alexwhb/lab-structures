@@ -2,7 +2,8 @@
 
 ```
 lab-series/
-  labkit/                          shared crates (another repo — never edit from here)
+  labkit/                          shared crates (github.com/alexwhb/labkit, a git dependency pinned
+                                   to a commit; another repo — never edit from here)
     lab-theme                      fonts, Palette + egui style builder, contrast helpers
     lab-ui                         layout maths (flex_wrap, auto_grid), graph-paper painting, galleys
     lab-mcp                        stdio MCP server + live bridge (Unix socket) to the running app

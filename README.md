@@ -107,7 +107,7 @@ remembers its size and the last screen; nothing animates at rest (0 % CPU when i
 ## Run
 
 ```sh
-cd structures-playground                 # next to ../labkit in the lab-series folder
+git clone https://github.com/alexwhb/lab-structures && cd lab-structures
 export PATH="$HOME/.cargo/bin:$PATH"     # rustup's toolchain, not an older Homebrew rustc
 cargo run --release -p structures-playground
 ```
@@ -115,8 +115,9 @@ cargo run --release -p structures-playground
 Or build the app bundle: `scripts/bundle-macos.sh` → `dist/Structures Playground.app` (with
 `structures-mcp` inside; add `--dmg` for a disk image, `--check` to verify it). macOS on Apple
 Silicon is what's built and tested; you need [Rust via rustup](https://rustup.rs)
-(`rust-toolchain.toml` selects stable) and the shared `labkit` crates (theme, UI, MCP) checked
-out next to this folder (`../labkit`).
+(`rust-toolchain.toml` selects stable). Cargo fetches the shared
+[labkit](https://github.com/alexwhb/labkit) crates (theme, UI, MCP) from GitHub at the commit
+pinned in `Cargo.toml`.
 
 `structures-playground --smoke 3` opens the Bridge, presses Test, runs for three seconds and
 prints a one-line report (start-up time, frames); `--headless` does it without a window.
@@ -188,10 +189,19 @@ breadboard, Chem Playground a reaction-kinetics engine under a glassware bench, 
 Playground an exact cellular-automata engine under a Petri tray, and Structures Playground a
 stiffness-method solver under a bridge you can break. The stiffness method is nodal analysis
 with springs instead of resistors, so the truss solver and Breadbox's DC solver are the same
-idea. They share [`labkit`](../labkit) (fonts and egui style, layout maths and graph-paper
-ground, the MCP server and live bridge), a look and the Playground / Advanced split.
+idea. They share [`labkit`](https://github.com/alexwhb/labkit) (fonts and egui style, layout
+maths and graph-paper ground, the MCP server and live bridge), a look and the Playground /
+Advanced split.
+
+| repo | what it is |
+|---|---|
+| [lab-breadbox](https://github.com/alexwhb/lab-breadbox) | Breadbox: breadboards, real Arduino firmware, a SPICE workbench |
+| lab-chem | Chem Playground: glassware bench on a reaction-kinetics engine (not published yet) |
+| [lab-automata](https://github.com/alexwhb/lab-automata) | Automata Playground: cellular automata on a 2.5D Petri tray |
+| [lab-structures](https://github.com/alexwhb/lab-structures) | Structures Playground (this repo) |
+| [labkit](https://github.com/alexwhb/labkit) | the shared crates |
 
 ## License
 
-MIT. The bundled fonts (Inter, JetBrains Mono, Space Grotesk, via labkit) are under the SIL
+MIT (see [`LICENSE`](LICENSE)). The bundled fonts (Inter, JetBrains Mono, Space Grotesk, via labkit) are under the SIL
 Open Font License 1.1.

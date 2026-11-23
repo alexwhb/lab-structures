@@ -118,7 +118,7 @@ done
 [ -f LICENSE ] && cp LICENSE "$res/licenses/LICENSE-Structures-Playground.txt"
 
 # Third-party notices: every crates.io crate linked into the shipped binaries (normal
-# dependencies, this platform). This workspace and labkit (a path dependency) are lab-series code.
+# dependencies, this platform). This workspace and labkit (a git dependency) are lab-series code.
 # shellcheck disable=SC2016  # the Python program is meant to be single-quoted
 ROOTS="structures-playground${mcp_pkg:+ $mcp_pkg}" python3 -c '
 import json, os, sys

@@ -12,6 +12,7 @@ members = [
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+repository = "https://github.com/alexwhb/lab-structures"
 rust-version = "1.90"
 
 [workspace.dependencies]
@@ -24,10 +25,11 @@ serde_json = "1"
 thiserror = "2"
 anyhow = "1"
 log = "0.4"
-# The lab-series shared libraries live in the sibling labkit repo (never edit them from here).
-lab-theme = { path = "../labkit/crates/lab-theme" }
-lab-ui = { path = "../labkit/crates/lab-ui" }
-lab-mcp = { path = "../labkit/crates/lab-mcp", default-features = false }
+# The lab-series shared libraries (github.com/alexwhb/labkit), pinned to a commit. To build
+# against a local ../labkit checkout instead, see "Working on labkit" in CLAUDE.md.
+lab-theme = { git = "https://github.com/alexwhb/labkit", rev = "652ac42b4b7bbb03eb5893e8413c92ec05ccaa98" }
+lab-ui = { git = "https://github.com/alexwhb/labkit", rev = "652ac42b4b7bbb03eb5893e8413c92ec05ccaa98" }
+lab-mcp = { git = "https://github.com/alexwhb/labkit", rev = "652ac42b4b7bbb03eb5893e8413c92ec05ccaa98", default-features = false }
 # This workspace's crates.
 sp-theme = { path = "crates/sp-theme" }
 sp-engine = { path = "crates/sp-engine" }

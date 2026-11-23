@@ -1605,6 +1605,7 @@ dependencies = [
 [[package]]
 name = "lab-mcp"
 version = "0.1.0"
+source = "git+https://github.com/alexwhb/labkit?rev=652ac42b4b7bbb03eb5893e8413c92ec05ccaa98#652ac42b4b7bbb03eb5893e8413c92ec05ccaa98"
 dependencies = [
  "base64",
  "image",
@@ -1618,6 +1619,7 @@ dependencies = [
 [[package]]
 name = "lab-theme"
 version = "0.1.0"
+source = "git+https://github.com/alexwhb/labkit?rev=652ac42b4b7bbb03eb5893e8413c92ec05ccaa98#652ac42b4b7bbb03eb5893e8413c92ec05ccaa98"
 dependencies = [
  "egui",
 ]
@@ -1625,6 +1627,7 @@ dependencies = [
 [[package]]
 name = "lab-ui"
 version = "0.1.0"
+source = "git+https://github.com/alexwhb/labkit?rev=652ac42b4b7bbb03eb5893e8413c92ec05ccaa98#652ac42b4b7bbb03eb5893e8413c92ec05ccaa98"
 dependencies = [
  "egui",
  "lab-theme",

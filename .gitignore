@@ -9,3 +9,5 @@ crates/**/tests/snapshots/*.diff.png
 /dist
 tests/**/snapshots/*.old.png
 crates/**/tests/snapshots/*.old.png
+# a local [patch] onto ../labkit (CLAUDE.md, "Working on labkit")
+/.cargo/config.toml

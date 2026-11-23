@@ -4,6 +4,7 @@ description = "Structures Playground engine (no UI): 2D truss stiffness solver a
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
