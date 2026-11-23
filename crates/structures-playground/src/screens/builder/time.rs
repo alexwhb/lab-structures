@@ -51,14 +51,25 @@ struct Run {
     years_level: bool,
     /// Started in the Sandbox while building.
     sandbox: bool,
+    /// A toppled tower falling over after the years: seconds into the fall.
+    fall: Option<f64>,
     /// The Leaning tower's result, once the years have played.
     result: Option<pisa::PisaResult>,
 }
 
 impl Run {
+    /// How far a toppled tower has fallen on screen (0–1), at the last year.
+    fn fall_k(&self) -> Option<f64> {
+        let f = self.fall?;
+        (self.year >= self.lt.end_year() - 1e-9).then(|| (f / longterm::FALL_SECONDS).min(1.0))
+    }
+
     /// The structure at the year on show, for `Game::view_settled`.
     fn settled(&self) -> (Vec<[f64; 2]>, PieceStates) {
-        let s = self.lt.at(self.year);
+        let mut s = self.lt.at(self.year);
+        if let Some(pos) = self.fall_k().and_then(|k| self.lt.fall(k)) {
+            s.pos = pos;
+        }
         let pieces = self
             .piece_of
             .iter()
@@ -175,6 +186,7 @@ impl Time {
             year: 0.0,
             years_level: years,
             sandbox: sandbox_building(game),
+            fall: None,
             result: None,
         });
     }
@@ -213,6 +225,13 @@ impl Time {
     /// The years are playing.
     pub fn playing(&self) -> bool {
         self.run.as_ref().is_some_and(|r| r.elapsed.is_some())
+    }
+
+    /// The years or a toppled tower's fall are moving on screen.
+    pub fn moving(&self) -> bool {
+        self.run.as_ref().is_some_and(|r| {
+            r.elapsed.is_some() || r.fall.is_some_and(|f| f < longterm::FALL_SECONDS)
+        })
     }
 
     /// The Leaning tower's result, once its 30 years have played.
@@ -257,6 +276,12 @@ impl Time {
         let Some(r) = &mut self.run else {
             return;
         };
+        if let Some(f) = r.fall
+            && r.elapsed.is_none()
+        {
+            r.fall = Some((f + dt.max(0.0)).min(longterm::FALL_SECONDS));
+            return;
+        }
         let Some(e) = r.elapsed else {
             return;
         };
@@ -269,6 +294,9 @@ impl Time {
         }
         r.year = end;
         r.elapsed = None;
+        if matches!(r.lt.ending, Ending::Toppled(_)) && r.fall.is_none() {
+            r.fall = Some(0.0);
+        }
         if r.years_level && r.result.is_none() {
             let budget = game.setup().budget.unwrap_or(pisa::BUDGET);
             let cost = pisa::fix_cost(game.design());
@@ -435,7 +463,7 @@ impl FoldIn for Time {
             self.run = None;
             self.start(game);
         }
-        if self.playing() {
+        if self.moving() {
             let k = if game.slow() { 0.3 } else { 1.0 };
             self.advance(game, ctx.dt() as f64 * k);
             ctx.wake_in(1.0 / 30.0);
@@ -494,6 +522,9 @@ impl FoldIn for Time {
         let Some(r) = self.shown(game) else {
             return;
         };
+        if r.fall_k().is_some_and(|k| k > 0.0) {
+            return;
+        }
         let Some((base, tp)) = r.lt.lean_line(r.year) else {
             return;
         };
@@ -555,7 +586,7 @@ impl FoldIn for Time {
     }
 
     fn busy(&self) -> bool {
-        self.playing()
+        self.moving()
     }
 
     fn describe(&self, game: &Game) -> Option<String> {

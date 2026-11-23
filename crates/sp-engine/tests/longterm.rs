@@ -131,6 +131,28 @@ fn a_tower_leaning_past_five_degrees_topples() {
     assert!(lt.sentence().contains("tipped over"));
     assert!(lt.at(30.0).fallen);
     assert!(!lt.at(0.0).fallen);
+    // drawn falling over to the right, about its right-hand footing, never below the ground
+    let start = lt.fall(0.0).unwrap();
+    assert_eq!(start, lt.last().unwrap().pos);
+    let end = lt.fall(1.0).unwrap();
+    let top = pisa::bells_joint();
+    let j = lt.joint_index(&top).unwrap();
+    assert!(
+        end[j][0] > start[j][0] + 20.0,
+        "{:?} → {:?}",
+        start[j],
+        end[j]
+    );
+    let ground = lt
+        .found
+        .iter()
+        .map(|&f| start[f][1])
+        .fold(f64::INFINITY, f64::min);
+    assert!(end.iter().all(|p| p[1] >= ground - 1.0));
+    assert!(
+        pisa_run(&pisa::prebuilt(), Soil::Soft).fall(1.0).is_none(),
+        "it stood"
+    );
 }
 
 #[test]

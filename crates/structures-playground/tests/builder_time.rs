@@ -314,3 +314,39 @@ fn the_sandbox_offers_the_fast_forward_while_building() {
     h.run_steps(2);
     assert!(screen(&h).fold.time.long_term().is_none());
 }
+
+#[test]
+fn a_tower_leaning_past_five_degrees_topples_and_falls_over() {
+    let mut h = tall();
+    pisa(&mut h);
+    // heavier bells: 8 t + 6 t
+    screen_mut(&mut h).game.add_crate(&pisa::bells_joint(), 6.0);
+    assert_eq!(game(&h).design().load(&pisa::bells_joint()), 14.0);
+    h.run_steps(2);
+    click_drive(&mut h);
+    skip_years(&mut h);
+    let res = screen(&h).fold.time.pisa_result().cloned().unwrap();
+    assert_eq!(res.title, "It toppled");
+    assert!(has_label_containing(&h, "It toppled in year"));
+    // it falls over on screen, then rests (PLAT-3)
+    assert!(screen(&h).fold.time.moving());
+    // where the bells' joint is drawn: the end of a piece that ends there
+    let bells = pisa::bells_joint();
+    let piece = game(&h)
+        .design()
+        .members
+        .iter()
+        .find(|m| m.b == bells)
+        .map(|m| m.id.clone())
+        .unwrap();
+    let top = |h: &App| {
+        let mut v = game(h).view();
+        FoldIn::adjust_view(&screen(h).fold.time, game(h), &mut v);
+        v.members.iter().find(|m| m.id == piece).unwrap().wb
+    };
+    let before = top(&h);
+    h.run_steps(60);
+    let after = top(&h);
+    assert!(after[0] > before[0] + 5.0, "{before:?} → {after:?}");
+    assert!(!screen(&h).fold.time.moving());
+}

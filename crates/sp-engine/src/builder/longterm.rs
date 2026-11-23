@@ -51,6 +51,10 @@ pub const KS_REF: f64 = 1.0;
 pub const OVERLOAD_CREEP: f64 = 3.0;
 /// The fast-forward animation lasts this long, s (TIME-1 "about 6 s").
 pub const ANIM_SECONDS: f64 = 6.0;
+/// How far a toppled tower is drawn falling over, degrees ([`LongTerm::fall`]).
+pub const FALL_DEG: f64 = 80.0;
+/// The fall lasts this long on screen, s.
+pub const FALL_SECONDS: f64 = 1.2;
 /// Tilt under this is "barely leans" (and the Leaning tower's goal), degrees.
 pub const LEAN_OK_DEG: f64 = 0.5;
 
@@ -561,6 +565,47 @@ impl LongTerm {
             ])
         };
         Some((mean(&self.found)?, mean(top)?))
+    }
+
+    /// A toppled tower falling over (drawing only): the last frame's joints turned about the
+    /// outermost foundation on the side it leans to, by `k` × [`FALL_DEG`] (`k` 0 → 1, eased
+    /// in), none below the ground line through that foundation. `None` unless it toppled.
+    pub fn fall(&self, k: f64) -> Option<Vec<[f64; 2]>> {
+        let Ending::Toppled(_) = self.ending else {
+            return None;
+        };
+        let last = self.last()?;
+        let right = last.tilt >= 0.0;
+        let pivot = self
+            .found
+            .iter()
+            .filter_map(|&j| last.pos.get(j).copied())
+            .fold(None::<[f64; 2]>, |best, p| match best {
+                Some(b) if (right && b[0] >= p[0]) || (!right && b[0] <= p[0]) => Some(b),
+                _ => Some(p),
+            })?;
+        let k = if k.is_finite() {
+            k.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        if k == 0.0 {
+            return Some(last.pos.clone());
+        }
+        let th = (FALL_DEG * k * k).to_radians() * if right { -1.0 } else { 1.0 };
+        let (sn, cs) = th.sin_cos();
+        Some(
+            last.pos
+                .iter()
+                .map(|p| {
+                    let (dx, dy) = (p[0] - pivot[0], p[1] - pivot[1]);
+                    [
+                        pivot[0] + dx * cs - dy * sn,
+                        (pivot[1] + dx * sn + dy * cs).max(pivot[1]),
+                    ]
+                })
+                .collect(),
+        )
     }
 
     /// The HUD chips at `year` (TIME-1): `("Year ", "12.0")`, `("Tilt ", "1.8°")` (towers) or
