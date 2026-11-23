@@ -337,8 +337,8 @@ Shared-file etiquette:
   the mockup's dynamic amplitude, enough to carry the drawn top **through vertical into the
   wind** at the default settings. Verified with a probe on the default tower (60 floors, core,
   30 m/s, seed 7): mean lean 0.789 m, `dyn_amp` 0.232 m, simulated rms swing 0.326 m
-  (1.40 × dyn), max swing over 500 periods 1.09 m > the mean lean, so the top reaches −0.3 m
-  (the tower leans upwind; ×40 on the stage that's a 46 px swing against a 33 px lean). The
+  (1.40 × dyn); over 500 periods the top ranges −0.44 … 1.94 m and is upwind of vertical ~1 %
+  of the time (5 seeds: min −0.23 … −0.57 m) — ×40 on the stage, ±46 px against a 33 px lean. The
   doc comment says "gust peaks (≈ 3σ) come out near the mockup's dynamic amplitude `dyn`", i.e.
   rms ≈ dyn/3, but 3σ ≈ 0.98 m ≈ 4.2 × dyn; the test
   `dynamics.rs::play_gusts_sways_around_the_drawn_lean…` only bounds rms to 0.15–1.5 × dyn, so
