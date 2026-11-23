@@ -550,6 +550,52 @@ the Bridge, presses its drive button, runs and prints `SMOKE route=bridge mode=�
 frames=… frame_ms_avg=… frame_ms_max=… status=ok`. `STRUCTURES_BUNDLE=1` at build time
 (`scripts/bundle-macos.sh`) leaves the checkout path out of the binary (`MANIFEST_DIR`).
 
-## MCP — wave 2
+## MCP (`crates/sp-shared`, `crates/sp-mcp`, the app's `control.rs`) — agent `shell`
 
-TODO.
+Forked from Automata Playground's `ap-shared` / `ap-mcp` / `control.rs`, on labkit's `lab-mcp`
+(a synchronous stdio MCP server + the live bridge: a user-only Unix socket with
+newline-delimited JSON). Setup and the tool list for users: `crates/sp-mcp/README.md`.
+
+```
+MCP client ──stdio──▶ structures-mcp (sp-mcp) ──Unix socket──▶ the app (control.rs) ──▶ screens' state
+                         └─ engine tools: sp-engine in-process     both build replies with sp-shared
+```
+
+- **`sp-shared`** (no egui): `APP_NAME`, `APP_ID`, `SOCKET_ENV` (`STRUCTURES_MCP_SOCKET`; empty or
+  `off` disables), `bridge_socket_path()`, `HOW_TO_START`; `SCREENS` / `MODES` (a test in
+  `tests/mcp_bridge.rs` keeps them equal to `Route`); `proto` — the bridge methods beyond the
+  four every app answers (`status`, `navigate`, `screenshot`, `describe`): `bridge.get`,
+  `bridge.load_netlist` (`BridgeLoadNetlist`), `bridge.test` (`BridgeTest`), `tower.set`
+  (`TowerSet` = `TowerChange` + `show`), `ground.set` (`GroundSet`), `materials.set`
+  (`MaterialsSet`), `MAX_TEST_TICKS`; `input` — checks that refuse (never clamp): `netlist`
+  (line / column diagnostics), `material`, `temperature`, `strain`, `TowerChange::apply`,
+  `GroundChange::apply`; `report` — the payloads both sides send, built from the engine:
+  `truss_report(&Netlist, x)` (on `influence::analyse_at`), `influence_report(&Netlist, id)`,
+  `tower_report(&TowerInput)`, `ground_report(&GroundInput)`, `tensile_report(kind, T, e,
+  points)` / `tensile_from_bench(&Bench, ..)`, `bridge_state(&Game)`, `run_bridge_test(&mut
+  Game, max_ticks)` (held / collapsed / refused with the game's own toast, first failure, stars).
+- **`sp-mcp`** (binary `structures-mcp`, `--socket`, `--version`, `--help`): `engine.rs`
+  (`solve_truss`, `influence_line`, `tower_wind`, `ground_check`, `tensile_test`), `app.rs` (the
+  lab-series tools: `app_status`, `list_screens`, `navigate`, `screenshot`, `describe_screen`;
+  `AppLink::call` opens a fresh connection per call, so the server survives app restarts, and
+  turns "nothing listening" into "Structures Playground isn't running — open …"), `screens.rs`
+  (`bridge_load_netlist`, `bridge_test`, `set_tower`, `set_ground`, `set_material`: arguments
+  forwarded as the method's params). Tool arguments are validated against their JSON Schemas
+  by `lab-mcp` before the handler runs.
+- **The app** (`control.rs`): `AppOptions::mcp_socket` (the real app: the default socket; tests
+  and the smoke run: none; `--no-mcp`); `Control::start` never fails start-up (a second
+  instance logs "MCP bridge off"). `control::poll` runs first thing in every `frame`;
+  `control::logic` runs from `eframe::App::logic`, also while the window is hidden, and asks for
+  a painted frame (`RequestPaintWhileHidden`) while requests wait. Screen methods act through
+  the screens' public state — `BridgeScreen::game` (`open_in_sandbox`, `pick_level`,
+  `back_to_build`, `run_test`), `TowerScreen::set_input`, `GroundScreen::set_input`,
+  `MaterialsScreen::bench_mut` — after entering a never-shown screen once
+  (`StructuresApp::enter_screen`); `show` (default) switches to it. Screenshots come from
+  `ViewportCommand::Screenshot` (PNG-encoded off the UI thread), descriptions from the AccessKit
+  tree caught by a small egui plugin; both wait `SETTLE_FRAMES` after a navigation.
+- **Tests**: `crates/sp-mcp/tests/e2e.rs` (the real binary for every tool, the real app in
+  egui_kittest on a temp socket), `crates/structures-playground/tests/mcp_bridge.rs` (the bridge
+  without the binary: errors change nothing, hidden window, a client that leaves, a second
+  instance, the shared screen table), `sp-shared` unit tests (checks, params).
+- **Bundle**: `scripts/bundle-macos.sh` builds `structures-mcp` too and puts it in
+  `Contents/MacOS/`; `scripts/check-bundle.sh` checks it is there.
