@@ -8,7 +8,7 @@
 //! 3. A cable-stayed Sandbox bridge with looping traffic and a wind change mid-run.
 //! 4. A tower built to 64 m rides out the storm: comfort meter, "Compare shapes" (CMF).
 //! 5. Shaky ground: footings liquefy, piles fix it.
-//! 6. Leaning tower fixed with piles and a counterweight over 30 years (TIME).
+//! 6. The Leaning tower fixed over 30 years with piles under its three footings (TIME-3).
 //! 7. A material card's sample pulled to breaking (LAB).
 //! 8. A fire softens a steel truss (FIRE).
 //! 9. Open in Advanced shows the same structure; an error in the netlist, fixed, then "Open in
@@ -16,17 +16,18 @@
 //! 10. Keyboard only: ⌘1 / ⌘2, Space drives, Tab reaches the drive button, brand → Series →
 //!     Esc; build and zoom by keyboard.
 //!
-//! Running now: 1, 2, 9 (+ 9b), 10 (+ 10b). Journeys that need features still landing in v2
-//! wave 1 (3–8: the Sandbox's cable-stayed run, the fold-ins) are `#[ignore]`d with the reason;
-//! they are completed in wave 2 (PROGRESS "v2 — the builder"). Click positions on the stage
-//! come from an engine `Game` in the same level and view (the app's camera isn't read).
+//! Click positions on the stage come from an engine `Game` given the same clicks (the app's
+//! camera isn't read); a netlist pasted with ⌘V goes into the Sandbox as a user's would.
 
 mod common;
 
 use common::*;
 use eframe::egui::{self, Key, Modifiers, PointerButton, Pos2, accesskit::Role};
 use egui_kittest::kittest::{NodeT, Queryable};
-use sp_engine::builder::{Game, LevelKey, PieceType};
+use sp_engine::builder::{
+    Design, Foundation, Game, Inspector, Joint, LevelKey, Piece, PieceType, PresetBuild, Scene,
+    Tool,
+};
 use structures_playground::Route;
 
 // ============================================================================================
@@ -61,9 +62,11 @@ fn header_has(h: &App, text: &str) -> bool {
 
 /// The drive button's label, read from the header.
 fn drive(h: &App) -> String {
-    const DRIVES: [&str; 5] = [
+    const DRIVES: [&str; 7] = [
         "Run traffic",
         "Run the test",
+        "Fast-forward 30 years",
+        "Back to building",
         "Stop",
         "Pause",
         "Drive across",
@@ -187,6 +190,139 @@ fn build_truss(h: &mut App, g: &mut Game, chord: &str, kind: PieceType) {
     }
 }
 
+/// Clicks world point (x, y) and mirrors it on `g`: a joint there takes the click (its button
+/// covers it), otherwise the grid does. Press and release in one frame, then one more so the
+/// next click finds what this one built.
+fn click_world(h: &mut App, g: &mut Game, x: f64, y: f64) {
+    let r = stage_inner(h);
+    let s = r.width() / 1120.0;
+    let c = g.camera();
+    let p: Pos2 = r.min + egui::vec2(c.x(x) as f32 * s, c.y(y) as f32 * s);
+    h.hover_at(p);
+    for pressed in [true, false] {
+        h.event(egui::Event::PointerButton {
+            pos: p,
+            button: PointerButton::Primary,
+            pressed,
+            modifiers: Modifiers::NONE,
+        });
+    }
+    h.step();
+    h.step();
+    let at = g
+        .design()
+        .nodes
+        .iter()
+        .find(|n| n.x == x && n.y == y)
+        .map(|n| n.id.clone());
+    match at {
+        Some(id) => g.click_node(&id),
+        None => g.click_at([x, y]),
+    }
+}
+
+/// Esc ends the member chain (NAV-5), mirrored.
+fn end_chain(h: &mut App, g: &mut Game) {
+    press(h, Key::Escape);
+    h.step();
+    g.finish_line();
+}
+
+/// The joint and piece counts the stage summary reports ("Tower with 27 joints and 58
+/// pieces. …").
+fn counts(h: &App) -> (usize, usize) {
+    let l = stage_label(h);
+    let num = |after: &str| {
+        l.split(after)
+            .next()
+            .and_then(|a| a.rsplit(' ').next())
+            .and_then(|n| n.parse::<usize>().ok())
+            .unwrap_or(0)
+    };
+    (num(" joints"), num(" pieces"))
+}
+
+/// A tower on open ground shaped like the mockup's preset (`buildPreset` tower), by clicks:
+/// `bays` 8 m bays centred on x = 100, foundations at the base (Found tool), then each Steel
+/// column as one chain up to `height`, a chain of Floors every 4 m, and the `brace` diagonals
+/// (bottom left to top right in every bay and storey). The engine `g`, given the same clicks,
+/// holds the same design.
+fn build_tower(
+    h: &mut App,
+    g: &mut Game,
+    bays: u32,
+    height: f64,
+    brace: (&str, PieceType),
+    found: (&str, Foundation),
+) {
+    let xs: Vec<f64> = (0..=bays)
+        .map(|i| 100.0 - bays as f64 * 4.0 + i as f64 * 8.0)
+        .collect();
+    click_button(h, "Found");
+    g.pick_tool(Tool::Found);
+    click_in(h, "Foundation type", found.0);
+    g.pick_found(found.1);
+    for &x in &xs {
+        // the level's own anchors may already stand there on this foundation (clicking one
+        // again would take it away)
+        let done = g
+            .design()
+            .nodes
+            .iter()
+            .any(|n| n.x == x && n.y == 0.0 && n.sup == Some(found.1));
+        if !done {
+            click_world(h, g, x, 0.0);
+        }
+    }
+    // frame the base and the target before building up
+    press_cmd(h, Key::Num0);
+    settle(h);
+    g.fit();
+    click_button(h, "Build");
+    g.pick_tool(Tool::Build);
+    let storeys: Vec<f64> = (1..)
+        .map(|k| k as f64 * 4.0)
+        .take_while(|y| *y <= height + 1e-9)
+        .collect();
+    click_in(h, "Piece to build", "Steel");
+    g.pick_type(PieceType::Steel);
+    for &x in &xs {
+        click_world(h, g, x, 0.0);
+        for &y in &storeys {
+            click_world(h, g, x, y);
+        }
+        end_chain(h, g);
+    }
+    click_in(h, "Piece to build", "Floor");
+    g.pick_type(PieceType::Floor);
+    for &y in &storeys {
+        for &x in &xs {
+            click_world(h, g, x, y);
+        }
+        end_chain(h, g);
+    }
+    click_in(h, "Piece to build", brace.0);
+    g.pick_type(brace.1);
+    for &y in &storeys {
+        for i in 0..bays as usize {
+            click_world(h, g, xs[i], y - 4.0);
+            click_world(h, g, xs[i + 1], y);
+            end_chain(h, g);
+        }
+    }
+}
+
+/// Pastes `text` as ⌘V would (NAV-6: a netlist goes into the Sandbox).
+fn paste(h: &mut App, text: &str) {
+    h.event(egui::Event::Paste(text.to_string()));
+    settle(h);
+}
+
+/// The HUD chip whose label starts with `key` ("Crossings 3", "Wind 25 m/s →").
+fn hud(h: &App, key: &str) -> Option<String> {
+    labels(h).into_iter().find(|l| l.starts_with(key))
+}
+
 /// Steps the app until the result banner shows (its "Back to building" button), up to `max`.
 fn wait_for_banner(h: &mut App, max: usize) -> bool {
     step_until(h, max, |h| {
@@ -287,29 +423,368 @@ fn journey_2_heavy_haul_collapses_and_replays() {
     assert!(header_has(&h, "building"));
 }
 
+/// DONE-4: a cable-stayed bridge in the Sandbox (pasted from the builder's own Share of the
+/// mockup's cable preset) carries the looping traffic; mid-run the wind is turned up to Strong
+/// from the Conditions chips: the HUD wind eases up to 25 m/s, the cars, buses and trucks keep
+/// crossing — as the engine says the same bridge does.
 #[test]
-#[ignore = "wave 2: needs the builder screen — cable-stayed Sandbox, looping traffic, wind change mid-run"]
-fn journey_3_cable_stayed_sandbox_in_changing_wind() {}
+fn journey_3_cable_stayed_sandbox_in_changing_wind() {
+    let mut src = Game::new();
+    src.pick_level(LevelKey::Sandbox);
+    src.build_preset(PresetBuild::Cable);
+    let text = src.share_text();
+    // the engine's own run: traffic crossing, then 25 m/s from 5 s, nothing breaks in 30 s
+    let mut g = Game::new();
+    g.paste_netlist(&text).expect("the cable bridge loads");
+    g.start_run(false);
+    for f in 0..900 {
+        if f == 150 {
+            g.set_wind(25.0);
+        }
+        g.tick();
+    }
+    let sim = g.sim().expect("running");
+    assert!(sim.first_break.is_none(), "{:?}", sim.first_break);
+    assert!(sim.laps() > 0, "traffic loops across");
 
-#[test]
-#[ignore = "wave 2: needs the builder + CMF (agents `screen`, `time`) — 64 m tower, comfort meter, Compare shapes"]
-fn journey_4_storm_tower_comfort_and_shapes() {}
+    let mut h = harness(Route::Playground);
+    click_button(&mut h, "Sandbox");
+    paste(&mut h, &text);
+    assert!(header_has(&h, "sandbox"));
+    let (n, m) = (src.design().nodes.len(), src.design().members.len());
+    assert_eq!(counts(&h), (n, m), "{}", stage_label(&h));
+    click_header(&mut h, "Run traffic");
+    assert_eq!(drive(&h), "Pause");
+    assert!(has_label_containing(&h, "runs until you stop"));
+    let crossings = |h: &App| {
+        hud(h, "Crossings")
+            .and_then(|l| l.rsplit(' ').next().and_then(|n| n.parse::<u32>().ok()))
+            .unwrap_or(0)
+    };
+    assert!(
+        step_until(&mut h, 400, |h| crossings(h) >= 1),
+        "a vehicle crosses: {:?}",
+        hud(&h, "Crossings")
+    );
+    let before = crossings(&h);
+    // the wind, mid-run
+    click_in(&mut h, "Wind", "Strong");
+    assert!(
+        step_until(&mut h, 400, |h| hud(h, "Wind")
+            .is_some_and(|l| l.contains("25 m/s"))),
+        "the wind eases up to 25 m/s: {:?}",
+        hud(&h, "Wind")
+    );
+    assert!(
+        step_until(&mut h, 600, |h| crossings(h) > before),
+        "traffic keeps crossing in the wind: {:?}",
+        hud(&h, "Crossings")
+    );
+    assert_eq!(drive(&h), "Pause", "still running");
+}
 
+/// DONE-4: a 64 m tower on piles, built storey by storey by clicks, rides out level 5's storm:
+/// "It stood!", the comfort meter's value and sentence, then "Compare shapes" with the four
+/// bars and the verdict — every number from the engine for the same design.
 #[test]
-#[ignore = "wave 2: needs the builder screen — Shaky ground footings liquefy, piles fix it"]
-fn journey_5_shaky_ground_piles_fix_liquefaction() {}
+fn journey_4_storm_tower_comfort_and_shapes() {
+    let mut h = harness(Route::Playground);
+    click_button(&mut h, "5 · Storm tower");
+    assert!(header_has(&h, "t2-level"));
+    let mut g = Game::new();
+    g.pick_level(LevelKey::T2);
+    build_tower(
+        &mut h,
+        &mut g,
+        4,
+        64.0,
+        ("Wood", PieceType::Wood),
+        ("Pile · $1.5k", Foundation::Pile),
+    );
+    let (n, m) = (g.design().nodes.len(), g.design().members.len());
+    assert_eq!(counts(&h), (n, m), "{}", stage_label(&h));
+    // the engine's run and comparison of the same tower
+    let setup = g.setup();
+    let cond = *g.cond();
+    let shapes = sp_engine::builder::comfort::compare(g.design(), &setup, &cond);
+    g.run_test(sp_shared::proto::MAX_RUN_FRAMES);
+    let r = g.result().expect("a result").clone();
+    assert!(r.pass, "the 64 m tower rides out the storm: {r:?}");
+    let banner = g.view().result.expect("a banner");
+    let sp_engine::builder::Outcome::Tower { mg, .. } = r.outcome else {
+        panic!("open ground")
+    };
+    let meter = sp_engine::builder::comfort::Meter::new(mg, setup.comfort);
 
-#[test]
-#[ignore = "wave 2: needs TIME (agent `time`) — Leaning tower fixed with piles and a counterweight over 30 years"]
-fn journey_6_leaning_tower_fixed_over_30_years() {}
+    click_header(&mut h, "Run the test");
+    assert!(wait_for_banner(&mut h, 3000), "the test ends");
+    assert!(has_label(&h, &banner.title), "banner {:?}", banner.title);
+    assert!(has_label(&h, &meter.label()), "meter {:?}", meter.label());
+    assert!(has_label(&h, meter.sentence()));
+    reveal(&mut h, "Compare shapes", Some(Role::Button));
+    click_button(&mut h, "Compare shapes");
+    settle(&mut h);
+    for b in &shapes.bars {
+        assert!(has_label(&h, &b.label()), "bar {:?}", b.label());
+    }
+    assert!(
+        has_label(&h, &shapes.verdict),
+        "verdict {:?}",
+        shapes.verdict
+    );
+}
 
+/// DONE-4: Shaky ground — a 32 m tower on footings in loose wet sand comes down in the quake
+/// when its footings liquefy; swapped to piles with the Found tool it stands (banners and
+/// sentences from the engine for the same designs).
 #[test]
-#[ignore = "wave 2: needs LAB (agent `lab`) — a material card's sample pulled to breaking"]
-fn journey_7_sample_pulled_to_breaking() {}
+fn journey_5_shaky_ground_piles_fix_liquefaction() {
+    let mut h = harness(Route::Playground);
+    click_button(&mut h, "6 · Shaky ground");
+    let mut g = Game::new();
+    g.pick_level(LevelKey::T3);
+    build_tower(
+        &mut h,
+        &mut g,
+        2,
+        32.0,
+        ("Wood", PieceType::Wood),
+        ("Footing · $0.3k", Foundation::Footing),
+    );
+    let base: Vec<String> = g
+        .design()
+        .nodes
+        .iter()
+        .filter(|n| n.y == 0.0)
+        .map(|n| n.id.clone())
+        .collect();
+    let mut on_piles = g.clone();
+    g.run_test(sp_shared::proto::MAX_RUN_FRAMES);
+    let r = g.result().expect("a result").clone();
+    assert!(!r.pass, "footings in loose wet sand: {r:?}");
+    let ff = r.first_found.as_ref().expect("a foundation gave way");
+    assert_eq!(ff.mode.text(), "liquefied", "{ff:?}");
+    let failed = g.view();
+    click_header(&mut h, "Run the test");
+    assert!(wait_for_banner(&mut h, 3000));
+    let title = &failed.result.as_ref().expect("a banner").title;
+    assert!(has_label(&h, title), "banner {title:?}");
+    assert!(
+        has_label(&h, &failed.explain),
+        "sentence {:?}",
+        failed.explain
+    );
+    // back to building: piles instead
+    click_in(&mut h, "Goal", "Back to building");
+    click_button(&mut h, "Found");
+    on_piles.pick_tool(Tool::Found);
+    click_in(&mut h, "Foundation type", "Pile · $1.5k");
+    on_piles.pick_found(Foundation::Pile);
+    for id in &base {
+        click_joint(&mut h, id);
+        on_piles.click_node(id);
+    }
+    assert!(
+        on_piles
+            .design()
+            .nodes
+            .iter()
+            .filter(|n| n.y == 0.0)
+            .all(|n| n.sup == Some(Foundation::Pile))
+    );
+    on_piles.run_test(sp_shared::proto::MAX_RUN_FRAMES);
+    let fixed = on_piles.result().expect("a result").clone();
+    assert!(
+        fixed.pass,
+        "piles reach below the liquefying sand: {fixed:?}"
+    );
+    let banner = on_piles.view().result.expect("a banner");
+    click_header(&mut h, "Run the test");
+    assert!(wait_for_banner(&mut h, 3000));
+    assert!(has_label(&h, &banner.title), "banner {:?}", banner.title);
+}
 
+/// DONE-4 / TIME-3: the Leaning tower, left alone, leans past its goal over 30 years; piles
+/// under all three footings (the level's named fix) keep it under 0.5° — the fast-forward's
+/// banner and stars are the engine's for the same design.
 #[test]
-#[ignore = "wave 2: needs FIRE (agent `lab`) — a fire softens a steel truss"]
-fn journey_8_fire_softens_a_steel_truss() {}
+fn journey_6_leaning_tower_fixed_over_30_years() {
+    use sp_engine::builder::longterm::{self, pisa};
+    let mut h = harness(Route::Playground);
+    click_button(&mut h, "7 · Leaning tower");
+    assert!(header_has(&h, "pisa-level"));
+    let mut g = Game::new();
+    g.pick_level(LevelKey::Pisa);
+    let lean = |g: &Game| longterm::fast_forward_design(g.design(), &g.setup(), g.cond());
+    let left_alone = lean(&g);
+    assert!(
+        left_alone
+            .last()
+            .is_some_and(|f| f.tilt.abs() > pisa::GOAL_TILT),
+        "left alone it leans past the goal"
+    );
+    click_button(&mut h, "Found");
+    g.pick_tool(Tool::Found);
+    click_in(&mut h, "Foundation type", "Pile · $1.5k");
+    g.pick_found(Foundation::Pile);
+    for id in pisa::footing_ids() {
+        click_joint(&mut h, &id);
+        g.click_node(&id);
+    }
+    let lt = lean(&g);
+    let budget = g.setup().budget.unwrap_or(pisa::BUDGET);
+    let want = pisa::result(&lt, g.cost(), g.practice(), budget);
+    assert!(want.pass, "piles under all three footings fix it: {want:?}");
+    let stars = sp_engine::builder::data::stars_text(want.stars);
+    let label = if want.stars > 0 {
+        format!("{} {stars}", want.title)
+    } else {
+        want.title.clone()
+    };
+    // the run is the 30-year fast-forward
+    let run = drive(&h);
+    click_header(&mut h, &run);
+    if h.query_by_label("Skip to the end").is_some() {
+        click_button(&mut h, "Skip to the end");
+    }
+    assert!(
+        step_until(&mut h, 400, |h| has_label(h, &label)),
+        "the result {label:?} in {:?}",
+        labels(&h)
+            .into_iter()
+            .filter(|l| l.contains("year") || l.contains("Straight") || l.contains("lean"))
+            .collect::<Vec<_>>()
+    );
+}
+
+/// DONE-4 / LAB-1: a material card opens the sample drawer; "Pull" pulls the wood sample to
+/// breaking; the status reads what the engine's own sample of that piece type says.
+#[test]
+fn journey_7_sample_pulled_to_breaking() {
+    use sp_engine::builder::sample::Sample;
+    let mut h = harness(Route::Playground);
+    let Inspector::Materials(cards) = Game::new().view().inspector else {
+        panic!("nothing selected: the Materials list")
+    };
+    let wood = cards
+        .iter()
+        .find(|c| c.kind == PieceType::Wood)
+        .expect("a Wood card");
+    let card = format!("{} · {} · {}", wood.name, wood.blurb, wood.cost);
+    let mut sample = Sample::new(PieceType::Wood);
+    sample.pull();
+    assert!(sample.run_to_end(), "wood snaps");
+    let want = sample.status().label(PieceType::Wood);
+    click(&mut h, &card);
+    assert!(has_label(&h, "Pull"), "the sample drawer is open");
+    click_button(&mut h, "Pull");
+    assert!(
+        step_until(&mut h, 400, |h| has_label(h, &want)),
+        "status {want:?}"
+    );
+    // Esc closes the drawer
+    press(&mut h, Key::Escape);
+    settle(&mut h);
+    assert!(!has_label(&h, "Pull"), "the drawer closed");
+}
+
+/// The lab's steel Warren truss over a Road deck on the river (`fire_heat.rs`), no crates.
+fn steel_truss() -> Design {
+    let joint = |id: &str, x: f64, y: f64, sup: Option<Foundation>| Joint {
+        id: id.into(),
+        x,
+        y,
+        sup,
+        locked: false,
+    };
+    let mut nodes = vec![
+        joint("J1", 8.0, 0.0, Some(Foundation::Footing)),
+        joint("J2", 48.0, 0.0, Some(Foundation::Footing)),
+    ];
+    for (i, x) in [18.0, 28.0, 38.0].iter().enumerate() {
+        nodes.push(joint(&format!("J{}", 3 + i), *x, 0.0, None));
+    }
+    for (i, x) in [13.0, 23.0, 33.0, 43.0].iter().enumerate() {
+        nodes.push(joint(&format!("J{}", 6 + i), *x, 6.0, None));
+    }
+    let bottom = ["J1", "J3", "J4", "J5", "J2"];
+    let top = ["J6", "J7", "J8", "J9"];
+    let mut members: Vec<Piece> = Vec::new();
+    let mut add = |a: &str, b: &str, kind: PieceType| {
+        let id = format!("M{}", members.len() + 1);
+        members.push(Piece {
+            id,
+            a: a.into(),
+            b: b.into(),
+            kind,
+            locked: false,
+        });
+    };
+    for w in bottom.windows(2) {
+        add(w[0], w[1], PieceType::Road);
+    }
+    for w in top.windows(2) {
+        add(w[0], w[1], PieceType::Steel);
+    }
+    for i in 0..4 {
+        add(bottom[i], top[i], PieceType::Steel);
+        add(top[i], bottom[i + 1], PieceType::Steel);
+    }
+    let n_m = members.len() as u32;
+    Design {
+        nodes,
+        members,
+        loads: vec![],
+        n_n: 9,
+        n_m,
+    }
+}
+
+/// DONE-4 / FIRE-1: a steel truss pasted into the Sandbox carries the traffic cold; with "Big
+/// fire" under the span the middle top chord softens — the running explanation names the
+/// piece the engine says goes first.
+#[test]
+fn journey_8_fire_softens_a_steel_truss() {
+    let mut src = Game::new();
+    src.pick_level(LevelKey::Sandbox);
+    let text = sp_engine::builder::netlist::write(
+        &steel_truss(),
+        LevelKey::Sandbox,
+        Scene::River,
+        src.cond(),
+        "fire-truss",
+    );
+    // the engine: the same truss, Big fire, run until something gives way
+    let mut g = Game::new();
+    g.paste_netlist(&text).expect("the truss loads");
+    g.set_fire(700.0);
+    g.start_run(false);
+    let mut first = None;
+    for _ in 0..1500 {
+        g.tick();
+        if let Some(fb) = g.sim().and_then(|s| s.first_break.clone()) {
+            first = Some(fb);
+            break;
+        }
+    }
+    let fb = first.expect("something gives way in the fire");
+    assert_eq!(fb.mode.text(), "softened", "{fb:?}");
+    let want = format!("{} just softened!", fb.id);
+
+    let mut h = harness(Route::Playground);
+    click_button(&mut h, "Sandbox");
+    paste(&mut h, &text);
+    assert!(header_has(&h, "sandbox"));
+    assert_eq!(counts(&h), (9, 15), "{}", stage_label(&h));
+    click_in(&mut h, "Fire", "Big fire");
+    click_header(&mut h, "Run traffic");
+    assert_eq!(drive(&h), "Pause");
+    assert!(
+        step_until(&mut h, 900, |h| has_label_containing(h, &want)),
+        "{want:?} (the engine: {fb:?})"
+    );
+    assert!(has_label_containing(&h, "Fire "), "the HUD's fire chip");
+}
 
 // ============================================================================================
 // 9. Advanced: an error in the netlist, fixed, then "Open in Playground"
