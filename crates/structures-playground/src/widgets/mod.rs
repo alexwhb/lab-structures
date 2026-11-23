@@ -21,7 +21,8 @@
 //! | [`Plot`] | sparkline / plot (line, fill, guides, playhead) | |
 //! | [`Icon`] | every mockup icon as vector paths | icons |
 //! | [`Toasts`] | transient confirmations | |
-//! | [`header`], [`tabs`] | the header (NAV-1) and the world tab row (NAV-2) | chrome |
+//! | [`header`] | the header (NAV-1; no world tab row in v2) | chrome |
+//! | [`world`] | band bars, comparison rows, readout tiles, goal rows, … (v1 Tower / Ground; reused by the builder's fold-ins) | |
 //!
 //! [`gallery`] draws all of them (the widget snapshot test renders it). Screen agents may add
 //! widget files here for widgets only their screen needs (one `pub mod` line each).
@@ -38,7 +39,6 @@ pub mod plot;
 pub mod seg;
 pub mod select;
 pub mod slider;
-pub mod tabs;
 pub mod text;
 pub mod toast;
 pub mod world;
@@ -143,6 +143,35 @@ pub fn space_passes_through(ui: &Ui, id: Id) {
 /// Whether the focused widget `focused` lets Space through (see [`space_passes_through`]).
 pub fn space_passes(ctx: &eframe::egui::Context, focused: Id) -> bool {
     ctx.data(|d| d.get_temp::<Id>(space_key())) == Some(focused)
+}
+
+fn arrows_key() -> Id {
+    Id::unique("sp-arrows-pass-through")
+}
+
+/// Call every frame while widget `id` has keyboard focus and the arrow keys should reach the
+/// screen as [`crate::Command::Pan`] / [`crate::Command::Nudge`] (the builder's stage, a joint
+/// button: NAV-5 "arrow keys pan the view, ⌥ nudges a selected joint") instead of moving focus
+/// to the neighbouring widget. Locks egui's arrow-key focus moves for `id`; Tab still leaves.
+/// With nothing focused the arrows reach the Playground anyway.
+pub fn arrows_pass_through(ui: &Ui, id: Id) {
+    ui.data_mut(|d| d.insert_temp(arrows_key(), id));
+    ui.memory_mut(|m| {
+        m.set_focus_lock_filter(
+            id,
+            eframe::egui::EventFilter {
+                horizontal_arrows: true,
+                vertical_arrows: true,
+                ..Default::default()
+            },
+        )
+    });
+}
+
+/// Whether the focused widget `focused` lets the arrow keys through (see
+/// [`arrows_pass_through`]).
+pub fn arrows_pass(ctx: &eframe::egui::Context, focused: Id) -> bool {
+    ctx.data(|d| d.get_temp::<Id>(arrows_key())) == Some(focused)
 }
 
 /// Click sense when enabled, hover only when disabled.

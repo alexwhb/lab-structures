@@ -4,12 +4,12 @@
 //!
 //! For each route it renders the app at the mockup's board size (`Route::board_size`) and at
 //! 390 px wide (as tall as the reference or the app's content, whichever is taller), puts the
-//! reference from `docs/design/screenshots/` next to it and writes
-//! `target/compare/<Screen>-1440.png` / `<Screen>-390.png` (+ `-1440-app.png`, the app alone).
-//! `SP_COMPARE_ONLY=series,tower` limits it to some routes.
+//! reference (`Route::reference`: the builder's BridgeBuild board for the Playground) next to
+//! it and writes `target/compare/<Screen>-1440.png` / `<Screen>-390.png` (+ `-1440-app.png`,
+//! the app alone). `SP_COMPARE_ONLY=series,playground` limits it to some routes.
 //!
 //! `readme_screenshots` writes `docs/screenshots/*.png` with `SP_SCREENSHOTS=1`
-//! (`scripts/screenshots.sh`). `chrome_stays_close_to_the_mockup` always runs: the header and the world tab row (the
+//! (`scripts/screenshots.sh`). `chrome_stays_close_to_the_mockup` always runs: the header (the
 //! shell's) must stay within a mean channel difference of the references.
 
 mod common;
@@ -65,9 +65,9 @@ fn side_by_side_with_mockup() {
     }
     for route in Route::ALL.into_iter().filter(|r| wanted(*r)) {
         let name = mockup_name(route);
-        let (w, h) = route.board_size();
-        let (_, img) = app_render(route, w, h);
         let mock = load(&mockup_png(route, 1440));
+        let (w, h) = route.board_size();
+        let (_, img) = app_render(route, w, h.max(mock.height() as f32));
         save(&img, &out_dir().join(format!("{name}-1440-app.png")));
         save(
             &side_by_side(&img, &mock),
@@ -104,34 +104,13 @@ fn readme_screenshots() {
         save(&img, &path);
         println!("screenshot: {}", path.display());
     }
-    // the README's hero: the Bridge's Sandbox with its starter truss, solved
-    if wanted(Route::Bridge) {
-        let (w, h) = Route::Bridge.board_size();
-        let mut app = harness_at(Route::Bridge, w, h);
-        {
-            let game = &mut app.state_mut().screens_mut().bridge.game;
-            game.pick_level(sp_engine::bridge::LevelKey::Sandbox);
-            game.starter();
-        }
-        settle(&mut app);
-        let img = render(&mut app);
-        let path = repo().join("docs/screenshots/bridge-built.png");
-        save(&img, &path);
-        println!("screenshot: {}", path.display());
-    }
 }
 
-/// The header (56 px) and the world tab row (45 px) at 1440 stay close to each world's
-/// reference; Advanced's header too (LOOK-1, the shell's regions).
+/// The header (56 px) at 1440 stays close to the builder's and Advanced's references (LOOK-1,
+/// the shell's region; no world tab row in v2).
 #[test]
 fn chrome_stays_close_to_the_mockup() {
-    for route in [
-        Route::Bridge,
-        Route::Tower,
-        Route::Ground,
-        Route::Materials,
-        Route::Advanced,
-    ] {
+    for route in [Route::Playground, Route::Advanced] {
         let (w, h) = route.board_size();
         let mut app = harness_at(route, w, h);
         let img = render(&mut app);
@@ -139,10 +118,5 @@ fn chrome_stays_close_to_the_mockup() {
         // brand + mode switcher (the right-hand actions depend on the screen's clock text)
         let header = mean_diff(&img, &mock, Some((0, 0, 560, 56)));
         assert!(header < 6.0, "{route:?} header: {header:.2}");
-        if route.is_world() {
-            // the tabs (badges are the screen's text)
-            let tabs = mean_diff(&img, &mock, Some((0, 56, 420, 45)));
-            assert!(tabs < 6.0, "{route:?} tab row: {tabs:.2}");
-        }
     }
 }

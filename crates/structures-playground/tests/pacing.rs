@@ -51,7 +51,7 @@ fn smoke_line_has_the_fields() {
     let line = r.line();
     assert!(r.ok(), "{line}");
     for field in [
-        "route=bridge",
+        "route=playground",
         "mode=headless",
         "first_frame_ms=",
         "frames=",

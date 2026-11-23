@@ -32,7 +32,7 @@ const UNDO_COALESCE: f64 = 0.8;
 pub enum Origin {
     /// The toolbar's generator ("example: 48 m truss").
     Generated,
-    /// Handed over from another screen (the Bridge's "Open in Advanced").
+    /// Handed over from another screen (the builder's "Open in Advanced").
     Received(Route),
     /// Opened from a file (Finder, the command line).
     File,

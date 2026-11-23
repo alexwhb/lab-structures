@@ -11,14 +11,13 @@
 //! | `navigate` | `{"screen": id}` | status after navigating |
 //! | `screenshot` | `{"screen"?: id}` | PNG of the screen as it stands (base64) |
 //! | `describe` | `{"screen"?: id}` | outline of its AccessKit tree + the screen's one-line `summary` |
-//! | `bridge.get`, `bridge.load_netlist`, `bridge.test`, `tower.set`, `ground.set`, `materials.set` | see [`sp_shared::proto`] | the screen's state after the call |
+//! | the builder's methods | see [`sp_shared::proto`] | the builder's state after the call |
 //!
-//! The screen methods drive the screens' public state (`BridgeScreen::game`,
-//! `TowerScreen::set_input`, `GroundScreen::set_input`, `MaterialsScreen::bench_mut`; see
-//! `docs/ARCHITECTURE.md`) through [`StructuresApp::screens_mut`]. Their params are checked
-//! before anything changes; with `show` (the default) the app switches to that screen. A screen
-//! that has never been shown is entered first ([`StructuresApp::enter_screen`]), so its
-//! first-visit set-up happens before the change, not after it.
+//! The screen methods drive the screens' public state through
+//! [`StructuresApp::screens_mut`]. Their params are checked before anything changes; with
+//! `show` (the default) the app switches to that screen. A screen that has never been shown is
+//! entered first ([`StructuresApp::enter_screen`]), so its first-visit set-up happens before
+//! the change, not after it.
 //!
 //! **Screenshots and descriptions are rendered offscreen**, at once, from the app's real state
 //! ([`StructuresApp::render_offscreen`]): the same UI code draws into a second egui context at
@@ -47,10 +46,7 @@ use lab_mcp::bridge::proto::{
 };
 use lab_mcp::bridge::{BridgeServer, PendingRequest, RemoteError, code};
 use serde_json::Value;
-use sp_engine::bridge::{LevelKey, Phase};
-use sp_engine::materials::curves::Kind as Sample;
-use sp_shared::proto::{self as sp, MaterialsState};
-use sp_shared::{input, report};
+use sp_shared::proto as sp;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -65,8 +61,6 @@ pub struct Control {
     waker_installed: bool,
     /// Requests taken from the bridge by [`logic`], for the next [`poll`].
     inbox: Vec<PendingRequest>,
-    /// Screens already entered for the bridge.
-    prepared: Vec<Route>,
     /// When a frame last polled the bridge.
     last_poll: Option<Instant>,
     /// The offscreen renderer (made on the first screenshot or description).
@@ -296,10 +290,11 @@ fn screen_param(req: &PendingRequest) -> Result<Option<Route>, RemoteError> {
     match p.screen {
         None => Ok(None),
         Some(id) => Route::from_id(&id).map(Some).ok_or_else(|| {
-            RemoteError::invalid_params(format!(
-                "unknown screen `{id}`; screens are {}",
-                sp_shared::screen_ids().join(", ")
-            ))
+            let known = sp_shared::screen_ids().join(", ");
+            RemoteError::invalid_params(match sp_shared::retired_note(&id) {
+                Some(note) => format!("{note}; screens are {known}"),
+                None => format!("unknown screen `{id}`; screens are {known}"),
+            })
         }),
     }
 }
@@ -314,171 +309,18 @@ fn invalid(message: impl Into<String>) -> RemoteError {
 
 // ---- the screens' methods -------------------------------------------------------------------
 
-/// Enters `route` once (if the bridge hasn't yet) and, with `show`, switches to it.
-fn prepare(app: &mut StructuresApp, ctx: &Context, route: Route, show: bool) {
-    if !app.control.prepared.contains(&route) {
-        app.enter_screen(route, ctx);
-        app.control.prepared.push(route);
-    }
-    if show && app.route() != route {
-        app.navigate(route);
-    }
-}
-
+/// The Structures methods ([`sp::METHODS`]). v2: the v1 screens' methods are retired; the
+/// builder's arrive with its engine.
 fn screen_method(
-    app: &mut StructuresApp,
-    ctx: &Context,
+    _app: &mut StructuresApp,
+    _ctx: &Context,
     req: &PendingRequest,
 ) -> Result<Value, RemoteError> {
-    match req.method() {
-        sp::BRIDGE_GET => {
-            prepare(app, ctx, Route::Bridge, false);
-            to_value(&report::bridge_state(&app.screens().bridge.game))
-        }
-        sp::BRIDGE_LOAD_NETLIST => {
-            let p: sp::BridgeLoadNetlist = req.parse_params()?;
-            if p.netlist.chars().count() > input::NETLIST_MAX_LEN {
-                return Err(invalid(format!(
-                    "the netlist is longer than {} characters",
-                    input::NETLIST_MAX_LEN
-                )));
-            }
-            let (design, mat) = sp_engine::bridge::netlist::read(&p.netlist).map_err(|e| {
-                invalid(format!(
-                    "{e}. The Bridge's Sandbox takes netlists whose nodes sit on its 2 m grid \
-                     (x 0–58 m, y −12–16 m, nothing underground), like the one its Share copies; \
-                     solve_truss solves any netlist without the app."
-                ))
-            })?;
-            prepare(app, ctx, Route::Bridge, p.show);
-            let game = &mut app.screens_mut().bridge.game;
-            game.open_in_sandbox(design, mat);
-            to_value(&report::bridge_state(game))
-        }
-        sp::BRIDGE_TEST => {
-            let p: sp::BridgeTest = req.parse_params()?;
-            let level = match &p.level {
-                Some(k) => Some(
-                    LevelKey::from_key(&k.trim().to_ascii_lowercase()).ok_or_else(|| {
-                        invalid(format!(
-                            "unknown level `{k}`; levels are {}",
-                            LevelKey::ALL.map(|l| l.key()).join(", ")
-                        ))
-                    })?,
-                ),
-                None => None,
-            };
-            prepare(app, ctx, Route::Bridge, p.show);
-            let game = &mut app.screens_mut().bridge.game;
-            if let Some(l) = level {
-                game.pick_level(l);
-            }
-            if matches!(game.phase(), Phase::Held | Phase::Collapsed) {
-                game.back_to_build();
-            }
-            to_value(&report::run_bridge_test(game, sp::MAX_TEST_TICKS))
-        }
-        sp::TOWER_SET => {
-            let p: sp::TowerSet = req.parse_params()?;
-            let screen = &app.screens().tower;
-            let next = p.change.apply(screen.input).map_err(invalid)?;
-            prepare(app, ctx, Route::Tower, p.show);
-            let screen = &mut app.screens_mut().tower;
-            screen.set_input(next);
-            to_value(&report::tower_report(&screen.input))
-        }
-        sp::GROUND_SET => {
-            let p: sp::GroundSet = req.parse_params()?;
-            let next = p
-                .change
-                .apply(app.screens().ground.input)
-                .map_err(invalid)?;
-            prepare(app, ctx, Route::Ground, p.show);
-            let screen = &mut app.screens_mut().ground;
-            screen.set_input(next);
-            to_value(&report::ground_report(&screen.input))
-        }
-        sp::MATERIALS_SET => {
-            let p: sp::MaterialsSet = req.parse_params()?;
-            let kind = p
-                .material
-                .as_deref()
-                .map(input::material)
-                .transpose()
-                .map_err(invalid)?;
-            let temp = p
-                .temperature_c
-                .map(input::temperature)
-                .transpose()
-                .map_err(invalid)?;
-            if let Some(e) = p.strain_pct {
-                // the axis the sample will be on (picking a sample picks the axis that fits it)
-                let zoom = match kind {
-                    Some(k) => sp_engine::materials::bench::Zoom::fitting(k),
-                    None => app.screens().materials.bench().zoom(),
-                };
-                if !(e.is_finite() && (0.0..=zoom.max()).contains(&e)) {
-                    return Err(invalid(format!(
-                        "`strain_pct` must be 0 to {} on the {} axis, not {e}",
-                        zoom.max(),
-                        zoom.label()
-                    )));
-                }
-            }
-            prepare(app, ctx, Route::Materials, p.show);
-            let bench = app.screens_mut().materials.bench_mut();
-            if let Some(k) = kind {
-                bench.pick(k);
-            }
-            if let Some(t) = temp {
-                bench.set_temp(t);
-            }
-            if p.fresh {
-                bench.fresh_sample();
-            }
-            if let Some(e) = p.strain_pct {
-                bench.set_strain(e);
-            }
-            let mut note = None;
-            if p.pull {
-                if !bench.playing() {
-                    bench.toggle_drive();
-                }
-                let mut broke = None;
-                for _ in 0..100_000 {
-                    if !bench.playing() {
-                        break;
-                    }
-                    if let Some(k) = bench.tick() {
-                        broke = Some(k);
-                    }
-                }
-                note = Some(match broke {
-                    Some(k) => format!(
-                        "Pulled the {} sample until it broke at {} %.",
-                        k.name().to_lowercase(),
-                        sp_engine::materials::jsnum::to_fixed(bench.strain(), 2)
-                    ),
-                    None => format!(
-                        "Pulled to the end of the {} axis without breaking.",
-                        bench.zoom().label()
-                    ),
-                });
-            }
-            let bench = app.screens().materials.bench();
-            to_value(&MaterialsState {
-                test: report::tensile_from_bench(bench, Some(201)),
-                axis: bench.zoom().label().into(),
-                broken_so_far: Sample::ALL
-                    .into_iter()
-                    .filter(|k| bench.broke(*k))
-                    .map(|k| k.key().to_string())
-                    .collect(),
-                note,
-            })
-        }
-        other => Err(RemoteError::method_not_found(other)),
-    }
+    Err(invalid(format!(
+        "`{}` belonged to a v1 screen retired in v2 (bridges and towers are built in the \
+         Playground now)",
+        req.method()
+    )))
 }
 
 // ---- AccessKit ------------------------------------------------------------------------------

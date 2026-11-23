@@ -1,14 +1,14 @@
-//! The app frame: the `.paper` ground, the header (NAV-1) and world tab row (NAV-2) drawn from
-//! what the active screen declares, the screen's body, toasts; global shortcuts (NAV-5); Share
-//! (NAV-6); navigation with hand-offs (NAV-4), Back / Esc from the Series screen (NAV-3) and
-//! the Playground's last-world memory; persistence of the last screen (NAV-7).
+//! The app frame: the `.paper` ground, the header (NAV-1) drawn from what the active screen
+//! declares (no world tab row in v2, NAV-2), the screen's body, toasts; global shortcuts and
+//! the builder's keys as [`Command`]s (NAV-5); Share (NAV-6); navigation with hand-offs
+//! (NAV-4), Back / Esc from the Series screen (NAV-3); persistence of the last screen (NAV-7).
 
 use crate::ctx::{Carry, Command, Ctx, NavRequest, Outbox, Services};
 use crate::launcher::Launcher;
-use crate::router::{Mode, Route};
+use crate::router::Route;
 use crate::screens::Screens;
+use crate::widgets::Toasts;
 use crate::widgets::header::{HeaderClicks, HeaderModel, header};
-use crate::widgets::{Toasts, tabs::world_tabs};
 use eframe::egui::{self, Key, Modifiers, Ui};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -29,7 +29,7 @@ pub struct AppOptions {
     pub save_dialog: bool,
     /// Opens sibling apps (Series, SR-1).
     pub launcher: Launcher,
-    /// Restore the last route and world from eframe storage (NAV-7).
+    /// Restore the last route from eframe storage (NAV-7).
     pub load_persisted: bool,
     /// Where the live MCP bridge listens (`None`: no bridge; see `control.rs`). The real app
     /// listens on [`crate::control::default_socket_path`]; tests pass their own temp socket.
@@ -42,7 +42,7 @@ impl Default for AppOptions {
             .map(|h| PathBuf::from(h).join("Documents").join(crate::APP_NAME))
             .unwrap_or_else(|| std::env::temp_dir().join("structures-playground"));
         Self {
-            start: Route::Bridge,
+            start: Route::Playground,
             // NAV-7: a fresh start is reproducible; screens derive their seeds from this
             rng_seed: Self::DEFAULT_SEED,
             autoplay: false,
@@ -67,7 +67,7 @@ impl AppOptions {
         static N: AtomicU64 = AtomicU64::new(0);
         let n = N.fetch_add(1, Ordering::Relaxed);
         Self {
-            start: Route::Bridge,
+            start: Route::Playground,
             rng_seed: Self::TEST_SEED,
             autoplay: false,
             out_dir: std::env::temp_dir().join(format!(
@@ -92,13 +92,13 @@ impl AppOptions {
 
 const STORAGE_KEY: &str = "structures-playground";
 
-/// What survives a restart (NAV-7; the window size is eframe's `persist_window`).
+/// What survives a restart (NAV-7; the window size is eframe's `persist_window`). A v1 save
+/// (`{"route":"Tower","last_world":"Tower"}`) restores to the Playground: the retired routes
+/// are aliases of [`Route::Playground`] and unknown fields are ignored.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Persisted {
     /// The screen shown last.
     pub route: Route,
-    /// The Playground world used last.
-    pub last_world: Route,
 }
 
 /// Something the app did on a screen's behalf (tests and the MCP bridge read the log).
@@ -119,7 +119,6 @@ pub enum AppEvent {
 /// The app.
 pub struct StructuresApp {
     route: Route,
-    last_world: Route,
     previous: Option<Route>,
     entered: Option<Route>,
     screens: Screens,
@@ -168,11 +167,6 @@ impl StructuresApp {
         let route = opts.start;
         Self {
             route,
-            last_world: if route.is_world() {
-                route
-            } else {
-                Route::Bridge
-            },
             previous: None,
             entered: None,
             screens: Screens::new(),
@@ -191,20 +185,14 @@ impl StructuresApp {
 
     /// What would be persisted now.
     pub fn persisted(&self) -> Persisted {
-        Persisted {
-            route: self.route,
-            last_world: self.last_world,
-        }
+        Persisted { route: self.route }
     }
 
-    /// Restores a persisted state (the Series screen restores to the last world: it isn't a
+    /// Restores a persisted state (the Series screen restores to the Playground: it isn't a
     /// place to start in).
     pub fn restore(&mut self, p: Persisted) {
-        if p.last_world.is_world() {
-            self.last_world = p.last_world;
-        }
         self.route = if p.route == Route::Series {
-            self.last_world
+            Route::Playground
         } else {
             p.route
         };
@@ -214,11 +202,6 @@ impl StructuresApp {
     /// The current screen.
     pub fn route(&self) -> Route {
         self.route
-    }
-
-    /// The Playground world "Playground" opens (the last one used; Bridge at first).
-    pub fn last_world(&self) -> Route {
-        self.last_world
     }
 
     /// The screen before this one (where Series' Back goes).
@@ -240,9 +223,6 @@ impl StructuresApp {
     }
 
     fn apply(&mut self, req: NavRequest) {
-        if req.route.is_world() {
-            self.last_world = req.route;
-        }
         if req.route != self.route {
             self.entered = None;
             // Series' Back returns to where it was opened from, not to itself
@@ -304,7 +284,7 @@ impl StructuresApp {
         self.content_height
     }
 
-    /// The header + tab row height as of the last frame.
+    /// The header height as of the last frame.
     pub fn chrome_height(&self) -> f32 {
         self.chrome_height
     }
@@ -343,7 +323,6 @@ impl StructuresApp {
         (
             Ctx {
                 route: self.route,
-                last_world: self.last_world,
                 previous: self.previous,
                 nav: None,
                 toasts: &mut self.toasts,
@@ -506,7 +485,7 @@ impl StructuresApp {
             self.entered = Some(route);
         }
 
-        // ---- the page: ground, header, tab row, body (scrolls as a whole when columns stack)
+        // ---- the page: ground, header, body (scrolls as a whole when columns stack)
         lab_ui::paint::paint_grid(ui.painter(), full, full.min, &sp_theme::PAPER);
         let document = self.document();
         let mut chrome_h = self.chrome_height;
@@ -530,12 +509,6 @@ impl StructuresApp {
                         };
                         let (_, clicks) = header(ui, &model);
                         handle_header(clicks, screen, &mut ctx, &mut events, &document);
-                    }
-                    if route.is_world() {
-                        let badges = screen.provenance();
-                        if let Some(r) = world_tabs(ui, route, &badges) {
-                            ctx.go(r);
-                        }
                     }
                     chrome_h = ui.cursor().top() - top;
                     screen.ui(&mut ctx, ui);
@@ -607,10 +580,10 @@ fn handle_header(
     if clicks.brand {
         ctx.go(Route::Series);
     }
-    match clicks.mode {
-        Some(Mode::Playground) if !route.is_world() => ctx.go(ctx.last_world()),
-        Some(Mode::Advanced) if route != Route::Advanced => ctx.go(Route::Advanced),
-        _ => {}
+    if let Some(mode) = clicks.mode
+        && route.mode() != Some(mode)
+    {
+        ctx.go(mode.route());
     }
     if clicks.drive {
         events.push(AppEvent::Drive(route));
@@ -636,15 +609,9 @@ fn handle_header(
     }
 }
 
-/// ⌘1–⌘5 (NAV-5).
+/// ⌘1 Playground, ⌘2 Advanced (NAV-5).
 fn shortcut_route(ctx: &egui::Context) -> Option<Route> {
-    const KEYS: [(Key, u8); 5] = [
-        (Key::Num1, 1),
-        (Key::Num2, 2),
-        (Key::Num3, 3),
-        (Key::Num4, 4),
-        (Key::Num5, 5),
-    ];
+    const KEYS: [(Key, u8); 2] = [(Key::Num1, 1), (Key::Num2, 2)];
     ctx.input_mut(|i| {
         KEYS.iter().find_map(|(k, d)| {
             i.consume_key(Modifiers::COMMAND, *k)
@@ -665,6 +632,8 @@ struct Keys {
     drive: bool,
     /// Esc on the Series screen: Back.
     back: bool,
+    /// An arrow key became a command.
+    arrows: bool,
     commands: Vec<Command>,
 }
 
@@ -672,12 +641,17 @@ struct Keys {
 /// when no widget has focus or the focused one lets Space through (a slider:
 /// [`crate::widgets::space_passes_through`]); a focused button, tab or checkbox takes Space
 /// itself, and a text field types it. Esc on Series → Back. ⌘Z (not ⌘⇧Z), Delete / Backspace
-/// and ⌘V (no text field focused) → [`Command`]s.
+/// and ⌘V (no text field focused) → [`Command`]s. On the Playground also (no text field
+/// focused): ⌘= / ⌘+ / ⌘− / ⌘0 → zoom commands (instead of egui's whole-window zoom), Esc →
+/// [`Command::Escape`], and the arrow keys → [`Command::Pan`] / ⌥ [`Command::Nudge`] while no
+/// widget has focus or the focused one asked for them ([`crate::widgets::arrows_pass_through`];
+/// otherwise they move keyboard focus, egui's way).
 fn keys(ctx: &egui::Context, route: Route) -> Keys {
     let mut out = Keys::default();
     let focused = ctx.memory(|m| m.focused());
     let typing = ctx.text_edit_focused();
     let space_free = !typing && focused.is_none_or(|id| crate::widgets::space_passes(ctx, id));
+    let arrows_free = !typing && focused.is_none_or(|id| crate::widgets::arrows_pass(ctx, id));
     ctx.input_mut(|i| {
         if space_free {
             let mut pressed = false;
@@ -722,7 +696,47 @@ fn keys(ctx: &egui::Context, route: Route) -> Keys {
         if let Some(text) = pasted {
             out.commands.push(Command::Paste(text));
         }
+        if route != Route::Playground {
+            return;
+        }
+        // the builder's keys (BLD-2, NAV-5)
+        if i.consume_key(Modifiers::COMMAND, Key::Equals)
+            || i.consume_key(Modifiers::COMMAND, Key::Plus)
+        {
+            out.commands.push(Command::ZoomIn);
+        }
+        if i.consume_key(Modifiers::COMMAND, Key::Minus) {
+            out.commands.push(Command::ZoomOut);
+        }
+        if i.consume_key(Modifiers::COMMAND, Key::Num0) {
+            out.commands.push(Command::ZoomFit);
+        }
+        if i.consume_key(Modifiers::NONE, Key::Escape) {
+            out.commands.push(Command::Escape);
+        }
+        if arrows_free {
+            const ARROWS: [(Key, i8, i8); 4] = [
+                (Key::ArrowLeft, -1, 0),
+                (Key::ArrowRight, 1, 0),
+                (Key::ArrowUp, 0, 1),
+                (Key::ArrowDown, 0, -1),
+            ];
+            for (key, dx, dy) in ARROWS {
+                if i.consume_key(Modifiers::ALT, key) {
+                    out.commands.push(Command::Nudge { dx, dy });
+                    out.arrows = true;
+                } else if i.consume_key(Modifiers::NONE, key) {
+                    out.commands.push(Command::Pan { dx, dy });
+                    out.arrows = true;
+                }
+            }
+        }
     });
+    if out.arrows && focused.is_some() {
+        // egui honours a focus lock only from the widget's second focused frame: on the first
+        // its arrow-key navigation would move focus on — cancel that
+        ctx.memory_mut(|m| m.move_focus(egui::FocusDirection::None));
+    }
     out
 }
 
@@ -755,13 +769,13 @@ mod tests {
         assert_eq!(a.rng_seed, AppOptions::TEST_SEED);
         assert!(!a.autoplay && !a.save_dialog && !a.load_persisted);
         assert_ne!(a.out_dir, b.out_dir, "each test app gets its own folder");
-        assert_eq!(AppOptions::at(Route::Tower).start, Route::Tower);
+        assert_eq!(AppOptions::at(Route::Advanced).start, Route::Advanced);
         // NAV-7: a fresh start is reproducible
         assert_eq!(
             AppOptions::default().rng_seed,
             AppOptions::default().rng_seed
         );
-        assert_eq!(AppOptions::default().start, Route::Bridge);
+        assert_eq!(AppOptions::default().start, Route::Playground);
     }
 
     #[test]
@@ -790,11 +804,9 @@ mod tests {
     #[test]
     fn navigation_rules() {
         let mut app = StructuresApp::with_options(AppOptions::at(Route::Advanced));
-        assert_eq!(app.last_world(), Route::Bridge, "Bridge at first start");
-        app.navigate(Route::Ground);
+        app.navigate(Route::Playground);
         app.navigate(Route::Advanced);
-        assert_eq!(app.last_world(), Route::Ground);
-        assert_eq!(app.previous(), Some(Route::Ground));
+        assert_eq!(app.previous(), Some(Route::Playground));
         app.navigate(Route::Series);
         assert_eq!(app.previous(), Some(Route::Advanced));
         // Back from Series: where it was opened from
@@ -805,14 +817,12 @@ mod tests {
     #[test]
     fn persistence_round_trip() {
         let mut app = StructuresApp::with_options(AppOptions::test());
-        app.navigate(Route::Materials);
         app.navigate(Route::Advanced);
         let p = app.persisted();
         assert_eq!(
             p,
             Persisted {
-                route: Route::Advanced,
-                last_world: Route::Materials
+                route: Route::Advanced
             }
         );
         let json = serde_json::to_string(&p).unwrap();
@@ -820,12 +830,42 @@ mod tests {
         let mut fresh = StructuresApp::with_options(AppOptions::test());
         fresh.restore(back);
         assert_eq!(fresh.route(), Route::Advanced);
-        assert_eq!(fresh.last_world(), Route::Materials);
         // Series isn't a place to start in
         fresh.restore(Persisted {
             route: Route::Series,
-            last_world: Route::Tower,
         });
-        assert_eq!(fresh.route(), Route::Tower);
+        assert_eq!(fresh.route(), Route::Playground);
+    }
+
+    /// A v1 save names a retired screen: it restores to the Playground (and keeps Advanced).
+    #[test]
+    fn a_v1_save_restores_to_the_playground() {
+        for (json, route) in [
+            (
+                r#"{"route":"Tower","last_world":"Tower"}"#,
+                Route::Playground,
+            ),
+            (
+                r#"{"route":"Bridge","last_world":"Bridge"}"#,
+                Route::Playground,
+            ),
+            (
+                r#"{"route":"Materials","last_world":"Ground"}"#,
+                Route::Playground,
+            ),
+            (
+                r#"{"route":"Advanced","last_world":"Ground"}"#,
+                Route::Advanced,
+            ),
+            (
+                r#"{"route":"Series","last_world":"Tower"}"#,
+                Route::Playground,
+            ),
+        ] {
+            let p: Persisted = serde_json::from_str(json).expect(json);
+            let mut app = StructuresApp::with_options(AppOptions::at(Route::Advanced));
+            app.restore(p);
+            assert_eq!(app.route(), route, "{json}");
+        }
     }
 }

@@ -80,11 +80,11 @@ fn cards_open_the_siblings() {
 /// Back and Esc return to where the Series was opened from (NAV-3).
 #[test]
 fn back_and_escape_return() {
-    let mut h = harness(Route::Ground);
+    let mut h = harness(Route::Playground);
     click_link(&mut h, "Structures Playground");
     assert_eq!(route(&h), Route::Series);
     click_button(&mut h, "Back");
-    assert_eq!(route(&h), Route::Ground);
+    assert_eq!(route(&h), Route::Playground);
     goto(&mut h, Route::Advanced);
     click_link(&mut h, "Structures Playground");
     press(&mut h, Key::Escape);

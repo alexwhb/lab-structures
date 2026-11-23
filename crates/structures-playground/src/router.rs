@@ -1,17 +1,19 @@
-//! Navigation model (NAV-1/2/3): two modes and six routes.
+//! Navigation model (NAV-1/2/3): two modes and three routes.
 //!
-//! Playground holds the four worlds (Bridge, Tower, Ground, Materials) under the world tab row;
-//! Advanced is the truss netlist workbench; the Series screen belongs to no mode (it is reached
-//! from the brand, NAV-3, and has no header). Each route knows its mockup
-//! (`docs/design/mockup/<file>`), the mockup's board size and the fixed panel height its
-//! columns use when they stack.
+//! v2: the Playground is one builder for bridges and towers (no world tab row); Advanced is
+//! the truss netlist workbench; the Series screen belongs to no mode (it is reached from the
+//! brand, NAV-3, and has no header). Each route knows its mockup (under `docs/design/`), the
+//! mockup's board size and the fixed panel height its columns use when they stack.
+//!
+//! The v1 Bridge, Tower, Ground and Materials screens are retired: a saved route naming one of
+//! them restores to the Playground (the serde aliases on [`Route::Playground`]).
 
 use serde::{Deserialize, Serialize};
 
 /// The header's mode switcher.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Mode {
-    /// Bridge · Tower · Ground · Materials (the worlds).
+    /// The builder.
     Playground,
     /// The truss netlist workbench.
     Advanced,
@@ -28,53 +30,48 @@ impl Mode {
             Mode::Advanced => "Advanced",
         }
     }
+
+    /// The route the switcher opens.
+    pub fn route(self) -> Route {
+        match self {
+            Mode::Playground => Route::Playground,
+            Mode::Advanced => Route::Advanced,
+        }
+    }
 }
 
 /// A screen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Route {
-    /// SCR-1 Playground › Bridge.
-    Bridge,
-    /// SCR-3 Playground › Tower.
-    Tower,
-    /// SCR-4 Playground › Ground.
-    Ground,
-    /// SCR-5 Playground › Materials.
-    Materials,
-    /// SCR-2 Advanced (the bridge as a truss netlist).
+    /// SCR-1 the Playground: the builder for bridges and towers (v2). A route saved by v1
+    /// (`Bridge`, `Tower`, `Ground`, `Materials`) restores here.
+    #[serde(
+        alias = "Bridge",
+        alias = "Tower",
+        alias = "Ground",
+        alias = "Materials"
+    )]
+    Playground,
+    /// SCR-2 Advanced (a truss netlist).
     Advanced,
     /// SCR-6 the Series screen (from the brand).
     Series,
 }
 
-impl Route {
-    /// Every route, in shortcut order (⌘1 … ⌘5, then Series).
-    pub const ALL: [Route; 6] = [
-        Route::Bridge,
-        Route::Tower,
-        Route::Ground,
-        Route::Materials,
-        Route::Advanced,
-        Route::Series,
-    ];
+/// The ids of the v1 screens retired in v2 (MCP `navigate` explains instead of guessing).
+pub const RETIRED_IDS: [&str; 4] = ["bridge", "tower", "ground", "materials"];
 
-    /// The Playground worlds, in tab order.
-    pub const WORLDS: [Route; 4] = [Route::Bridge, Route::Tower, Route::Ground, Route::Materials];
+impl Route {
+    /// Every route, in shortcut order (⌘1, ⌘2, then Series).
+    pub const ALL: [Route; 3] = [Route::Playground, Route::Advanced, Route::Series];
 
     /// The mode this route belongs to (`None` for the Series screen, which highlights no mode).
     pub fn mode(self) -> Option<Mode> {
         match self {
-            Route::Bridge | Route::Tower | Route::Ground | Route::Materials => {
-                Some(Mode::Playground)
-            }
+            Route::Playground => Some(Mode::Playground),
             Route::Advanced => Some(Mode::Advanced),
             Route::Series => None,
         }
-    }
-
-    /// True for the four Playground worlds (they have the world tab row).
-    pub fn is_world(self) -> bool {
-        self.mode() == Some(Mode::Playground)
     }
 
     /// True for every route that has the header (all but Series, NAV-1).
@@ -82,68 +79,60 @@ impl Route {
         self != Route::Series
     }
 
-    /// The world tab label (`None` off the Playground).
-    pub fn tab_label(self) -> Option<&'static str> {
-        match self {
-            Route::Bridge => Some("Bridge"),
-            Route::Tower => Some("Tower"),
-            Route::Ground => Some("Ground"),
-            Route::Materials => Some("Materials"),
-            Route::Advanced | Route::Series => None,
-        }
-    }
-
-    /// A human title (the tab label for worlds).
+    /// A human title.
     pub fn title(self) -> &'static str {
         match self {
+            Route::Playground => "Playground",
             Route::Advanced => "Advanced",
             Route::Series => "Series",
-            r => r.tab_label().unwrap_or_default(),
         }
     }
 
     /// The default document name shown after the brand in the header (NAV-1, SPEC § Screens).
-    /// A screen may show another one ([`crate::Screen::document`]): the Bridge's level, the
+    /// A screen may show another one ([`crate::Screen::document`]): the builder's level, the
     /// netlist's file stem.
     pub fn document(self) -> &'static str {
         match self {
-            Route::Bridge => "river-level",
-            Route::Tower => "tower-study",
-            Route::Ground => "foundation-pit",
-            Route::Materials => "tensile-test",
+            Route::Playground => "river-level",
             Route::Advanced => "river-crossing",
             Route::Series => "series",
         }
     }
 
-    /// The mockup file in `docs/design/mockup/`.
+    /// The mockup file, relative to `docs/design/`.
     pub fn mockup(self) -> &'static str {
         match self {
-            Route::Bridge => "Playground.dc.html",
-            Route::Tower => "Tower.dc.html",
-            Route::Ground => "Ground.dc.html",
-            Route::Materials => "Materials.dc.html",
-            Route::Advanced => "Advanced.dc.html",
-            Route::Series => "Series.dc.html",
+            Route::Playground => "v2/mockup/Builder.dc.html",
+            Route::Advanced => "mockup/Advanced.dc.html",
+            Route::Series => "mockup/Series.dc.html",
+        }
+    }
+
+    /// The rendered reference at `width` (1440 or 390), relative to `docs/design/`: the
+    /// builder's first board (BridgeBuild) for the Playground.
+    pub fn reference(self, width: u32) -> String {
+        match self {
+            Route::Playground => format!("v2/screenshots/BridgeBuild-{width}.png"),
+            Route::Advanced => format!("screenshots/Advanced-{width}.png"),
+            Route::Series => format!("screenshots/Series-{width}.png"),
         }
     }
 
     /// The mockup's board size in points (`$preview` width × height).
     pub fn board_size(self) -> (f32, f32) {
         match self {
-            Route::Bridge | Route::Tower | Route::Ground | Route::Materials => (1440.0, 900.0),
+            Route::Playground => (1440.0, 900.0),
             Route::Advanced => (1440.0, 1000.0),
             Route::Series => (1440.0, 1400.0),
         }
     }
 
-    /// The height of the chrome above the body at 1440: the 56 px header, plus the 45 px
-    /// world tab row (44 px tabs + its 1 px border) on the Playground; nothing on Series.
+    /// The height of the chrome above the body at 1440: the 56 px header (no tab row in v2);
+    /// nothing on Series.
     pub fn chrome_height(self) -> f32 {
         match self {
             Route::Series => 0.0,
-            Route::Advanced => sp_theme::size::HEADER,
-            _ => sp_theme::size::HEADER + sp_theme::size::TAB_ROW + 1.0,
+            Route::Playground | Route::Advanced => sp_theme::size::HEADER,
         }
     }
 
@@ -157,14 +146,11 @@ impl Route {
         }
     }
 
-    /// The ⌘-digit shortcut (NAV-5): ⌘1–⌘4 worlds, ⌘5 Advanced.
+    /// The ⌘-digit shortcut (NAV-5): ⌘1 Playground, ⌘2 Advanced.
     pub fn shortcut_digit(self) -> Option<u8> {
         match self {
-            Route::Bridge => Some(1),
-            Route::Tower => Some(2),
-            Route::Ground => Some(3),
-            Route::Materials => Some(4),
-            Route::Advanced => Some(5),
+            Route::Playground => Some(1),
+            Route::Advanced => Some(2),
             Route::Series => None,
         }
     }
@@ -172,21 +158,18 @@ impl Route {
     /// A stable lowercase id (persistence, MCP `navigate`, test filters).
     pub fn id(self) -> &'static str {
         match self {
-            Route::Bridge => "bridge",
-            Route::Tower => "tower",
-            Route::Ground => "ground",
-            Route::Materials => "materials",
+            Route::Playground => "playground",
             Route::Advanced => "advanced",
             Route::Series => "series",
         }
     }
 
-    /// Parses [`Route::id`] (any case; also accepts `playground` for the Bridge, the mockup's
-    /// name for it).
+    /// Parses [`Route::id`] (any case; `builder` also names the Playground). The retired v1
+    /// ids ([`RETIRED_IDS`]) are not routes.
     pub fn from_id(id: &str) -> Option<Route> {
         let id = id.trim().to_ascii_lowercase();
-        if id == "playground" {
-            return Some(Route::Bridge);
+        if id == "builder" {
+            return Some(Route::Playground);
         }
         Route::ALL.into_iter().find(|r| r.id() == id)
     }
@@ -197,45 +180,32 @@ mod tests {
     use super::*;
 
     #[test]
-    fn modes_and_worlds() {
-        assert_eq!(
-            Route::WORLDS.map(Route::mode),
-            [Some(Mode::Playground); 4],
-            "worlds are Playground"
-        );
+    fn modes() {
+        assert_eq!(Route::Playground.mode(), Some(Mode::Playground));
         assert_eq!(Route::Advanced.mode(), Some(Mode::Advanced));
         assert_eq!(Route::Series.mode(), None);
-        assert!(Route::Bridge.is_world() && !Route::Advanced.is_world());
         assert!(!Route::Series.has_header() && Route::Advanced.has_header());
         assert_eq!(Mode::ALL.map(Mode::label), ["Playground", "Advanced"]);
+        assert_eq!(
+            Mode::ALL.map(Mode::route),
+            [Route::Playground, Route::Advanced]
+        );
     }
 
     #[test]
-    fn labels_match_the_mockup() {
-        assert_eq!(
-            Route::WORLDS.map(|r| r.tab_label().unwrap()),
-            ["Bridge", "Tower", "Ground", "Materials"]
-        );
-        assert_eq!(Route::Advanced.tab_label(), None);
+    fn documents_match_the_spec() {
         assert_eq!(
             Route::ALL.map(Route::document),
-            [
-                "river-level",
-                "tower-study",
-                "foundation-pit",
-                "tensile-test",
-                "river-crossing",
-                "series"
-            ]
+            ["river-level", "river-crossing", "series"]
         );
     }
 
     #[test]
     fn boards_and_panels() {
-        assert_eq!(Route::Bridge.board_size(), (1440.0, 900.0));
+        assert_eq!(Route::Playground.board_size(), (1440.0, 900.0));
         assert_eq!(Route::Advanced.board_size(), (1440.0, 1000.0));
         assert_eq!(Route::Series.board_size(), (1440.0, 1400.0));
-        assert_eq!(Route::Bridge.panel_height(), 900.0 - 56.0 - 45.0);
+        assert_eq!(Route::Playground.panel_height(), 900.0 - 56.0);
         assert_eq!(Route::Advanced.panel_height(), 1000.0 - 56.0);
         assert_eq!(Route::Series.panel_height(), 0.0);
     }
@@ -244,12 +214,10 @@ mod tests {
     fn mockups_exist() {
         let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/design");
         for r in Route::ALL {
-            assert!(dir.join("mockup").join(r.mockup()).is_file(), "{r:?}");
-            let stem = r.mockup().trim_end_matches(".dc.html");
-            assert!(
-                dir.join(format!("screenshots/{stem}-1440.png")).is_file(),
-                "{r:?}"
-            );
+            assert!(dir.join(r.mockup()).is_file(), "{r:?}");
+            for w in [1440, 390] {
+                assert!(dir.join(r.reference(w)).is_file(), "{r:?} {w}");
+            }
         }
     }
 
@@ -259,15 +227,34 @@ mod tests {
             assert_eq!(Route::from_id(r.id()), Some(r));
         }
         assert_eq!(Route::from_id("Advanced"), Some(Route::Advanced));
-        assert_eq!(Route::from_id("playground"), Some(Route::Bridge));
+        assert_eq!(Route::from_id("builder"), Some(Route::Playground));
         assert_eq!(Route::from_id("nope"), None);
+        for id in RETIRED_IDS {
+            assert_eq!(Route::from_id(id), None, "{id} is retired");
+        }
+    }
+
+    #[test]
+    fn retired_routes_restore_to_the_playground() {
+        for old in ["Bridge", "Tower", "Ground", "Materials", "Playground"] {
+            let r: Route = serde_json::from_str(&format!("\"{old}\"")).unwrap();
+            assert_eq!(r, Route::Playground, "{old}");
+        }
+        assert_eq!(
+            serde_json::from_str::<Route>("\"Advanced\"").unwrap(),
+            Route::Advanced
+        );
+        assert_eq!(
+            serde_json::to_string(&Route::Playground).unwrap(),
+            "\"Playground\""
+        );
     }
 
     #[test]
     fn shortcuts() {
         assert_eq!(
             Route::ALL.map(Route::shortcut_digit),
-            [Some(1), Some(2), Some(3), Some(4), Some(5), None]
+            [Some(1), Some(2), None]
         );
     }
 }

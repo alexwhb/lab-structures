@@ -12,7 +12,6 @@ use egui_kittest::kittest::Queryable;
 use lab_mcp::bridge::proto::{AppStatus, Description, ImagePayload};
 use lab_mcp::bridge::{BridgeClient, BridgeError, code};
 use serde_json::{Value, json};
-use sp_shared::proto;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::thread;
@@ -109,8 +108,8 @@ fn status_and_navigate() {
         serde_json::from_value(ok(&mut h, &sock.path(), "status", Value::Null)).unwrap();
     assert_eq!(s.app, "Structures Playground");
     assert_eq!(s.pid, std::process::id());
-    assert_eq!(s.screen.id, "bridge");
-    assert_eq!(s.screen.label, "Bridge");
+    assert_eq!(s.screen.id, "playground");
+    assert_eq!(s.screen.label, "Playground");
     assert_eq!(s.screen.mode.as_ref().unwrap().id, "playground");
     let w = s.window.unwrap();
     assert_eq!(
@@ -121,14 +120,21 @@ fn status_and_navigate() {
         &mut h,
         &sock.path(),
         "navigate",
-        json!({"screen": "ground"}),
+        json!({"screen": "advanced"}),
     );
-    assert_eq!(r["screen"]["id"], "ground");
-    assert_eq!(h.state().route(), Route::Ground);
+    assert_eq!(r["screen"]["id"], "advanced");
+    assert_eq!(h.state().route(), Route::Advanced);
     assert!(
-        has_label(&h, "foundation-pit"),
-        "the header shows the Ground"
+        has_label(&h, "river-crossing"),
+        "the header shows Advanced's netlist"
     );
+    let r = ok(
+        &mut h,
+        &sock.path(),
+        "navigate",
+        json!({"screen": "builder"}),
+    );
+    assert_eq!(r["screen"]["id"], "playground", "`builder` names it too");
 }
 
 #[test]
@@ -136,8 +142,6 @@ fn bad_requests_get_error_replies_and_change_nothing() {
     let sock = TempSocket::new();
     let mut h = harness(&sock.path());
     let p = sock.path();
-    let bridge_before = h.state().screens().bridge.game.summary();
-    let tower_before = h.state().screens().tower.input;
     let invalid = |r| refused(r).0;
     assert_eq!(
         invalid(call(&mut h, &p, "navigate", json!({"screen": "lab"}))),
@@ -155,64 +159,16 @@ fn bad_requests_get_error_replies_and_change_nothing() {
         invalid(call(&mut h, &p, "launch_rockets", Value::Null)),
         code::METHOD_NOT_FOUND
     );
-    let (c, m) = refused(call(
-        &mut h,
-        &p,
-        proto::BRIDGE_LOAD_NETLIST,
-        json!({"netlist": ".node A 0 0 fix=xy\n.member M1 A B s\n"}),
-    ));
-    assert_eq!(c, code::INVALID_PARAMS);
-    assert!(m.contains("line 2"), "{m}");
-    let (_, m) = refused(call(
-        &mut h,
-        &p,
-        proto::BRIDGE_TEST,
-        json!({"level": "moon"}),
-    ));
-    assert!(
-        m.contains("levels are river, overhang, haul, sandbox"),
-        "{m}"
-    );
-    let (_, m) = refused(call(&mut h, &p, proto::TOWER_SET, json!({"floors": 121})));
-    assert_eq!(m, "`floors` must be 5 to 120, not 121");
-    let (_, m) = refused(call(
-        &mut h,
-        &p,
-        proto::TOWER_SET,
-        json!({"system": "glass"}),
-    ));
-    assert!(m.contains("core, tube, outrigger, braced"), "{m}");
-    let (_, m) = refused(call(&mut h, &p, proto::GROUND_SET, json!({"years": -1})));
-    assert!(m.contains("0 to 30"), "{m}");
-    let (_, m) = refused(call(
-        &mut h,
-        &p,
-        proto::MATERIALS_SET,
-        json!({"material": "gold"}),
-    ));
-    assert!(m.contains("unknown material"), "{m}");
-    let (_, m) = refused(call(
-        &mut h,
-        &p,
-        proto::MATERIALS_SET,
-        json!({"temperature_c": 900}),
-    ));
-    assert!(m.contains("-40 to 600"), "{m}");
-    let (_, m) = refused(call(
-        &mut h,
-        &p,
-        proto::BRIDGE_TEST,
-        json!({"colour": "red"}),
-    ));
-    assert!(m.contains("unknown field `colour`"), "{m}");
-
-    assert_eq!(h.state().route(), Route::Bridge, "nothing moved");
-    assert_eq!(h.state().screens().bridge.game.summary(), bridge_before);
-    assert_eq!(
-        h.state().screens().tower.input,
-        tower_before,
-        "nothing changed"
-    );
+    // the retired v1 screens say where their ideas went
+    for old in ["bridge", "tower", "ground", "materials"] {
+        let (c, m) = refused(call(&mut h, &p, "navigate", json!({"screen": old})));
+        assert_eq!(c, code::INVALID_PARAMS);
+        assert!(
+            m.contains("retired in v2") && m.contains("playground"),
+            "{m}"
+        );
+    }
+    assert_eq!(h.state().route(), Route::Playground, "nothing moved");
 }
 
 #[test]
@@ -223,114 +179,37 @@ fn screenshot_is_the_rendered_frame() {
         &mut h,
         &sock.path(),
         "screenshot",
-        json!({"screen": "materials"}),
+        json!({"screen": "advanced"}),
     );
     let img: ImagePayload = serde_json::from_value(r).unwrap();
-    assert_eq!(img.screen.id, "materials");
+    assert_eq!(img.screen.id, "advanced");
     assert_eq!((img.width, img.height), (1440, 900));
     assert_eq!(img.mime_type, "image/png");
-    assert_eq!(h.state().route(), Route::Materials);
+    assert_eq!(h.state().route(), Route::Advanced);
 }
 
 #[test]
 fn describe_outlines_the_accesskit_tree() {
     let sock = TempSocket::new();
     let mut h = harness(&sock.path());
-    let r = ok(&mut h, &sock.path(), "describe", json!({"screen": "tower"}));
-    let summary = r["summary"].as_str().unwrap_or_default().to_string();
-    let d: Description = serde_json::from_value(r).unwrap();
-    assert_eq!(d.screen.id, "tower");
-    for label in [
-        "\"Structures Playground\"",
-        "\"Play gusts\"",
-        "\"Playground worlds\"",
-    ] {
-        assert!(d.outline.contains(label), "{label} in\n{}", d.outline);
-    }
-    assert!(!summary.is_empty(), "the screen's one-line summary");
-}
-
-#[test]
-fn screen_methods_drive_the_screens() {
-    let sock = TempSocket::new();
-    let mut h = harness(&sock.path());
-    let p = sock.path();
-    // Tower in the background
     let r = ok(
-        &mut h,
-        &p,
-        proto::TOWER_SET,
-        json!({"floors": 90, "shape": "tapered", "show": false}),
-    );
-    assert_eq!(r["settings"]["floors"], 90);
-    assert_eq!(h.state().route(), Route::Bridge, "show: false stays put");
-    assert_eq!(h.state().screens().tower.input.floors, 90);
-    // the same numbers the screen shows: its tiles
-    goto(&mut h, Route::Tower);
-    let tile = &r["tiles"][0];
-    assert!(
-        has_label(
-            &h,
-            &format!(
-                "{}: {}",
-                tile["label"].as_str().unwrap(),
-                tile["value"].as_str().unwrap()
-            )
-        ) || h
-            .query_all_by_label_contains(tile["value"].as_str().unwrap())
-            .next()
-            .is_some(),
-        "the Tower shows {tile}"
-    );
-    // Ground
-    let r = ok(
-        &mut h,
-        &p,
-        proto::GROUND_SET,
-        json!({"soil": "dense", "floors": 20}),
-    );
-    assert_eq!(r["settings"]["soil"], "dense");
-    assert_eq!(h.state().route(), Route::Ground);
-    assert_eq!(h.state().screens().ground.input.floors, 20);
-    // Materials
-    let r = ok(
-        &mut h,
-        &p,
-        proto::MATERIALS_SET,
-        json!({"material": "steel", "temperature_c": 300, "strain_pct": 5}),
-    );
-    assert_eq!(r["test"]["temperature_c"], 300.0);
-    assert_eq!(r["test"]["strain_pct"], 5.0);
-    assert_eq!(h.state().screens().materials.bench().temp(), 300.0);
-    // Bridge: read, load the Share of a level, test
-    let r = ok(&mut h, &p, proto::BRIDGE_GET, Value::Null);
-    assert_eq!(r["level"], "river");
-    assert_eq!(r["document"], "river-level");
-    let r = ok(&mut h, &p, proto::BRIDGE_TEST, json!({"show": false}));
-    assert_eq!(r["outcome"], "refused", "{r}");
-}
-
-/// A change to a screen never shown yet survives that screen's first visit.
-#[test]
-fn a_change_to_an_unvisited_screen_survives_its_first_visit() {
-    let sock = TempSocket::new();
-    let mut h = harness(&sock.path());
-    ok(
         &mut h,
         &sock.path(),
-        proto::GROUND_SET,
-        json!({"foundation": "caisson", "show": false}),
+        "describe",
+        json!({"screen": "playground"}),
     );
-    goto(&mut h, Route::Ground);
-    assert_eq!(
-        h.state().screens().ground.input.foundation,
-        sp_engine::ground::Foundation::Caisson
+    let summary = r["summary"].as_str().unwrap_or_default().to_string();
+    let d: Description = serde_json::from_value(r).unwrap();
+    assert_eq!(d.screen.id, "playground");
+    for label in ["\"Structures Playground\"", "\"Run traffic\""] {
+        assert!(d.outline.contains(label), "{label} in\n{}", d.outline);
+    }
+    assert!(
+        !d.outline.contains("Playground worlds"),
+        "no world tab row in v2:\n{}",
+        d.outline
     );
-}
-
-fn goto(h: &mut App, r: Route) {
-    h.state_mut().navigate(r);
-    h.run_steps(3);
+    assert!(!summary.is_empty(), "the screen's one-line summary");
 }
 
 #[test]
@@ -340,8 +219,10 @@ fn a_client_that_leaves_mid_screenshot_does_no_harm() {
     {
         use std::io::Write;
         let mut raw = std::os::unix::net::UnixStream::connect(sock.path()).unwrap();
-        raw.write_all(b"{\"id\":1,\"method\":\"screenshot\",\"params\":{\"screen\":\"tower\"}}\n")
-            .unwrap();
+        raw.write_all(
+            b"{\"id\":1,\"method\":\"screenshot\",\"params\":{\"screen\":\"advanced\"}}\n",
+        )
+        .unwrap();
         // the app takes the request while the client is there (one that already left isn't
         // applied at all)…
         let ctx = h.ctx.clone();
@@ -358,7 +239,7 @@ fn a_client_that_leaves_mid_screenshot_does_no_harm() {
     } // …and the client hangs up before the frame it waits for
     h.run_steps(5);
     let r = ok(&mut h, &sock.path(), "status", Value::Null);
-    assert_eq!(r["screen"]["id"], "tower");
+    assert_eq!(r["screen"]["id"], "advanced");
 }
 
 /// Whether the last frame asked eframe to paint even if the window is hidden.
@@ -384,7 +265,7 @@ fn a_hidden_window_asks_for_a_frame_to_answer_in() {
     // covered window.
     let mut raw = std::os::unix::net::UnixStream::connect(sock.path()).unwrap();
     raw.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
-    raw.write_all(b"{\"id\":1,\"method\":\"bridge.get\"}\n")
+    raw.write_all(b"{\"id\":1,\"method\":\"status\"}\n")
         .unwrap();
     let ctx = h.ctx.clone();
     let t0 = Instant::now();
@@ -405,7 +286,7 @@ fn a_hidden_window_asks_for_a_frame_to_answer_in() {
     BufReader::new(raw).read_line(&mut line).unwrap();
     let reply: Value = serde_json::from_str(&line).unwrap();
     assert_eq!(reply["id"], 1);
-    assert_eq!(reply["result"]["level"], "river");
+    assert_eq!(reply["result"]["app"], "Structures Playground");
     assert_eq!(structures_playground::control::pending(h.state()), 0);
 }
 
@@ -496,10 +377,10 @@ fn a_covered_window_still_answers_screenshots() {
         &mut h,
         &sock.path(),
         "screenshot",
-        json!({"screen": "tower"}),
+        json!({"screen": "advanced"}),
     );
     let img: ImagePayload = serde_json::from_value(r).unwrap();
-    assert_eq!(img.screen.id, "tower");
+    assert_eq!(img.screen.id, "advanced");
     assert_eq!((img.width, img.height), (1440, 900));
     let png = lab_mcp::base64_decode(&img.data).unwrap();
     let png = image::load_from_memory(&png).unwrap().to_rgba8();
@@ -509,20 +390,16 @@ fn a_covered_window_still_answers_screenshots() {
         "a blank frame ({} colours)",
         colours.len()
     );
-    assert_eq!(h.state().route(), Route::Tower);
+    assert_eq!(h.state().route(), Route::Advanced);
     let r = call_without_frames(
         &mut h,
         &sock.path(),
         "describe",
-        json!({"screen": "ground"}),
+        json!({"screen": "playground"}),
     );
     let d: Description = serde_json::from_value(r).unwrap();
-    assert_eq!(d.screen.id, "ground");
-    for label in [
-        "\"Structures Playground\"",
-        "\"Play years\"",
-        "\"Playground worlds\"",
-    ] {
+    assert_eq!(d.screen.id, "playground");
+    for label in ["\"Structures Playground\"", "\"Run traffic\""] {
         assert!(d.outline.contains(label), "{label} in\n{}", d.outline);
     }
     let r = call_without_frames(
@@ -540,30 +417,26 @@ fn a_covered_window_still_answers_screenshots() {
 fn an_offscreen_screenshot_changes_nothing() {
     let sock = TempSocket::new();
     let mut h = harness(&sock.path());
-    h.state_mut().navigate(Route::Materials);
+    h.state_mut().navigate(Route::Advanced);
     h.run_steps(3);
-    // Pull is running; focus sits on a slider
+    // Drive across is running; focus sits on a slider
     let ctx = h.ctx.clone();
     assert!(h.state_mut().press_drive(&ctx));
     h.step();
-    h.get_by_role_and_label(egui::accesskit::Role::Slider, "Temperature")
+    h.get_by_role_and_label(egui::accesskit::Role::Slider, "Truck")
         .focus();
     h.step();
     assert!(
-        h.state().screens().materials.bench().playing(),
-        "Pull is running"
+        h.state().screens().advanced.playing,
+        "Drive across is running"
     );
-    let strain = h.state().screens().materials.bench().strain();
+    let x = h.state().screens().advanced.doc.x();
     let events = h.state().events().len();
     let focused = h.ctx.memory(|m| m.focused());
     // the screenshot is answered from `logic` alone, so no real frame runs in between
     let r = call_without_frames(&mut h, &sock.path(), "screenshot", Value::Null);
-    assert_eq!(r["screen"]["id"], "materials");
-    assert_eq!(
-        h.state().screens().materials.bench().strain(),
-        strain,
-        "no tick"
-    );
+    assert_eq!(r["screen"]["id"], "advanced");
+    assert_eq!(h.state().screens().advanced.doc.x(), x, "no tick");
     assert_eq!(h.state().events().len(), events, "no clicks or keys");
     assert_eq!(h.ctx.memory(|m| m.focused()), focused, "focus stays");
 }

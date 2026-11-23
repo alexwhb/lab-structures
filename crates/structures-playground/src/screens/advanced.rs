@@ -161,7 +161,7 @@ impl AdvancedScreen {
         }
         if out.open_in_playground {
             ctx.go_with(
-                Route::Bridge,
+                Route::Playground,
                 Carry::netlist(self.doc.text.clone(), None, Route::Advanced),
             );
         }
@@ -304,15 +304,14 @@ impl Screen for AdvancedScreen {
     }
 
     fn receive(&mut self, carry: Carry, ctx: &mut Ctx) {
-        if let Carry::Netlist { text, name, from } = carry {
-            let now = ctx.egui().input(|i| i.time);
-            self.playing = false;
-            let origin = match from {
-                Some(r) => Origin::Received(r),
-                None => Origin::File,
-            };
-            self.doc.load(text, name, origin, now);
-        }
+        let Carry::Netlist { text, name, from } = carry;
+        let now = ctx.egui().input(|i| i.time);
+        self.playing = false;
+        let origin = match from {
+            Some(r) => Origin::Received(r),
+            None => Origin::File,
+        };
+        self.doc.load(text, name, origin, now);
     }
 
     fn describe(&self) -> String {

@@ -1,16 +1,16 @@
 //! `structures-playground --smoke <seconds> [--headless]` (PLAT-1) — a measurable start-up +
 //! run path for `scripts/test-all.sh` and `scripts/check-bundle.sh`: the real
-//! [`StructuresApp`] opens on the Bridge with something to test (the Sandbox's starter truss
-//! with 150 t on its middle joint: it buckles and collapses), presses Test after the first
-//! frame, draws the frames it asks for during `<seconds>` of wall time (it paces itself like
-//! the real app — ~30 frames a second while the Test ramps and the structure falls, none at
-//! rest — so `frames=` is its real frame count, not a spin) and prints one line
+//! [`StructuresApp`] opens on the Playground (the builder) with something to run, presses the
+//! drive button ("Run traffic") after the first frame, draws the frames it asks for during
+//! `<seconds>` of wall time (it paces itself like the real app — ~30 frames a second while the
+//! run moves, none at rest — so `frames=` is its real frame count, not a spin) and prints one
+//! line
 //!
 //! ```text
-//! SMOKE route=bridge mode=window first_frame_ms=412 frames=96 bridge=collapsed frame_ms_avg=1.9 frame_ms_max=7.2 status=ok
+//! SMOKE route=playground mode=window first_frame_ms=412 frames=96 run=running frame_ms_avg=1.9 frame_ms_max=7.2 status=ok
 //! ```
 //!
-//! (`bridge=` is the Test's phase when the run ended: `testing`, `collapse`, `collapsed`.)
+//! (`run=` is the drive's state when the run ended: `running` or `stopped`.)
 //!
 //! then exits 0 (1 on an error or when the window closes early, 2 on bad arguments). With
 //! `--headless` or `STRUCTURES_HEADLESS=1` — or when no window can be opened — the same app draws
@@ -86,8 +86,8 @@ pub struct SmokeReport {
     pub first_frame_ms: f64,
     /// Frames drawn after the first.
     pub frames: u64,
-    /// The Bridge's phase when the run ended (`testing`, `collapse`, `collapsed`, …).
-    pub bridge: String,
+    /// The builder's run when the smoke run ended (`running`, `stopped`).
+    pub run: String,
     /// Mean frame time (the app's `frame`, ms).
     pub frame_ms_avg: f64,
     /// Longest frame (ms).
@@ -105,16 +105,12 @@ impl SmokeReport {
     /// The one-line summary the scripts parse.
     pub fn line(&self) -> String {
         format!(
-            "SMOKE route={} mode={} first_frame_ms={:.0} frames={} bridge={} frame_ms_avg={:.2} frame_ms_max={:.2} status={}",
+            "SMOKE route={} mode={} first_frame_ms={:.0} frames={} run={} frame_ms_avg={:.2} frame_ms_max={:.2} status={}",
             self.route,
             self.mode,
             self.first_frame_ms,
             self.frames,
-            if self.bridge.is_empty() {
-                "-"
-            } else {
-                &self.bridge
-            },
+            if self.run.is_empty() { "-" } else { &self.run },
             self.frame_ms_avg,
             self.frame_ms_max,
             if self.ok() {
@@ -127,19 +123,21 @@ impl SmokeReport {
 }
 
 /// The screen a smoke run opens.
-pub const SMOKE_ROUTE: Route = Route::Bridge;
+pub const SMOKE_ROUTE: Route = Route::Playground;
 
-/// The weight (t) the smoke run hangs on the starter truss's middle bottom joint: enough to
-/// break it, so the run measures a Test ramp and a collapse.
-pub const SMOKE_LOAD_T: f64 = 150.0;
+/// Puts something to run on the Playground. (TODO(shell): load a level's structure through
+/// the builder engine once `sp_engine::builder` is published, so `--smoke` measures a real
+/// run; the placeholder builder runs nothing.)
+pub fn prepare(_app: &mut StructuresApp) {}
 
-/// Puts something testable on the Bridge: the Sandbox's starter truss with [`SMOKE_LOAD_T`]
-/// on its middle bottom joint (`J3`, x = 24 m).
-pub fn prepare(app: &mut StructuresApp) {
-    let game = &mut app.screens_mut().bridge.game;
-    game.pick_level(sp_engine::bridge::LevelKey::Sandbox);
-    game.starter();
-    game.add_load("J3", SMOKE_LOAD_T);
+/// The builder's run state for the report line.
+fn run_state(app: &StructuresApp) -> &'static str {
+    let running = app
+        .screens()
+        .get_ref(Route::Playground)
+        .drive_button()
+        .is_some_and(|d| d.running);
+    if running { "running" } else { "stopped" }
 }
 
 /// The options of a smoke run's app.
@@ -211,11 +209,11 @@ impl Driver {
                     .elapsed()
                     .as_secs_f64()
                     * 1e3;
-                // press the drive button (the Bridge's Test) so the run has something moving
+                // press the drive button ("Run traffic") so the run has something moving
                 if !app.press_drive(ctx) {
                     self.report
                         .errors
-                        .push("the Bridge had no enabled Test button".into());
+                        .push("the Playground had no enabled drive button".into());
                 }
             }
             Some(first) => {
@@ -238,10 +236,9 @@ impl Driver {
         let r = &mut self.report;
         r.frame_ms_avg = self.frame_sum / r.frames.max(1) as f64;
         r.route = app.route().id().into();
-        let game = &app.screens().bridge.game;
-        r.bridge = sp_shared::report::phase_name(game.phase()).into();
-        if game.phase() == sp_engine::bridge::Phase::Build {
-            r.errors.push("the Bridge's Test never started".into());
+        r.run = run_state(app).into();
+        if r.run != "running" {
+            r.errors.push("the Playground's run never started".into());
         }
         if app.route() != SMOKE_ROUTE {
             r.errors.push(format!(
@@ -407,43 +404,25 @@ mod tests {
         }
     }
 
-    /// A short headless run tests a real structure: the Test starts, frames come at the
-    /// Test's pace (~30 a second, not a spin), it stays on the Bridge, and the line has the
-    /// fields the scripts parse.
+    /// A short headless run starts the builder's run, stays on the Playground, and the line
+    /// has the fields the scripts parse.
     #[test]
-    fn headless_smoke_runs_a_real_test() {
+    fn headless_smoke_runs() {
         let r = run_headless(&SmokeArgs {
             seconds: 0.5,
             headless: true,
         });
         assert!(r.ok(), "{}", r.line());
-        assert!(r.frames >= 8, "frames while testing: {}", r.line());
+        assert_eq!(r.run, "running", "{}", r.line());
         assert!(r.frames <= 40, "paced, not a spin: {}", r.line());
-        assert_ne!(r.bridge, "build", "{}", r.line());
         let line = r.line();
         assert!(
-            line.starts_with("SMOKE route=bridge mode=headless first_frame_ms="),
+            line.starts_with("SMOKE route=playground mode=headless first_frame_ms="),
             "{line}"
         );
         assert!(
-            line.contains(" frames=") && line.contains(" bridge=") && line.ends_with("status=ok"),
+            line.contains(" frames=") && line.contains(" run=") && line.ends_with("status=ok"),
             "{line}"
-        );
-    }
-
-    /// The prepared structure collapses under its load when tested to the end.
-    #[test]
-    fn the_smoke_structure_collapses() {
-        let mut app = StructuresApp::with_options(app_options());
-        prepare(&mut app);
-        let game = &mut app.screens_mut().bridge.game;
-        assert_eq!(game.design().members.len(), 18);
-        let phase = game.run_test(5_000);
-        assert_eq!(
-            phase,
-            sp_engine::bridge::Phase::Collapsed,
-            "{}",
-            game.summary()
         );
     }
 }

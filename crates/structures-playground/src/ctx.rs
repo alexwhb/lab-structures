@@ -15,9 +15,9 @@ use std::path::PathBuf;
 /// [`Screen::receive`](crate::screens::Screen::receive) right after its `enter`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Carry {
-    /// A truss netlist (`.str` text): Bridge "Open in Advanced" → Advanced (ADV-9), Advanced
-    /// "Open in Playground" → Bridge (loads into the Sandbox), a `.str` opened from Finder or
-    /// the command line → Advanced.
+    /// A truss netlist (`.str` text): builder "Open in Advanced" → Advanced (the structure as a
+    /// netlist), Advanced "Open in Playground" → the builder (loads into the Sandbox), a `.str`
+    /// opened from Finder or the command line → Advanced.
     Netlist {
         /// The netlist text (parse it with `sp_engine`).
         text: String,
@@ -25,21 +25,6 @@ pub enum Carry {
         name: Option<String>,
         /// The screen it came from (`None`: from outside the app, e.g. a file).
         from: Option<Route>,
-    },
-    /// Tower "Send base reactions to Ground ›" → Ground: the building standing on the ground.
-    Building {
-        /// Storeys (Ground turns them into the building load).
-        floors: u32,
-        /// The tower's base shear in N (shown as a note).
-        base_shear_n: f64,
-        /// The tower's overturning moment at the base in N·m (shown as a note).
-        overturning_nm: f64,
-    },
-    /// Ground "‹ Back to the Tower" → Tower: the building's floors (the Tower keeps the rest
-    /// of its settings).
-    Tower {
-        /// Storeys.
-        floors: u32,
     },
 }
 
@@ -57,8 +42,6 @@ impl Carry {
     pub fn from(&self) -> Option<Route> {
         match self {
             Carry::Netlist { from, .. } => *from,
-            Carry::Building { .. } => Some(Route::Tower),
-            Carry::Tower { .. } => Some(Route::Ground),
         }
     }
 }
@@ -74,14 +57,45 @@ pub struct NavRequest {
 
 /// Keyboard commands the app routes to the active screen (NAV-5). The app handles Space
 /// itself (it calls [`Screen::drive`](crate::screens::Screen::drive)); these are the rest.
+///
+/// ⌘Z, Delete and ⌘V go to every screen (with no text field focused). The builder's keys —
+/// zoom, pan, nudge and Esc — go to the Playground only (elsewhere ⌘= / ⌘− / ⌘0 keep egui's
+/// whole-window zoom and the arrows its focus moves): ⌘= / ⌘+ [`Command::ZoomIn`], ⌘−
+/// [`Command::ZoomOut`], ⌘0 [`Command::ZoomFit`], Esc [`Command::Escape`], and the arrow keys
+/// [`Command::Pan`] (⌥ + arrow: [`Command::Nudge`]) while nothing has keyboard focus or the
+/// focused widget asked for them ([`crate::widgets::arrows_pass_through`]).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Command {
-    /// ⌘Z (when no text field has focus): undo (the Bridge).
+    /// ⌘Z (when no text field has focus): undo.
     Undo,
-    /// Delete / Backspace (when no text field has focus): delete the selection (the Bridge).
+    /// Delete / Backspace (when no text field has focus): delete the selection.
     Delete,
-    /// ⌘V (when no text field has focus): pasted text (a netlist on the Bridge / Advanced).
+    /// ⌘V (when no text field has focus): pasted text (a netlist in the builder / Advanced).
     Paste(String),
+    /// ⌘= or ⌘+ (Playground): zoom in one step.
+    ZoomIn,
+    /// ⌘− (Playground): zoom out one step.
+    ZoomOut,
+    /// ⌘0 (Playground): fit the view.
+    ZoomFit,
+    /// An arrow key (Playground): pan the view one step. `dx` / `dy` are −1, 0 or 1, `dy` up
+    /// (ArrowUp is `dy = 1`).
+    Pan {
+        /// −1 left, 1 right.
+        dx: i8,
+        /// −1 down, 1 up.
+        dy: i8,
+    },
+    /// ⌥ + an arrow key (Playground): nudge the selected joint one grid step (same axes as
+    /// [`Command::Pan`]).
+    Nudge {
+        /// −1 left, 1 right.
+        dx: i8,
+        /// −1 down, 1 up.
+        dy: i8,
+    },
+    /// Esc (Playground, no text field focused): end a member chain, close the sample drawer.
+    Escape,
 }
 
 /// App services shared by every frame (owned by the app).
@@ -111,7 +125,6 @@ pub struct Outbox {
 /// The screen context for one frame. See the module docs.
 pub struct Ctx<'a> {
     pub(crate) route: Route,
-    pub(crate) last_world: Route,
     pub(crate) previous: Option<Route>,
     pub(crate) nav: Option<NavRequest>,
     pub(crate) toasts: &'a mut Toasts,
@@ -127,11 +140,6 @@ impl<'a> Ctx<'a> {
         self.route
     }
 
-    /// The Playground world used last (where "Playground" goes).
-    pub fn last_world(&self) -> Route {
-        self.last_world
-    }
-
     /// Navigate to `route` after this frame.
     pub fn go(&mut self, route: Route) {
         self.nav = Some(NavRequest { route, carry: None });
@@ -145,10 +153,10 @@ impl<'a> Ctx<'a> {
         });
     }
 
-    /// Back to the screen before this one (Series "Back", Esc; NAV-3): the last world when
+    /// Back to the screen before this one (Series "Back", Esc; NAV-3): the Playground when
     /// there is none.
     pub fn back(&mut self) {
-        self.go(self.previous.unwrap_or(self.last_world));
+        self.go(self.previous.unwrap_or(Route::Playground));
     }
 
     /// The screen shown before this one, if any.
@@ -435,8 +443,7 @@ mod tests {
         }
         let mut out = egui.run_ui(raw, |_ui| {
             let ctx = Ctx {
-                route: Route::Bridge,
-                last_world: Route::Bridge,
+                route: Route::Playground,
                 previous: None,
                 nav: None,
                 toasts: &mut toasts,
@@ -512,21 +519,12 @@ mod tests {
 
     #[test]
     fn carry_builders() {
-        let c = Carry::netlist(".node A 0 0 fix=xy", Some("mine"), Route::Bridge);
-        assert_eq!(c.from(), Some(Route::Bridge));
-        let Carry::Netlist { text, name, .. } = c else {
-            panic!("a netlist")
-        };
+        let c = Carry::netlist(".node A 0 0 fix=xy", Some("mine"), Route::Playground);
+        assert_eq!(c.from(), Some(Route::Playground));
+        let Carry::Netlist { text, name, .. } = c;
         assert_eq!(
             (text.as_str(), name.as_deref()),
             (".node A 0 0 fix=xy", Some("mine"))
         );
-        let b = Carry::Building {
-            floors: 60,
-            base_shear_n: 1.0,
-            overturning_nm: 2.0,
-        };
-        assert_eq!(b.from(), Some(Route::Tower));
-        assert_eq!(Carry::Tower { floors: 60 }.from(), Some(Route::Ground));
     }
 }

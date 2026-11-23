@@ -283,9 +283,9 @@ fn influence_line_picks() {
     }
 }
 
-/// A Bridge-like structure handed over (ADV-9): the same forces as solving it directly.
+/// A builder structure handed over (NAV-4 / ADV-9): the same forces as solving it directly.
 #[test]
-fn a_bridge_structure_round_trips() {
+fn a_builder_structure_round_trips() {
     let truss = Truss {
         nodes: vec![
             Node::new("J1", 8.0, 0.0, Fix::PIN),
@@ -305,7 +305,7 @@ fn a_bridge_structure_round_trips() {
     let sections = vec!["Medium".to_string(); 7];
     let text_in = netlist::write_truss(&WriteTruss {
         name: "river-level",
-        comment: "Bridge · River crossing",
+        comment: "Playground · First crossing",
         truss: &truss,
         sections: &sections,
         loads: &loads,
@@ -315,16 +315,16 @@ fn a_bridge_structure_round_trips() {
     hand_off(
         &mut h,
         Route::Advanced,
-        Carry::netlist(text_in.clone(), Some("river-level"), Route::Bridge),
+        Carry::netlist(text_in.clone(), Some("river-level"), Route::Playground),
     );
     assert_eq!(text(&h), text_in);
     assert_eq!(document(&h), "river-level");
-    assert!(has_label(&h, "from the Bridge"));
+    assert!(has_label(&h, "from the Playground"));
     assert!(has_label(&h, "river-level.str"));
     // no truck: Drive across is disabled and the plot says why
     assert!(disabled(&h, "Drive across"));
     assert!(has_label_containing(&h, "No moving load to sweep"));
-    // forces match the Bridge's own solve (self-weight half per member end) to the newton
+    // forces match the structure's own solve (self-weight half per member end) to the newton
     let mut all = loads.clone();
     all.extend(truss.self_weight(1.0, &[]));
     let direct = truss.solve(&all, &SolveOptions::default()).unwrap();
@@ -341,19 +341,15 @@ fn a_bridge_structure_round_trips() {
             &format!("{} {}: N {} kN", row.id, row.nodes, row.force)
         ));
     }
-    // "Open in Playground" hands the netlist back to the Bridge
+    // "Open in Playground" hands the netlist back to the builder
     reveal(&mut h, "Open in Playground", Some(Role::Button));
     click_button(&mut h, "Open in Playground");
     let (to, carry) = carried(&h).last().cloned().unwrap();
-    assert_eq!(to, Route::Bridge);
-    assert_eq!(route(&h), Route::Bridge);
-    match carry {
-        Carry::Netlist { text, from, .. } => {
-            assert_eq!(text, text_in);
-            assert_eq!(from, Some(Route::Advanced));
-        }
-        c => panic!("{c:?}"),
-    }
+    assert_eq!(to, Route::Playground);
+    assert_eq!(route(&h), Route::Playground);
+    let Carry::Netlist { text, from, .. } = carry;
+    assert_eq!(text, text_in);
+    assert_eq!(from, Some(Route::Advanced));
 }
 
 #[test]

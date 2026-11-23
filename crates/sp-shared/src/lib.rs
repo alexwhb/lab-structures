@@ -61,8 +61,7 @@ pub struct ModeInfo {
     pub id: &'static str,
     /// The switcher label.
     pub label: &'static str,
-    /// Where the mode link goes at first start (a screen id; afterwards Playground opens the
-    /// last world used).
+    /// The screen the mode link opens (a screen id).
     pub home: &'static str,
 }
 
@@ -76,11 +75,11 @@ impl ModeInfo {
     }
 }
 
-/// Playground: the four worlds (Bridge, Tower, Ground, Materials).
+/// Playground: the builder for bridges and towers.
 pub const PLAYGROUND: ModeInfo = ModeInfo {
     id: "playground",
     label: "Playground",
-    home: "bridge",
+    home: "playground",
 };
 /// Advanced: the truss netlist workbench.
 pub const ADVANCED: ModeInfo = ModeInfo {
@@ -103,10 +102,9 @@ pub struct Board {
 /// A screen as the bridge and `list_screens` name it.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct ScreenInfo {
-    /// Stable id (`navigate` takes it): `bridge`, `tower`, `ground`, `materials`, `advanced`,
-    /// `series`.
+    /// Stable id (`navigate` takes it): `playground`, `advanced`, `series`.
     pub id: &'static str,
-    /// The tab label or title ("Bridge", "Advanced").
+    /// The title ("Playground", "Advanced").
     pub label: &'static str,
     /// The mode it belongs to (`None`: the Series screen).
     pub mode: Option<ModeInfo>,
@@ -116,7 +114,7 @@ pub struct ScreenInfo {
     pub shortcut: Option<&'static str>,
     /// What is on it, for the model.
     pub about: &'static str,
-    /// The mockup that specifies it (`docs/design/mockup/`).
+    /// The mockup that specifies it (relative to `docs/design/`).
     pub mockup: &'static str,
     /// The mockup board size at 1440 px.
     pub board: Board,
@@ -133,76 +131,38 @@ impl ScreenInfo {
     }
 }
 
-const BOARD_900: Board = Board {
-    width: 1440.0,
-    height: 900.0,
-};
-
-/// Every screen, in shortcut order (⌘1–⌘5, then Series).
-pub const SCREENS: [ScreenInfo; 6] = [
+/// Every screen, in shortcut order (⌘1, ⌘2, then Series). v2 retired the v1 `bridge`,
+/// `tower`, `ground` and `materials` screens ([`RETIRED_SCREENS`]).
+pub const SCREENS: [ScreenInfo; 3] = [
     ScreenInfo {
-        id: "bridge",
-        label: "Bridge",
+        id: "playground",
+        label: "Playground",
         mode: Some(PLAYGROUND),
         document: "river-level",
         shortcut: Some("⌘1"),
-        about: "Build a truss across a 40 m river and break it: joints, members (thin / \
-                medium / thick), supports, hanging weights, four levels with budgets and stars, \
-                a live linear-statics solve coloured tension / compression, and a Test that \
-                ramps the load until it holds or collapses.",
-        mockup: "Playground.dc.html",
-        board: BOARD_900,
-    },
-    ScreenInfo {
-        id: "tower",
-        label: "Tower",
-        mode: Some(PLAYGROUND),
-        document: "tower-study",
-        shortcut: Some("⌘2"),
-        about: "A skyscraper in a storm: floors, structural system, shape and a tuned mass \
-                damper; wind at 10 m; top sway and drift, sway period, base shear, \
-                overturning, vortex lock-in, occupant comfort, cost and the 100-floor \
-                challenge (a simplified cantilever model).",
-        mockup: "Tower.dc.html",
-        board: BOARD_900,
-    },
-    ScreenInfo {
-        id: "ground",
-        label: "Ground",
-        mode: Some(PLAYGROUND),
-        document: "foundation-pit",
-        shortcut: Some("⌘3"),
-        about: "Soils and foundations: soil, footings / mat / piles / caissons, pile length, \
-                building floors and earthquake shaking; bearing pressure, capacity, safety \
-                factor, settlement and tilt over the years, liquefaction and the lean of Pisa \
-                challenge (simplified).",
-        mockup: "Ground.dc.html",
-        board: BOARD_900,
-    },
-    ScreenInfo {
-        id: "materials",
-        label: "Materials",
-        mode: Some(PLAYGROUND),
-        document: "tensile-test",
-        shortcut: Some("⌘4"),
-        about: "A tensile test: steel, aluminum, concrete, timber or carbon fiber at a \
-                temperature, pulled until it breaks; the stress–strain curve, stiffness, \
-                yield, peak strength, stretch at break, toughness and strength per kilogram \
-                (representative curves).",
-        mockup: "Materials.dc.html",
-        board: BOARD_900,
+        about: "The builder for bridges and towers: draw pieces (road, floor, wood, steel, \
+                concrete, rope, cable) joint to joint, put foundations on the soil, hang \
+                crates, then run traffic across a river or test a tower in wind, snow and \
+                earthquakes on one settling engine; levels with budgets and stars, a Sandbox, \
+                live forces coloured pulled / pushed, the comfort meter, 30 years of \
+                settlement, the sample lab and fire.",
+        mockup: "v2/mockup/Builder.dc.html",
+        board: Board {
+            width: 1440.0,
+            height: 900.0,
+        },
     },
     ScreenInfo {
         id: "advanced",
         label: "Advanced",
         mode: Some(ADVANCED),
         document: "river-crossing",
-        shortcut: Some("⌘5"),
-        about: "The bridge as a truss netlist: the editable .str text (Pratt / Howe / Warren \
+        shortcut: Some("⌘2"),
+        about: "A truss as a netlist: the editable .str text (Pratt / Howe / Warren \
                 generators, material, size, truck), the elevation coloured by force, the \
                 influence line of a member as the truck crosses, the member results table and \
                 the checks (determinacy, reactions, deflection, worst member, weight).",
-        mockup: "Advanced.dc.html",
+        mockup: "mockup/Advanced.dc.html",
         board: Board {
             width: 1440.0,
             height: 1000.0,
@@ -216,13 +176,30 @@ pub const SCREENS: [ScreenInfo; 6] = [
         shortcut: None,
         about: "What Structures adds to the lab series: the five apps, shared engines, bridges \
                 to the other apps, netlist directives, the challenge ladder and provenance.",
-        mockup: "Series.dc.html",
+        mockup: "mockup/Series.dc.html",
         board: Board {
             width: 1440.0,
             height: 1400.0,
         },
     },
 ];
+
+/// The v1 screens retired in v2 (their ideas live on in the builder; their engines stay for
+/// the engine tools `tower_wind`, `ground_check`, `tensile_test`).
+pub const RETIRED_SCREENS: [&str; 4] = ["bridge", "tower", "ground", "materials"];
+
+/// Why a retired screen id isn't a screen any more (for `navigate` errors), `None` for any
+/// other id.
+pub fn retired_note(id: &str) -> Option<String> {
+    let id = id.trim().to_ascii_lowercase();
+    RETIRED_SCREENS.contains(&id.as_str()).then(|| {
+        format!(
+            "the `{id}` screen was retired in v2: bridges and towers are built in the \
+             Playground (`playground`), whose fold-ins carry the comfort meter, settlement over \
+             the years and the sample lab"
+        )
+    })
+}
 
 /// The screen with this id (exact, lowercase).
 pub fn screen(id: &str) -> Option<&'static ScreenInfo> {
@@ -240,17 +217,7 @@ mod tests {
 
     #[test]
     fn screens_and_modes() {
-        assert_eq!(
-            screen_ids(),
-            [
-                "bridge",
-                "tower",
-                "ground",
-                "materials",
-                "advanced",
-                "series"
-            ]
-        );
+        assert_eq!(screen_ids(), ["playground", "advanced", "series"]);
         let adv = screen("advanced").unwrap().screen_ref();
         assert_eq!(adv.label, "Advanced");
         assert_eq!(adv.mode.unwrap().id, "advanced");
@@ -259,6 +226,12 @@ mod tests {
             assert_eq!(screen(m.home).unwrap().mode, Some(m));
         }
         assert!(screen("lab").is_none());
+        for id in RETIRED_SCREENS {
+            assert!(screen(id).is_none());
+            assert!(retired_note(id).unwrap().contains("playground"));
+        }
+        assert!(retired_note("Tower").is_some());
+        assert!(retired_note("advanced").is_none());
     }
 
     #[test]

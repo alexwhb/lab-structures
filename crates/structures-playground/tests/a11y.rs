@@ -1,7 +1,7 @@
-//! Accessibility of the chrome on every route at 1440 and 390 px (NAV-1/2/5): every control in
-//! the header and the world tab row has a role and a name, targets reach 44 × 44 without
-//! covering another control's centre, the current tab / mode report selected; Tab walks the
-//! header then the tabs in reading order; the Series screen's controls are named too.
+//! Accessibility of the chrome on every route at 1440 and 390 px (NAV-1/5): every control in
+//! the header has a role and a name, targets reach 44 × 44 without covering another control's
+//! centre, the current mode reports selected; Tab walks the header in reading order; the
+//! Series screen's controls are named too.
 
 mod common;
 
@@ -12,29 +12,18 @@ use structures_playground::Route;
 
 const INTERACTIVE: &[Role] = &[Role::Button, Role::Link, Role::Tab];
 
-/// (role, label, rect) of the interactive nodes under the banner and the world tab list.
+/// (role, label, rect) of the interactive nodes under the banner.
 fn chrome_nodes(h: &App) -> Vec<(Role, String, egui::Rect)> {
-    let mut out = Vec::new();
-    for (role, label) in [
-        (Role::Banner, None),
-        (Role::TabList, Some("Playground worlds")),
-    ] {
-        let parent = match label {
-            Some(l) => h.query_by_role_and_label(role, l),
-            None => h.query_by_role(role),
-        };
-        if let Some(p) = parent {
-            out.extend(
-                p.children_recursive()
-                    .filter(|n| INTERACTIVE.contains(&n.accesskit_node().role()))
-                    .map(|n| {
-                        let ak = n.accesskit_node();
-                        (ak.role(), ak.label().unwrap_or_default(), n.rect())
-                    }),
-            );
-        }
-    }
-    out
+    let Some(p) = h.query_by_role(Role::Banner) else {
+        return Vec::new();
+    };
+    p.children_recursive()
+        .filter(|n| INTERACTIVE.contains(&n.accesskit_node().role()))
+        .map(|n| {
+            let ak = n.accesskit_node();
+            (ak.role(), ak.label().unwrap_or_default(), n.rect())
+        })
+        .collect()
 }
 
 fn check(w: f32, hgt: f32) {
@@ -42,9 +31,8 @@ fn check(w: f32, hgt: f32) {
     for r in Route::ALL.into_iter().filter(|r| r.has_header()) {
         goto(&mut h, r);
         let nodes = chrome_nodes(&h);
-        // brand, 2 modes, (drive), Reset, Share (+ 4 tabs)
-        let floor = if r.is_world() { 9 } else { 5 };
-        assert!(nodes.len() >= floor, "{r:?} at {w}: {nodes:?}");
+        // brand, 2 modes, drive, Reset, Share
+        assert!(nodes.len() >= 6, "{r:?} at {w}: {nodes:?}");
         for (role, label, rect) in &nodes {
             assert!(!label.trim().is_empty(), "{r:?} at {w}: unnamed {role:?}");
             assert!(
@@ -78,49 +66,47 @@ fn chrome_controls_are_named_and_big_enough_phone() {
 }
 
 /// Tab walks the header in reading order — brand, Playground, Advanced, the drive button,
-/// Reset, Share — then the world tabs (NAV-5).
+/// Reset, Share — before the screen's body (NAV-5).
 #[test]
 fn tab_order_follows_reading_order() {
-    let mut h = harness(Route::Tower);
-    let mut seen = Vec::new();
-    for _ in 0..10 {
-        press(&mut h, Key::Tab);
-        if let Some(l) = focused_label(&h) {
-            seen.push(l);
+    for r in [Route::Playground, Route::Advanced] {
+        let mut h = harness(r);
+        let mut seen = Vec::new();
+        for _ in 0..6 {
+            press(&mut h, Key::Tab);
+            if let Some(l) = focused_label(&h) {
+                seen.push(l);
+            }
         }
+        let drive = drive_label(&h).unwrap();
+        let want = [
+            "Structures Playground",
+            "Playground",
+            "Advanced",
+            drive.as_str(),
+            "Reset",
+            "Share",
+        ];
+        assert_eq!(&seen[..want.len()], &want[..], "{r:?}: {seen:?}");
     }
-    let drive = drive_label(&h).unwrap();
-    let want = [
-        "Structures Playground",
-        "Playground",
-        "Advanced",
-        drive.as_str(),
-        "Reset",
-        "Share",
-        "Bridge",
-        "Tower",
-        "Ground",
-        "Materials",
-    ];
-    assert_eq!(&seen[..want.len()], &want[..], "{seen:?}");
 }
 
-/// Enter on a focused tab activates it (NAV-5).
+/// Enter on a focused mode link activates it (NAV-5).
 #[test]
-fn enter_activates_the_focused_tab() {
-    let mut h = harness(Route::Bridge);
-    h.get_by_role_and_label(Role::Tab, "Ground").focus();
+fn enter_activates_the_focused_mode() {
+    let mut h = harness(Route::Playground);
+    h.get_by_role_and_label(Role::Link, "Advanced").focus();
     h.step();
     press(&mut h, Key::Enter);
     settle(&mut h);
-    assert_eq!(route(&h), Route::Ground);
+    assert_eq!(route(&h), Route::Advanced);
 }
 
 /// Every route is reachable from the keyboard alone: Tab to the brand + Enter opens Series,
-/// Tab to Back + Enter returns; ⌘1–⌘5 do the rest (`nav.rs`) (NAV-5).
+/// Tab to Back + Enter returns; ⌘1 / ⌘2 do the rest (`nav.rs`) (NAV-5).
 #[test]
 fn series_and_back_by_keyboard() {
-    let mut h = harness(Route::Materials);
+    let mut h = harness(Route::Advanced);
     press(&mut h, Key::Tab);
     assert_eq!(focused_label(&h).as_deref(), Some("Structures Playground"));
     press(&mut h, Key::Enter);
@@ -130,7 +116,7 @@ fn series_and_back_by_keyboard() {
     assert_eq!(focused_label(&h).as_deref(), Some("Back"));
     press(&mut h, Key::Enter);
     settle(&mut h);
-    assert_eq!(route(&h), Route::Materials);
+    assert_eq!(route(&h), Route::Advanced);
 }
 
 /// The Series screen: Back is a named button, each sibling card a button, the Structures card a

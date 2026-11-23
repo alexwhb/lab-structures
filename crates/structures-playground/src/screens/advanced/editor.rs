@@ -46,7 +46,7 @@ pub struct EditorOutput {
     pub open_in_playground: bool,
 }
 
-/// The header badge: "example: 48 m truss", "from the Bridge", "edited", "2 errors".
+/// The header badge: "example: 48 m truss", "from the Playground", "edited", "2 errors".
 pub fn badge_for(doc: &Doc) -> (Badge, BadgeLook) {
     let n = doc.errors();
     if n > 0 {

@@ -1,9 +1,8 @@
 //! Structures Playground — the egui app: the header (brand, mode switcher, the screen's drive
-//! button / Reset / clock / Share), the world tab row with provenance badges, the widget kit
-//! drawn to the mockup, and the six screens (Bridge, Tower, Ground, Materials, Advanced,
-//! Series).
+//! button / Reset / clock / Share), the widget kit drawn to the mockup, and the three screens
+//! (v2): the Playground builder, Advanced and Series.
 //!
-//! Screens are specified by `docs/design/mockup/*.dc.html` ([`Route::mockup`]). How a screen
+//! Screens are specified by the mockups under `docs/design/` ([`Route::mockup`]). How a screen
 //! plugs in (state, `ui`, header hooks, keyboard commands, hand-offs, toasts) is documented on
 //! [`screens::Screen`] and in `docs/ARCHITECTURE.md` › App.
 

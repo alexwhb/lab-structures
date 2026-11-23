@@ -1,32 +1,29 @@
-//! The six screens. Each lives in its own module as a struct (`BridgeScreen`, …) with a
-//! `new()` that implements [`Screen`]; the app keeps them all alive in [`Screens`] so their
-//! state survives navigation. See `docs/ARCHITECTURE.md` › "App".
+//! The three screens (v2): the Playground builder, Advanced and Series. Each lives in its own
+//! module as a struct (`BuilderScreen`, …) with a `new()` that implements [`Screen`]; the app
+//! keeps them all alive in [`Screens`] so their state survives navigation. See
+//! `docs/ARCHITECTURE.md` › "App".
 //!
-//! The header (NAV-1) and the world tab row (NAV-2) are drawn by the app from what the active
-//! screen declares: [`Screen::document`], [`Screen::drive`] (the `.prim` drive button),
-//! [`Screen::reset`], [`Screen::clock`], [`Screen::share`] and [`Screen::provenance`]. Space
-//! presses the drive button (NAV-5); ⌘Z / Delete / ⌘V arrive as [`Command`]s.
+//! The header (NAV-1) is drawn by the app from what the active screen declares:
+//! [`Screen::document`], [`Screen::drive`] (the `.prim` drive button), [`Screen::reset`],
+//! [`Screen::clock`] and [`Screen::share`]. There is no world tab row in v2 (NAV-2): a screen
+//! draws its own provenance ([`Badge`], [`crate::widgets::badge`]). Space presses the drive
+//! button (NAV-5); ⌘Z / Delete / ⌘V (and in the builder zoom, pan, nudge, Esc) arrive as
+//! [`Command`]s.
 
 use crate::ctx::{Carry, Command, Ctx};
 use crate::router::Route;
 use eframe::egui::{Color32, Ui};
 
 pub mod advanced;
-pub mod bridge;
-pub mod ground;
-pub mod materials;
+pub mod builder;
 pub mod series;
-pub mod tower;
 
 pub use advanced::AdvancedScreen;
-pub use bridge::BridgeScreen;
-pub use ground::GroundScreen;
-pub use materials::MaterialsScreen;
+pub use builder::BuilderScreen;
 pub use series::SeriesScreen;
-pub use tower::TowerScreen;
 
-/// The header's drive button (NAV-1): `.prim` with a play icon and `label` ("Test", "Drive
-/// across", "Play gusts", "Play years", "Pull"), or a pause icon and "Pause" while `running`.
+/// The header's drive button (NAV-1): `.prim` with a play icon and `label` ("Run traffic",
+/// "Run the test", "Drive across"), or a pause icon and "Pause" while `running`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Drive {
     /// The label while stopped.
@@ -112,8 +109,8 @@ impl Provenance {
     }
 }
 
-/// A `.badge` with a coloured dot (PROV-1): the world tab row's right-hand badges, the
-/// Advanced results badges, the Series provenance row ([`crate::widgets::badge`] draws one).
+/// A `.badge` with a coloured dot (PROV-1): the Advanced results badges, the Series provenance
+/// row ([`crate::widgets::badge`] draws one; the builder's provenance line uses the colours).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Badge {
     /// The text ("Solver: linear statics, exact").
@@ -163,18 +160,16 @@ impl Badge {
 ///
 /// Call order each frame for the active screen: [`Screen::enter`] (only when the route has
 /// just become active, before anything else), then [`Screen::receive`] if a hand-off arrived,
-/// [`Screen::command`] (⌘Z, Delete, ⌘V) and [`Screen::drive`] (Space), [`Screen::tick`] (time
-/// passes), then the header reads [`Screen::document`], [`Screen::drive_button`],
+/// [`Screen::command`] (⌘Z, Delete, ⌘V, …) and [`Screen::drive`] (Space), [`Screen::tick`]
+/// (time passes), then the header reads [`Screen::document`], [`Screen::drive_button`],
 /// [`Screen::clock`] (and calls [`Screen::drive`], [`Screen::reset`] or [`Screen::share`] when
-/// clicked), the world tab row reads [`Screen::provenance`], then [`Screen::ui`] draws the
-/// body under them.
+/// clicked), then [`Screen::ui`] draws the body under it.
 pub trait Screen {
-    /// The body under the header (and the world tab row). Lay it out with
-    /// [`crate::layout::columns`].
+    /// The body under the header. Lay it out with [`crate::layout::columns`].
     fn ui(&mut self, ctx: &mut Ctx, ui: &mut Ui);
 
     /// The document name after the brand (NAV-1), when it isn't the route's default
-    /// ([`Route::document`]): the Bridge's `overhang-level`, the netlist's file stem.
+    /// ([`Route::document`]): the builder's `bus-level` / `sandbox`, the netlist's file stem.
     fn document(&self) -> Option<String> {
         None
     }
@@ -195,7 +190,7 @@ pub trait Screen {
     /// Reset was pressed: back to the screen's starting state (what Reset means per mockup).
     fn reset(&mut self, _ctx: &mut Ctx) {}
 
-    /// The mono clock in the header (`building`, `x = 24.0 m`, `T = 9.9 s`, …; empty: none).
+    /// The mono clock in the header (`building`, `t = 3.1 s`, `x = 24.0 m`, …; empty: none).
     fn clock(&self) -> String {
         String::new()
     }
@@ -203,11 +198,6 @@ pub trait Screen {
     /// What Share copies (NAV-6). `None` greys the button out.
     fn share(&mut self, _ctx: &mut Ctx) -> Option<Share> {
         None
-    }
-
-    /// The provenance badges at the right of the world tab row (PROV-1; worlds only).
-    fn provenance(&self) -> Vec<Badge> {
-        Vec::new()
     }
 
     /// Advances the screen's simulation by the frame's time ([`Ctx::dt`]) while it runs. It
@@ -267,16 +257,10 @@ pub fn placeholder(ui: &mut Ui, title: &str, note: &str) {
 
 /// Every screen's state.
 pub struct Screens {
-    /// SCR-1.
-    pub bridge: BridgeScreen,
+    /// SCR-1 the Playground (the builder).
+    pub builder: BuilderScreen,
     /// SCR-2.
     pub advanced: AdvancedScreen,
-    /// SCR-3.
-    pub tower: TowerScreen,
-    /// SCR-4.
-    pub ground: GroundScreen,
-    /// SCR-5.
-    pub materials: MaterialsScreen,
     /// SCR-6.
     pub series: SeriesScreen,
 }
@@ -291,11 +275,8 @@ impl Screens {
     /// Every screen in its starting state.
     pub fn new() -> Self {
         Self {
-            bridge: BridgeScreen::new(),
+            builder: BuilderScreen::new(),
             advanced: AdvancedScreen::new(),
-            tower: TowerScreen::new(),
-            ground: GroundScreen::new(),
-            materials: MaterialsScreen::new(),
             series: SeriesScreen::new(),
         }
     }
@@ -303,11 +284,8 @@ impl Screens {
     /// The screen for `route`.
     pub fn get(&mut self, route: Route) -> &mut dyn Screen {
         match route {
-            Route::Bridge => &mut self.bridge,
+            Route::Playground => &mut self.builder,
             Route::Advanced => &mut self.advanced,
-            Route::Tower => &mut self.tower,
-            Route::Ground => &mut self.ground,
-            Route::Materials => &mut self.materials,
             Route::Series => &mut self.series,
         }
     }
@@ -315,11 +293,8 @@ impl Screens {
     /// Read-only access for `describe` and tests.
     pub fn get_ref(&self, route: Route) -> &dyn Screen {
         match route {
-            Route::Bridge => &self.bridge,
+            Route::Playground => &self.builder,
             Route::Advanced => &self.advanced,
-            Route::Tower => &self.tower,
-            Route::Ground => &self.ground,
-            Route::Materials => &self.materials,
             Route::Series => &self.series,
         }
     }

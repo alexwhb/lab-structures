@@ -7,9 +7,9 @@
 //! mod common;
 //! use common::*;
 //!
-//! let mut h = app().at(Route::Tower).phone().build();   // 390 × 1000
-//! click_tab(&mut h, "Ground");
-//! assert_eq!(route(&h), Route::Ground);
+//! let mut h = app().at(Route::Playground).phone().build();   // 390 × 1000
+//! click_link(&mut h, "Advanced");
+//! assert_eq!(route(&h), Route::Advanced);
 //! ```
 #![allow(dead_code)]
 
@@ -34,7 +34,7 @@ pub const PHONE_H: f32 = 1000.0;
 // --------------------------------------------------------------------------------------------
 // Building
 
-/// Starts building an app harness: `app().at(Route::Tower).size(1024.0, 768.0).build()`.
+/// Starts building an app harness: `app().at(Route::Advanced).size(1024.0, 768.0).build()`.
 pub fn app() -> AppBuilder {
     AppBuilder {
         opts: AppOptions::test(),
@@ -172,7 +172,7 @@ pub fn document(h: &App) -> String {
     h.state().document()
 }
 
-/// The header's drive button label now ("Test", "Pause", …), if the screen has one.
+/// The header's drive button label now ("Run traffic", "Pause", …), if the screen has one.
 pub fn drive_label(h: &App) -> Option<String> {
     let r = route(h);
     h.state()
@@ -273,11 +273,6 @@ pub fn click_button(h: &mut App, label: &str) {
     click_role(h, label, Role::Button);
 }
 
-/// Clicks a world tab.
-pub fn click_tab(h: &mut App, label: &str) {
-    click_role(h, label, Role::Tab);
-}
-
 /// The pressed state (`aria-pressed`) of the button labelled `label`.
 pub fn pressed(h: &App, label: &str) -> Option<bool> {
     get(h, label, Role::Button)
@@ -314,6 +309,25 @@ pub fn press(h: &mut App, key: egui::Key) {
 pub fn press_cmd(h: &mut App, key: egui::Key) {
     h.key_press_modifiers(Modifiers::COMMAND, key);
     h.step();
+}
+
+/// Presses ⌥ + `key` and runs a frame (the builder's joint nudge).
+pub fn press_alt(h: &mut App, key: egui::Key) {
+    h.key_press_modifiers(Modifiers::ALT, key);
+    h.step();
+}
+
+/// The keyboard commands the app sent to screens so far (NAV-5), with whether they were
+/// handled.
+pub fn commands(h: &App) -> Vec<(Route, structures_playground::Command, bool)> {
+    h.state()
+        .events()
+        .iter()
+        .filter_map(|e| match e {
+            AppEvent::Command(r, c, handled) => Some((*r, c.clone(), *handled)),
+            _ => None,
+        })
+        .collect()
 }
 
 /// The label of the node that has keyboard focus, if any.
@@ -404,17 +418,16 @@ pub fn save(img: &image::RgbaImage, path: &Path) {
         .unwrap_or_else(|e| panic!("save {}: {e}", path.display()));
 }
 
-/// The mockup's screen name for `route` (`Playground`, `Tower`, …).
+/// The mockup's screen name for `route` (`Builder`, `Advanced`, `Series`).
 pub fn mockup_name(route: Route) -> &'static str {
-    route.mockup().trim_end_matches(".dc.html")
+    let file = route.mockup().rsplit('/').next().unwrap_or_default();
+    file.trim_end_matches(".dc.html")
 }
 
-/// The mockup's rendered reference for `route` at `width` (1440 or 390).
+/// The mockup's rendered reference for `route` at `width` (1440 or 390): the builder's
+/// BridgeBuild board for the Playground.
 pub fn mockup_png(route: Route, width: u32) -> PathBuf {
-    repo().join(format!(
-        "docs/design/screenshots/{}-{width}.png",
-        mockup_name(route)
-    ))
+    repo().join("docs/design").join(route.reference(width))
 }
 
 /// Loads a PNG.
