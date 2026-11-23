@@ -7,6 +7,7 @@
 //! |---|---|---|
 //! | [`Button`] ([`ghost`], [`prim`]) | `.ghost`, `.prim` (36 px), big (44 px) | actions |
 //! | [`SegGroup`] / [`SegItem`] | `.seg` (mode switcher, 36 px), `.mini` groups | choices |
+//! | [`Select`] | `<select>` drop-down (36 px) with a menu | |
 //! | [`Toggle`] | `.chip` toggle (34 px pill, `.chip-on`, `.chip-dim`, optional dot) | |
 //! | [`Checkbox`] | `input[type=checkbox]` row (18 px, accent) | |
 //! | [`lbl`] | `.lbl` eyebrow | text |
@@ -35,6 +36,7 @@ pub mod icons;
 pub mod menu;
 pub mod plot;
 pub mod seg;
+pub mod select;
 pub mod slider;
 pub mod tabs;
 pub mod text;
@@ -47,6 +49,7 @@ pub use cards::{Callout, Card, Chip, CodeBlock, StatTile};
 pub use icons::Icon;
 pub use plot::Plot;
 pub use seg::{MiniButton, SegGroup, SegItem, SegResponse, SegStyle};
+pub use select::{Select, SelectResponse};
 pub use slider::Slider;
 pub use text::{lbl, lbl_colored};
 pub use toast::{Toast, Toasts};

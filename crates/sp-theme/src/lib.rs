@@ -346,6 +346,9 @@ pub const RULE: Color32 = hex(0x222222);
 pub const CHECK_BOX: Color32 = hex(0xFFFFFF);
 /// The unchecked checkbox's border `#767676`.
 pub const CHECK_BORDER: Color32 = hex(0x767676);
+/// `<select>`'s chevron as Chrome draws it `#B4B4B4` (sampled in `screenshots/Advanced-1440.png`;
+/// the select itself is [`ROW`] with a [`BORDER_STRONG`] border).
+pub const SELECT_CHEVRON: Color32 = hex(0xB4B4B4);
 
 // ============================================================================================
 // The palette installed into egui (generic roles for labkit helpers and egui widgets)

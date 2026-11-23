@@ -28,6 +28,12 @@ pub struct Gallery {
     pub damper: bool,
     /// The material chip picked.
     pub material: usize,
+    /// The select's option and whether its menu is open.
+    pub select: usize,
+    /// The select's menu is open.
+    pub select_open: bool,
+    /// The wrapping pick.
+    pub pick: usize,
     /// Whether the drive button reads Pause.
     pub running: bool,
 }
@@ -44,6 +50,9 @@ impl Default for Gallery {
             floors: 60.0,
             damper: false,
             material: 0,
+            select: 0,
+            select_open: false,
+            pick: 0,
             running: false,
         }
     }
@@ -147,6 +156,30 @@ impl Gallery {
             .clicked
         {
             self.zoom = i;
+        }
+        const PICKS: [SegItem<'static>; 4] = [
+            SegItem::new("Top chord T2–T3"),
+            SegItem::new("Bottom chord B2–B3"),
+            SegItem::new("End post B0–T1"),
+            SegItem::new("Vertical B2–T2"),
+        ];
+        if let Some(i) = SegGroup::new("Member to plot", &PICKS, Some(self.pick))
+            .style(SegStyle::Header)
+            .wrap()
+            .show(ui)
+            .clicked
+        {
+            self.pick = i;
+        }
+        let r = Select::new(
+            "Material",
+            &["Steel", "Aluminum", "Glulam", "Carbon fiber"],
+            self.select,
+        )
+        .width(160.0)
+        .show(ui, &mut self.select_open);
+        if let Some(i) = r.picked {
+            self.select = i;
         }
         const SIZES: [SegItem<'static>; 3] = [
             SegItem::new("Thin"),

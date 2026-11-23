@@ -149,6 +149,7 @@ pub struct SegGroup<'a> {
     links: bool,
     navigation: bool,
     fill: bool,
+    wrap: bool,
 }
 
 impl<'a> SegGroup<'a> {
@@ -162,6 +163,7 @@ impl<'a> SegGroup<'a> {
             links: false,
             navigation: false,
             fill: false,
+            wrap: false,
         }
     }
 
@@ -175,6 +177,13 @@ impl<'a> SegGroup<'a> {
     /// center`, e.g. Materials' Strain axis); the well spans the width. (`.mini` groups use `SegStyle::Mini { fill }`.)
     pub fn fill(mut self) -> Self {
         self.fill = true;
+        self
+    }
+
+    /// `.seg` / tool items wrap onto more rows when they don't fit the width (`flex-wrap:
+    /// wrap`, e.g. Advanced's influence-line picks); the well hugs the rows.
+    pub fn wrap(mut self) -> Self {
+        self.wrap = true;
         self
     }
 
@@ -252,6 +261,21 @@ impl<'a> SegGroup<'a> {
                     .map(|i| Rect::from_min_size(pos2(pad + i as f32 * (w + gap), pad), vec2(w, h)))
                     .collect();
                 (rects, vec2(width, h + 2.0 * pad))
+            }
+            SegStyle::Header | SegStyle::Tool if self.wrap => {
+                let inner = (width - 2.0 * pad).max(0.0);
+                let mut rects = Vec::with_capacity(n);
+                let (mut x, mut y, mut maxx) = (0.0f32, 0.0f32, 0.0f32);
+                for w in ws {
+                    if x > 0.0 && x + w > inner + 0.01 {
+                        x = 0.0;
+                        y += h + gap;
+                    }
+                    rects.push(Rect::from_min_size(pos2(pad + x, pad + y), vec2(w, h)));
+                    x += w + gap;
+                    maxx = maxx.max(x - gap);
+                }
+                (rects, vec2(maxx + 2.0 * pad, y + h + 2.0 * pad))
             }
             SegStyle::Header | SegStyle::Tool => {
                 let mut x = pad;

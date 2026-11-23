@@ -140,6 +140,32 @@ fn slider_steps_with_the_arrow_keys_and_keeps_focus() {
     assert!(h.get_by_role_and_label(Role::Slider, "Floors").is_focused());
 }
 
+/// A wrapping `.seg` group puts what doesn't fit on the next row; the select is a ComboBox
+/// whose menu picks an option, and ↓ steps it from the keyboard.
+#[test]
+fn wrapping_seg_and_select() {
+    let mut h = gallery();
+    let (a, d) = (rect(&h, "Top chord T2–T3"), rect(&h, "Vertical B2–T2"));
+    assert!(
+        d.top() > a.top() + 20.0,
+        "the fourth pick wraps: {a:?} {d:?}"
+    );
+    click(&mut h, "Vertical B2–T2", Role::Button);
+    assert_eq!(h.state().pick, 3);
+    let combo = h.get_by_role_and_label(Role::ComboBox, "Material");
+    assert_eq!(combo.accesskit_node().value().as_deref(), Some("Steel"));
+    click(&mut h, "Material", Role::ComboBox);
+    assert!(h.state().select_open);
+    click(&mut h, "Glulam", Role::MenuItem);
+    assert_eq!(h.state().select, 2);
+    assert!(!h.state().select_open);
+    h.get_by_role_and_label(Role::ComboBox, "Material").focus();
+    h.step();
+    h.key_press(egui::Key::ArrowDown);
+    h.run_steps(2);
+    assert_eq!(h.state().select, 3);
+}
+
 /// Badges and readouts are labelled text (PROV-1, readouts).
 #[test]
 fn badges_and_readouts_are_labels() {
