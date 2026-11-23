@@ -1,16 +1,17 @@
 //! `structures-playground --smoke <seconds> [--headless]` (PLAT-1) — a measurable start-up +
 //! run path for `scripts/test-all.sh` and `scripts/check-bundle.sh`: the real
-//! [`StructuresApp`] opens on the Playground (the builder) with something to run, presses the
-//! drive button ("Run traffic") after the first frame, draws the frames it asks for during
-//! `<seconds>` of wall time (it paces itself like the real app — ~30 frames a second while the
-//! run moves, none at rest — so `frames=` is its real frame count, not a spin) and prints one
-//! line
+//! [`StructuresApp`] opens on the Playground (the builder) with something to run — level 1
+//! with a wood truss over a road deck ([`SMOKE_BUILD`]) — presses the drive button ("Run
+//! traffic") after the first frame, draws the frames it asks for during `<seconds>` of wall
+//! time (it paces itself like the real app — ~30 frames a second while the cars drive and the
+//! settling engine runs, none at rest — so `frames=` is its real frame count, not a spin) and
+//! prints one line
 //!
 //! ```text
-//! SMOKE route=playground mode=window first_frame_ms=412 frames=96 run=running frame_ms_avg=1.9 frame_ms_max=7.2 status=ok
+//! SMOKE route=playground mode=window first_frame_ms=412 frames=96 run=run frame_ms_avg=1.9 frame_ms_max=7.2 status=ok
 //! ```
 //!
-//! (`run=` is the drive's state when the run ended: `running` or `stopped`.)
+//! (`run=` is the builder's phase when the smoke run ended: `run` or `result`.)
 //!
 //! then exits 0 (1 on an error or when the window closes early, 2 on bad arguments). With
 //! `--headless` or `STRUCTURES_HEADLESS=1` — or when no window can be opened — the same app draws
@@ -25,6 +26,8 @@ use crate::app::{AppOptions, StructuresApp};
 use crate::launcher::Launcher;
 use crate::router::Route;
 use eframe::egui;
+use sp_engine::builder::data::{LevelKey, PieceType};
+use sp_engine::builder::game::PresetBuild;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -86,7 +89,7 @@ pub struct SmokeReport {
     pub first_frame_ms: f64,
     /// Frames drawn after the first.
     pub frames: u64,
-    /// The builder's run when the smoke run ended (`running`, `stopped`).
+    /// The builder's phase when the smoke run ended (`run`, `result`).
     pub run: String,
     /// Mean frame time (the app's `frame`, ms).
     pub frame_ms_avg: f64,
@@ -125,19 +128,22 @@ impl SmokeReport {
 /// The screen a smoke run opens.
 pub const SMOKE_ROUTE: Route = Route::Playground;
 
-/// Puts something to run on the Playground. (TODO(shell): load a level's structure through
-/// the builder engine once `sp_engine::builder` is published, so `--smoke` measures a real
-/// run; the placeholder builder runs nothing.)
-pub fn prepare(_app: &mut StructuresApp) {}
+/// What the smoke run builds on level 1: the preset truss (a Road deck in 8 m panels under a
+/// 6 m-deep truss) in wood.
+pub const SMOKE_BUILD: PresetBuild = PresetBuild::Truss {
+    chord: PieceType::Wood,
+};
 
-/// The builder's run state for the report line.
+/// Puts something to run on the Playground: level 1 with [`SMOKE_BUILD`].
+pub fn prepare(app: &mut StructuresApp) {
+    let game = &mut app.screens_mut().builder.game;
+    game.pick_level(LevelKey::River);
+    game.build_preset(SMOKE_BUILD);
+}
+
+/// The builder's phase for the report line.
 fn run_state(app: &StructuresApp) -> &'static str {
-    let running = app
-        .screens()
-        .get_ref(Route::Playground)
-        .drive_button()
-        .is_some_and(|d| d.running);
-    if running { "running" } else { "stopped" }
+    app.screens().builder.game.phase().key()
 }
 
 /// The options of a smoke run's app.
@@ -237,7 +243,7 @@ impl Driver {
         r.frame_ms_avg = self.frame_sum / r.frames.max(1) as f64;
         r.route = app.route().id().into();
         r.run = run_state(app).into();
-        if r.run != "running" {
+        if r.run == "build" {
             r.errors.push("the Playground's run never started".into());
         }
         if app.route() != SMOKE_ROUTE {
@@ -404,16 +410,18 @@ mod tests {
         }
     }
 
-    /// A short headless run starts the builder's run, stays on the Playground, and the line
-    /// has the fields the scripts parse.
+    /// A short headless run runs a real structure: the run starts, frames come at its pace
+    /// (~30 a second, not a spin), it stays on the Playground, and the line has the fields the
+    /// scripts parse.
     #[test]
-    fn headless_smoke_runs() {
+    fn headless_smoke_runs_a_real_structure() {
         let r = run_headless(&SmokeArgs {
             seconds: 0.5,
             headless: true,
         });
         assert!(r.ok(), "{}", r.line());
-        assert_eq!(r.run, "running", "{}", r.line());
+        assert_eq!(r.run, "run", "{}", r.line());
+        assert!(r.frames >= 8, "frames while running: {}", r.line());
         assert!(r.frames <= 40, "paced, not a spin: {}", r.line());
         let line = r.line();
         assert!(
@@ -424,5 +432,15 @@ mod tests {
             line.contains(" frames=") && line.contains(" run=") && line.ends_with("status=ok"),
             "{line}"
         );
+    }
+
+    /// The prepared structure is a real one: run to the end it gets a result.
+    #[test]
+    fn the_smoke_structure_runs_to_a_result() {
+        let mut app = StructuresApp::with_options(app_options());
+        prepare(&mut app);
+        let game = &mut app.screens_mut().builder.game;
+        assert!(game.design().members.len() > 10);
+        assert!(game.run_test(sp_shared::proto::MAX_RUN_FRAMES).is_some());
     }
 }

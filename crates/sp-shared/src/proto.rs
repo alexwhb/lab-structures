@@ -77,8 +77,9 @@ pub struct BuilderLevel {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BuilderLoadNetlist {
-    /// A `.str` netlist whose nodes fit the builder's grid (the river scene's 2 m grid when they
-    /// sit on it, else open ground's 4 m grid), like the one the builder's Share copies.
+    /// A `.str` netlist whose nodes sit on whole metres in a builder scene (the river scene when
+    /// every node fits its view above ground, else open ground, y ≥ 0), like the one the
+    /// builder's Share copies.
     pub netlist: String,
     /// Switch to the Playground (default `true`).
     #[serde(default = "yes")]

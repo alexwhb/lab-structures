@@ -582,9 +582,10 @@ pub fn test_structure(
         .map(|t| {
             netlist::read(t).map_err(|e| {
                 format!(
-                    "{e}. The builder takes netlists whose nodes sit on its grid in whole metres: \
-                     the river scene's 2 m grid (banks at x ≤ 8 and x ≥ 48 m, riverbed at \
-                     y = −12) or open ground's 4 m grid (y ≥ 0), like the one its Share copies"
+                    "{e}. The builder takes netlists whose nodes sit on whole metres in a scene: \
+                     the river scene (x −20…76 m, nothing below the banks at y = 0 for x ≤ 8 \
+                     and x ≥ 48 or the riverbed at y = −12) or else open ground (y ≥ 0), like \
+                     the one its Share copies"
                 )
             })
         })

@@ -440,3 +440,130 @@ fn an_offscreen_screenshot_changes_nothing() {
     assert_eq!(h.state().events().len(), events, "no clicks or keys");
     assert_eq!(h.ctx.memory(|m| m.focused()), focused, "focus stays");
 }
+
+/// The builder's methods drive `BuilderScreen::game` through `sp_shared::builder` (MCP-2):
+/// in the background with `show: false`, switching to the Playground otherwise; the header
+/// shows the change.
+#[test]
+fn builder_methods_drive_the_builder() {
+    use sp_shared::proto;
+    let sock = TempSocket::new();
+    let mut h = harness_with(&sock.path(), AppOptions::at(Route::Advanced));
+    let p = sock.path();
+    let r = ok(&mut h, &p, proto::BUILDER_GET, Value::Null);
+    assert_eq!(r["level"], "river");
+    assert_eq!(r["phase"], "build");
+    assert_eq!(r["document"], "river-level");
+    assert_eq!(h.state().route(), Route::Advanced, "get doesn't switch");
+
+    let r = ok(
+        &mut h,
+        &p,
+        proto::BUILDER_LEVEL,
+        json!({"level": "t2", "show": false}),
+    );
+    assert_eq!(r["level"], "t2");
+    assert_eq!(r["scene"], "flat");
+    assert_eq!(h.state().route(), Route::Advanced, "show: false stays put");
+    // the change survives the builder's first visit
+    h.state_mut().navigate(Route::Playground);
+    h.run_steps(3);
+    assert!(has_label(&h, "t2-level"), "the header shows the level");
+
+    let r = ok(
+        &mut h,
+        &p,
+        proto::BUILDER_CONDITIONS,
+        json!({"wind_ms": 25, "wind_from": "right", "snow_kg_m": 150}),
+    );
+    assert_eq!(r["conditions"]["wind"], "Strong");
+    assert_eq!(r["conditions"]["wind_from"], "right");
+    assert_eq!(r["conditions"]["snow"], "Light");
+    assert_eq!(h.state().screens().builder.game.cond().wind, 25.0);
+
+    // a structure from the builder's own Share loads into the Sandbox and runs
+    let mut g = sp_engine::builder::game::Game::new();
+    g.build_preset(sp_engine::builder::game::PresetBuild::Truss {
+        chord: sp_engine::builder::data::PieceType::Steel,
+    });
+    let r = ok(
+        &mut h,
+        &p,
+        proto::BUILDER_LOAD_NETLIST,
+        json!({"netlist": g.share_text()}),
+    );
+    assert_eq!(r["level"], "sandbox");
+    assert_eq!(r["joints"], g.design().nodes.len());
+    assert!(has_label(&h, "sandbox"), "the header shows the Sandbox");
+    let r = ok(&mut h, &p, proto::BUILDER_RUN, json!({}));
+    assert!(r["t_s"].as_f64().unwrap() > 15.0, "{r}");
+
+    // level 1 with nothing built: the cars can't cross
+    ok(&mut h, &p, proto::BUILDER_LEVEL, json!({"level": "river"}));
+    let r = ok(&mut h, &p, proto::BUILDER_RUN, json!({}));
+    assert_eq!(r["pass"], false);
+    assert_eq!(r["crossed"], 0);
+    assert_eq!(h.state().screens().builder.game.phase().key(), "result");
+
+    // the sample lab
+    let r = ok(
+        &mut h,
+        &p,
+        proto::SAMPLE_TEST,
+        json!({"piece": "wood", "show": false}),
+    );
+    assert_eq!(r["broken"], true, "{r}");
+    assert_eq!(r["piece"], "wood");
+}
+
+/// Bad builder arguments are error replies and change nothing.
+#[test]
+fn bad_builder_requests_change_nothing() {
+    use sp_shared::proto;
+    let sock = TempSocket::new();
+    let mut h = harness(&sock.path());
+    let p = sock.path();
+    let before = ok(&mut h, &p, proto::BUILDER_GET, Value::Null);
+    for (method, params, says) in [
+        (
+            proto::BUILDER_LEVEL,
+            json!({"level": "moon"}),
+            "levels are river",
+        ),
+        (
+            proto::BUILDER_LEVEL,
+            json!({"level": "river", "scene": "flat"}),
+            "Sandbox only",
+        ),
+        (
+            proto::BUILDER_LOAD_NETLIST,
+            json!({"netlist": ".node A 1.5 0 fix=xy"}),
+            "grid",
+        ),
+        (
+            proto::BUILDER_CONDITIONS,
+            json!({"wind_ms": 30, "soil": "mud"}),
+            "unknown soil",
+        ),
+        (
+            proto::BUILDER_CONDITIONS,
+            json!({"quake_g": 2}),
+            "`quake_g` must be 0 to 0.5",
+        ),
+        (
+            proto::SAMPLE_TEST,
+            json!({"piece": "rope", "mode": "push"}),
+            "only pulls",
+        ),
+        (
+            proto::BUILDER_RUN,
+            json!({"colour": "red"}),
+            "unknown field",
+        ),
+    ] {
+        let (c, m) = refused(call(&mut h, &p, method, params.clone()));
+        assert_eq!(c, code::INVALID_PARAMS, "{method} {params}");
+        assert!(m.contains(says), "{method} {params}: {m}");
+    }
+    assert_eq!(ok(&mut h, &p, proto::BUILDER_GET, Value::Null), before);
+}

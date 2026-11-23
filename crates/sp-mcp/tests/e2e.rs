@@ -12,7 +12,7 @@
 
 mod common;
 
-use common::{Mcp, TempSocket, app, data, error, text};
+use common::{Mcp, TempSocket, app, data, error, has_label, text};
 use serde_json::{Value, json};
 use sp_engine::generate::{Params, generate};
 use structures_playground::Route;
@@ -567,6 +567,86 @@ fn drive_the_running_app_over_mcp() {
         let msg = r["error"]["message"].as_str().unwrap_or_default();
         assert!(msg.contains("Unknown tool"), "{old}: {r}");
     }
+    mcp.close();
+}
+
+/// The builder tools through the real binary drive the real app (MCP-2/3): pick a level in
+/// the background, change the weather, load a structure into the Sandbox and run it, run an
+/// empty level, test a sample; the GUI shows the level.
+#[test]
+fn builder_tools_drive_the_app() {
+    let sock = TempSocket::new();
+    let mut app = app(&sock.path());
+    let mut mcp = Mcp::started(&sock.path());
+    app.state_mut().navigate(Route::Advanced);
+    app.run_steps(2);
+
+    let r = mcp.call_tool(
+        &mut app,
+        "builder_level",
+        json!({"level": "t1", "show": false}),
+    );
+    assert_eq!(data(&r)["level"], "t1", "{}", text(&r));
+    assert_eq!(
+        app.state().route(),
+        Route::Advanced,
+        "show: false stays put"
+    );
+    let r = mcp.call_tool(&mut app, "builder_level", json!({"level": "bus"}));
+    assert_eq!(data(&r)["document"], "bus-level");
+    assert_eq!(
+        app.state().route(),
+        Route::Playground,
+        "show: true switches"
+    );
+    assert!(has_label(&app, "bus-level"), "the header shows the level");
+
+    let r = mcp.call_tool(
+        &mut app,
+        "builder_conditions",
+        json!({"wind_ms": 15, "traffic": "trucks"}),
+    );
+    let c = &data(&r)["conditions"];
+    assert_eq!(c["wind"], "Breezy");
+    assert_eq!(c["traffic_name"], "Trucks");
+
+    // the empty level: nobody gets across, and the banner says so
+    let r = mcp.call_tool(&mut app, "builder_run", json!({}));
+    let d = data(&r);
+    assert_eq!(d["pass"], false, "{}", text(&r));
+    assert_eq!(d["crossed"], 0);
+    assert!(text(&r).starts_with(d["title"].as_str().unwrap()));
+
+    // a steel truss from the builder's own Share, into the Sandbox
+    let mut g = sp_engine::builder::game::Game::new();
+    g.build_preset(sp_engine::builder::game::PresetBuild::Truss {
+        chord: sp_engine::builder::data::PieceType::Steel,
+    });
+    let r = mcp.call_tool(
+        &mut app,
+        "builder_load_netlist",
+        json!({"netlist": g.share_text()}),
+    );
+    assert_eq!(data(&r)["level"], "sandbox", "{}", text(&r));
+    assert!(text(&r).starts_with("Loaded into the Sandbox"));
+    assert!(has_label(&app, "sandbox"));
+    let r = mcp.call_tool(&mut app, "builder_run", json!({"show": false}));
+    assert_eq!(r["isError"], false, "{r}");
+
+    // a sample to breaking
+    let r = mcp.call_tool(&mut app, "sample_test", json!({"piece": "steel"}));
+    let d = data(&r);
+    assert_eq!(d["broken"], true, "{}", text(&r));
+    assert!(d["piece_breaks_at_t"].as_f64().unwrap() > 0.0);
+
+    // refused input changes nothing
+    let r = mcp.call_tool(
+        &mut app,
+        "builder_load_netlist",
+        json!({"netlist": ".node A 1.5 0 fix=xy"}),
+    );
+    assert!(error(&r).contains("grid"), "{}", text(&r));
+    assert_eq!(app.state().document(), "sandbox");
     mcp.close();
 }
 

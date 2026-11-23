@@ -11,7 +11,7 @@
 //! | `navigate` | `{"screen": id}` | status after navigating |
 //! | `screenshot` | `{"screen"?: id}` | PNG of the screen as it stands (base64) |
 //! | `describe` | `{"screen"?: id}` | outline of its AccessKit tree + the screen's one-line `summary` |
-//! | the builder's methods | see [`sp_shared::proto`] | the builder's state after the call |
+//! | `builder.get`, `builder.level`, `builder.load_netlist`, `builder.conditions`, `builder.run`, `builder.fast_forward`, `sample.test` | see [`sp_shared::proto`] | the builder's state (or the run's report) after the call |
 //!
 //! The screen methods drive the screens' public state through
 //! [`StructuresApp::screens_mut`]. Their params are checked before anything changes; with
@@ -61,6 +61,8 @@ pub struct Control {
     waker_installed: bool,
     /// Requests taken from the bridge by [`logic`], for the next [`poll`].
     inbox: Vec<PendingRequest>,
+    /// Screens already entered for the bridge.
+    prepared: Vec<Route>,
     /// When a frame last polled the bridge.
     last_poll: Option<Instant>,
     /// The offscreen renderer (made on the first screenshot or description).
@@ -305,20 +307,117 @@ fn to_value(v: &impl serde::Serialize) -> Result<Value, RemoteError> {
 
 // ---- the screens' methods -------------------------------------------------------------------
 
-/// The Structures methods ([`sp::METHODS`]): the builder's. (Wired to the builder engine as
-/// soon as `sp_engine::builder` is published; until then they answer that they're coming.)
+fn invalid(message: impl Into<String>) -> RemoteError {
+    RemoteError::invalid_params(message)
+}
+
+/// Enters `route` once (if the bridge hasn't yet) and, with `show`, switches to it.
+fn prepare(app: &mut StructuresApp, ctx: &Context, route: Route, show: bool) {
+    if !app.control.prepared.contains(&route) {
+        app.enter_screen(route, ctx);
+        app.control.prepared.push(route);
+    }
+    if show && app.route() != route {
+        app.navigate(route);
+    }
+}
+
+/// The builder's game (entered first, so its first-visit set-up doesn't undo the change).
+fn game<'a>(
+    app: &'a mut StructuresApp,
+    ctx: &Context,
+    show: bool,
+) -> &'a mut sp_engine::builder::game::Game {
+    prepare(app, ctx, Route::Playground, show);
+    &mut app.screens_mut().builder.game
+}
+
+/// The Structures methods ([`sp::METHODS`]): the builder's, on `BuilderScreen::game` through
+/// the same `sp_shared::builder` functions the engine tool `builder_test` uses.
 fn screen_method(
-    _app: &mut StructuresApp,
-    _ctx: &Context,
+    app: &mut StructuresApp,
+    ctx: &Context,
     req: &PendingRequest,
 ) -> Result<Value, RemoteError> {
-    Err(RemoteError::new(
-        code::INTERNAL_ERROR,
-        format!(
-            "`{}` isn't wired to the builder yet in this build of Structures Playground",
-            req.method()
-        ),
-    ))
+    use sp_shared::builder as b;
+    match req.method() {
+        sp::BUILDER_GET => to_value(&b::builder_state(game(app, ctx, false))),
+        sp::BUILDER_LEVEL => {
+            let p: sp::BuilderLevel = req.parse_params()?;
+            let level = b::level(&p.level).map_err(invalid)?;
+            let scene = p
+                .scene
+                .as_deref()
+                .map(b::scene)
+                .transpose()
+                .map_err(invalid)?;
+            if scene.is_some() && level != sp_engine::builder::data::LevelKey::Sandbox {
+                return Err(invalid(
+                    "`scene` is for the Sandbox only (levels have their own)",
+                ));
+            }
+            let g = game(app, ctx, p.show);
+            g.pick_level(level);
+            if let Some(s) = scene {
+                g.pick_scene(s);
+            }
+            to_value(&b::builder_state(g))
+        }
+        sp::BUILDER_LOAD_NETLIST => {
+            let p: sp::BuilderLoadNetlist = req.parse_params()?;
+            if p.netlist.chars().count() > sp_shared::input::NETLIST_MAX_LEN {
+                return Err(invalid(format!(
+                    "the netlist is longer than {} characters",
+                    sp_shared::input::NETLIST_MAX_LEN
+                )));
+            }
+            // checked before anything changes (paste_netlist changes nothing on an error)
+            sp_engine::builder::netlist::read(&p.netlist).map_err(|e| {
+                invalid(format!(
+                    "{e}. The builder takes netlists whose nodes sit on its grid in whole \
+                     metres: the river scene (x −20…76 m, nothing below the banks at y = 0 for \
+                     x ≤ 8 and x ≥ 48 or the riverbed at y = −12) or else open ground (y ≥ 0), \
+                     like the one its Share \
+                     copies; solve_truss solves any netlist without the app."
+                ))
+            })?;
+            let g = game(app, ctx, p.show);
+            if g.phase() != sp_engine::builder::game::Phase::Build {
+                g.stop_run();
+            }
+            g.paste_netlist(&p.netlist)
+                .map_err(|e| invalid(e.to_string()))?;
+            to_value(&b::builder_state(g))
+        }
+        sp::BUILDER_CONDITIONS => {
+            let p: sp::BuilderConditions = req.parse_params()?;
+            // (apply_conditions checks everything before it changes anything)
+            let g = game(app, ctx, p.show);
+            b::apply_conditions(g, &p.change).map_err(invalid)?;
+            to_value(&b::builder_state(g))
+        }
+        sp::BUILDER_RUN => {
+            let p: sp::BuilderRun = req.parse_params()?;
+            let g = game(app, ctx, p.show);
+            let r = b::run_to_end(g).map_err(invalid)?;
+            to_value(&r)
+        }
+        sp::BUILDER_FAST_FORWARD => {
+            let p: sp::BuilderFastForward = req.parse_params()?;
+            let years = b::years(p.years).map_err(invalid)?;
+            let g = game(app, ctx, p.show);
+            to_value(&b::fast_forward_report(g, years))
+        }
+        sp::SAMPLE_TEST => {
+            let p: sp::SampleTest = req.parse_params()?;
+            let (kind, test, temp) =
+                b::sample_args(&p.piece, p.mode.as_deref(), p.temperature_c).map_err(invalid)?;
+            prepare(app, ctx, Route::Playground, p.show);
+            let mut sample = sp_engine::builder::sample::Sample::new(kind);
+            to_value(&b::run_sample(&mut sample, kind, test, temp))
+        }
+        other => Err(RemoteError::method_not_found(other)),
+    }
 }
 
 // ---- AccessKit ------------------------------------------------------------------------------

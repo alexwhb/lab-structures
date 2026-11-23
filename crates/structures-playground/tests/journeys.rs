@@ -224,7 +224,8 @@ fn journey_10_keyboard_only() {
     assert_eq!(drive(&h), run);
     // the brand opens the Series screen; Esc comes back
     let mut on_brand = false;
-    for _ in 0..40 {
+    // (Tab walks the whole builder — chips, joints, levels — before wrapping to the header)
+    for _ in 0..400 {
         press(&mut h, Key::Tab);
         if focused_label(&h).as_deref() == Some("Structures Playground") {
             on_brand = true;

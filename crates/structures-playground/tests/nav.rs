@@ -56,12 +56,12 @@ fn chrome_follows_the_route() {
             h.query_by_role(Role::TabList).is_none(),
             "{r:?}: no world tab row in v2"
         );
-        // (the Series screen has its own "Provenance" section)
+        // (the screens draw their own provenance: the builder's line, Advanced's badges)
         assert!(
-            !r.has_header()
-                || h.query_by_role_and_label(Role::Group, "Provenance")
-                    .is_none(),
-            "{r:?}: provenance is the screen's own, not the app's"
+            h.query_by_role(Role::Banner).is_none_or(|b| b
+                .query_by_role_and_label(Role::Group, "Provenance")
+                .is_none()),
+            "{r:?}: no provenance in the chrome"
         );
         assert_eq!(
             h.query_by_role(Role::Banner).is_some(),

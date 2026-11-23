@@ -127,8 +127,9 @@ pub fn register(tools: &mut ToolRegistry, link: AppLink) -> Result<(), RegistryE
              or Advanced's \"Open in Playground\": `.node`s become joints (`fix=` supports \
              become foundations), `.member`s pieces (their `.material` names a piece type: \
              Road, Floor, Wood, Steel, Concrete, Rope, Cable), static `.load`s crates. The \
-             nodes must fit the builder's grid: on the river scene's 2 m grid (banks at x ≤ 8 \
-             and x ≥ 48 m, riverbed at y = −12) or, if not, open ground's 4 m grid (y ≥ 0). \
+             nodes must sit on whole metres in a scene: the river scene when they all fit its \
+             view above ground (banks at y = 0 for x ≤ 8 and x ≥ 48 m, the riverbed at y = −12), \
+             else open ground (y ≥ 0). \
              The netlist the builder's Share copies always fits. Returns the builder \
              afterwards. Then builder_run runs it.",
         )
