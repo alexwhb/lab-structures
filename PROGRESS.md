@@ -187,6 +187,51 @@ Shared-file etiquette:
   broken flag from the `View` (as you listed) and the piece index into the sim. Create the two
   files as stubs when you need them; after that I fill them.
 
+- **time → engine** (CMF-2 / TIME-1 / TIME-3 hooks — rename freely, I adapt):
+  1. **CMF-2 factors**: two per-run factors on the sim, default 1.0, applied exactly at the
+     mockup's wind line: `fx += dir·0.613·v²·1.3·drag·4·4·gust` and `gust = 1 + 0.3·shedding·
+     sin(2π·fg·t) + 0.15·sin(…) + 0.1·sin(…)` (only the vortex term scales). And a **headless
+     run of any design** that doesn't touch the `Game`: e.g. `run_headless(&Design, &Level (or
+     the resolved L), &Conditions, RunFactors { drag, shedding }) -> RunOutcome` with at least
+     the result fields of `tick()`'s end (`pass`, `standing`, `reached`, `mg`, `height`, `sway`,
+     first break / foundation). Deterministic, no allocation per substep if you can (four 18 s
+     runs must fit in 400 ms release). I call it for the as-built tower too.
+  2. **TIME-1: I don't need the "settle with foundation offsets" hook** — a quick port of the
+     mockup engine to Node showed the 520-step preview hasn't converged on soft soil (a tower's
+     rocking mode on its soil springs is over-damped, τ ≈ 2 s ≫ the 1.3 s settle), so reactions
+     barely shift and the P-Δ feedback depends on the step count. `longterm` solves the settled
+     state exactly instead (linear stiffness with the builder's own springs: pieces `E/15·A/L`,
+     foundations `ks` vertical + pinned horizontally, gravity on the sim's joint masses, snow on
+     exposed decks; tension-only slack and breaks iterated; geometry updated each year step =
+     P-Δ). What I need instead: read access to the **sim's setup** for a design — `Sim::new(&
+     Design, &L, &Conditions, live: false)` (or whatever builds `makeSim`) with public per-joint
+     `x, y, m, sup, Qc, Qt, ks, inv`(used) and per-piece `a, b, L, kk, capT, capC, tOnly, deck,
+     exposed, buckles`, plus `soil_at(joint)`. If you already built the offsets hook, keep it;
+     I just won't depend on it.
+  3. **TIME-3 level**: I'll provide `longterm::pisa_level() -> Level` (full entry incl.
+     `prebuilt: Some(Design)` with locked joints + pieces, crate(s), `run: RunKind::Years`) and
+     `longterm::PISA_AVAILABLE`-style switch; you call it from `level(LevelKey::Pisa)` and
+     `pisa_available()`. Fine? (I'll tell you when it exists so your placeholder can go.) The run
+     is mine: the screen routes the Pisa drive to `time::Time::drive`; I need `Game::set_best(
+     level, stars)` (or similar) and `stars_for` (have it).
+- **time → screen**: thanks, `FoldIn` works for me. `comfort::Comfort` implements `results`
+  (meter + "Compare shapes" bars after an open-ground run), `reset`, `describe`; `time::Time`
+  `results` ("Fast-forward 30 years" button, years scrubber, result line), `tick` + `busy` (6 s
+  animation, ~30 fps), `hud` ("Year 12.0", "Tilt 1.8°", "Settled 214 mm"), `adjust_view`
+  (settled joint positions + broken pieces + each piece's band for that year), `drive` /
+  `drive_button` (Leaning tower), `reset`, `describe`. From `Game` I need read access to: the
+  design, the resolved level/conditions, the phase and the last run's result (`mg`, `standing`,
+  `pass`), and — for `adjust_view` — a way to override joint positions / piece band / broken in
+  `View`. Please create the stubs when you need them.
+- **time → lead** (decide; implemented as below until you say otherwise): CMF-1's meter "0–30+
+  milli-g, bands 5 / 10 / 20" is v1's real-world scale, but the builder's comfort number is the
+  mockup's game scale: the TowerStorm preset reads **272 mg** and passes level 5 (limit 300);
+  level 4's limit is 100. On a 0–30 meter every builder tower is "Seasick" and the level limit
+  is off the scale. I keep the v1 bands and sentences but **scale them ×15 for the builder**
+  (`comfort::GAME_SCALE`): bands 75 / 150 / 300 mg, meter 0–450+ mg, so level 5's 300 mg limit is
+  exactly the "Seasick" line ("…without making everyone seasick") and level 4's 100 sits in
+  "Some people notice". Documented as illustrative in DATA-SOURCES. One constant to change.
+
 - **shell → advanced** (small, 2e1eda8): `crates/sp-engine/tests/advanced_perf.rs:85` prints Debug
   durations (`parse+solve 1.2ms, …`); `scripts/test-all.sh` lists a line as a perf gate only
   when it reads `PERF <label>: <value> ms (limit <limit> ms)` (like `materials_perf.rs`). Could
