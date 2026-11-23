@@ -132,7 +132,7 @@ fn link_error(e: BridgeError, method: &str) -> LinkError {
     }
 }
 
-/// "Tower (Playground mode)".
+/// "Playground (Playground mode)".
 pub fn screen_label(s: &ScreenRef) -> String {
     match &s.mode {
         Some(m) => format!("{} ({} mode)", s.label, m.label),
@@ -215,8 +215,7 @@ pub fn register(tools: &mut ToolRegistry, link: AppLink) -> Result<(), RegistryE
         Tool::new(
             "navigate",
             "Switch the running Structures Playground to a screen (ids from `list_screens`: \
-             bridge, tower, ground, materials, advanced, series). Returns the app status \
-             afterwards.",
+             playground (the builder), advanced, series). Returns the app status afterwards.",
         )
         .title("Navigate")
         .idempotent()
@@ -245,8 +244,8 @@ pub fn register(tools: &mut ToolRegistry, link: AppLink) -> Result<(), RegistryE
              from the app's state at the window's size (physical pixels: 2× on a Retina \
              display), so it works while the window is covered by other windows or minimised \
              (no hover highlights; the page shown from the top). Give `screen` to navigate \
-             there first. For reading labels and numbers, `describe_screen` or the set_* / \
-             bridge_* tools (which return the screen's numbers) are cheaper.",
+             there first. For reading labels and numbers, `describe_screen` or the builder_* \
+             tools (which return the builder's numbers) are cheaper.",
         )
         .title("Screenshot")
         .idempotent()

@@ -10,7 +10,7 @@
 //! - how arguments typed by a person or a model are read and checked ([`input`]), so the app
 //!   and the server accept exactly the same values;
 //! - the engine reports both sides send ([`report`]): a solved truss, a tower in the wind, a
-//!   building on its ground, a tensile test.
+//!   building on its ground, a tensile test, the builder and its runs.
 //!
 //! No egui here: `sp-mcp` uses it without pulling in a GUI toolkit.
 

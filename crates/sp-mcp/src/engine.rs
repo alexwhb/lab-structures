@@ -45,7 +45,7 @@ fn netlist_schema() -> Value {
     json!({"type": "string", "description": NETLIST_DESC, "maxLength": input::NETLIST_MAX_LEN})
 }
 
-/// The Tower settings' JSON Schema properties (shared with `set_tower`).
+/// The Tower settings' JSON Schema properties.
 pub fn tower_properties() -> Value {
     json!({
         "floors": {"type": "integer", "minimum": 5, "maximum": 120,
@@ -60,7 +60,7 @@ pub fn tower_properties() -> Value {
     })
 }
 
-/// The Ground settings' JSON Schema properties (shared with `set_ground`).
+/// The Ground settings' JSON Schema properties.
 pub fn ground_properties() -> Value {
     json!({
         "soil": {"type": "string", "enum": ["dense", "stiff", "soft", "loose"],
@@ -205,14 +205,15 @@ pub fn register(tools: &mut ToolRegistry) -> Result<(), RegistryError> {
     tools.register(
         Tool::new(
             "tower_wind",
-            "A skyscraper in a storm, the Tower screen's model (a simplified cantilever): power-law \
+            "A skyscraper in a storm, the v1 Tower model (a simplified cantilever; the builder's \
+             CMF-2 shape factors come from it): power-law \
              wind V(z) = V10·(z/10)^0.2, floor forces, static top sway and drift (aim H/500), \
              first-mode period, damping (5 % with a tuned mass damper), vortex shedding and \
              lock-in, peak acceleration in milli-g (comfort bands 5 / 10 / 20), base shear, \
-             overturning moment and game cost. Unset settings take the screen's start (60 \
+             overturning moment and game cost. Unset settings take the v1 screen's start (60 \
              floors, core, straight, 30 m/s, no damper). Also returns the status, the comfort \
              sentence, the six tiles, the 100-floor challenge goals and Share's .story line. \
-             Headless, no app needed; set_tower changes the app's Tower instead.",
+             Headless, no app needed; builder_test runs a tower you build instead.",
         )
         .title("Tower in the wind")
         .read_only()
@@ -230,14 +231,15 @@ pub fn register(tools: &mut ToolRegistry) -> Result<(), RegistryError> {
     tools.register(
         Tool::new(
             "ground_check",
-            "A building on its ground, the Ground screen's model (simplified): 12 kPa per floor, \
+            "A building on its ground, the v1 Ground model (simplified; the builder's soils and \
+             consolidation times come from it): 12 kPa per floor, \
              footing pressure, bearing capacity (soil, pile skin friction and rock end bearing, \
              caissons), safety factor against its target (3 shallow, 2 deep), settlement with \
              consolidation over the years, differential settlement as tilt, liquefaction in a \
-             quake. Unset settings take the screen's start (soft clay, mat, 6 floors, 34 m \
+             quake. Unset settings take the v1 screen's start (soft clay, mat, 6 floors, 34 m \
              piles, no quake, year 10). Returns the numbers, the status (Solid / Marginal / \
              Leaning / Bearing failure / Liquefaction), the tiles, the Pisa challenge goals and \
-             Share's .soil line. Headless, no app needed; set_ground changes the app's Ground.",
+             Share's .soil line. Headless, no app needed.",
         )
         .title("Ground check")
         .read_only()
@@ -255,14 +257,14 @@ pub fn register(tools: &mut ToolRegistry) -> Result<(), RegistryError> {
     tools.register(
         Tool::new(
             "tensile_test",
-            "A tensile test on a 50 mm² dog-bone sample, the Materials screen's model \
+            "A tensile test on a 50 mm² dog-bone sample, the v1 Materials model \
              (representative curves; heat effects illustrative): the stress (MPa) and load-cell \
              force (kN) at a stretch, whether it has fractured and where it breaks, the status \
              (Ready / Elastic / Plastic / Necking / Fractured), stiffness E, yield and peak \
              strength at the temperature, toughness, strength per kilogram and density. Give \
              `strain_pct` for one point; without it (or with `curve: true`) the whole curve \
-             from 0 to fracture comes back as [strain %, MPa] samples. Headless; set_material \
-             drives the app's bench instead.",
+             from 0 to fracture comes back as [strain %, MPa] samples. Headless; sample_test \
+             tests the builder's own piece types in the app's sample lab.",
         )
         .title("Tensile test")
         .read_only()

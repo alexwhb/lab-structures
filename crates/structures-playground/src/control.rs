@@ -303,24 +303,22 @@ fn to_value(v: &impl serde::Serialize) -> Result<Value, RemoteError> {
     serde_json::to_value(v).map_err(|e| RemoteError::new(code::INTERNAL_ERROR, e.to_string()))
 }
 
-fn invalid(message: impl Into<String>) -> RemoteError {
-    RemoteError::invalid_params(message)
-}
-
 // ---- the screens' methods -------------------------------------------------------------------
 
-/// The Structures methods ([`sp::METHODS`]). v2: the v1 screens' methods are retired; the
-/// builder's arrive with its engine.
+/// The Structures methods ([`sp::METHODS`]): the builder's. (Wired to the builder engine as
+/// soon as `sp_engine::builder` is published; until then they answer that they're coming.)
 fn screen_method(
     _app: &mut StructuresApp,
     _ctx: &Context,
     req: &PendingRequest,
 ) -> Result<Value, RemoteError> {
-    Err(invalid(format!(
-        "`{}` belonged to a v1 screen retired in v2 (bridges and towers are built in the \
-         Playground now)",
-        req.method()
-    )))
+    Err(RemoteError::new(
+        code::INTERNAL_ERROR,
+        format!(
+            "`{}` isn't wired to the builder yet in this build of Structures Playground",
+            req.method()
+        ),
+    ))
 }
 
 // ---- AccessKit ------------------------------------------------------------------------------

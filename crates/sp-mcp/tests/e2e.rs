@@ -12,7 +12,7 @@
 
 mod common;
 
-use common::{Mcp, TempSocket, app, data, error, has_label, text};
+use common::{Mcp, TempSocket, app, data, error, text};
 use serde_json::{Value, json};
 use sp_engine::generate::{Params, generate};
 use structures_playground::Route;
@@ -24,12 +24,21 @@ const ENGINE_TOOLS: [&str; 5] = [
     "ground_check",
     "tensile_test",
 ];
-const APP_TOOLS: [&str; 10] = [
+const APP_TOOLS: [&str; 11] = [
     "app_status",
     "list_screens",
     "navigate",
     "screenshot",
     "describe_screen",
+    "builder_level",
+    "builder_load_netlist",
+    "builder_conditions",
+    "builder_run",
+    "builder_fast_forward",
+    "sample_test",
+];
+/// The v1 app tools retired in v2.
+const RETIRED_TOOLS: [&str; 5] = [
     "bridge_load_netlist",
     "bridge_test",
     "set_tower",
@@ -48,21 +57,6 @@ const TRIANGLE: &str = "* triangle.str
 .member M2 C B s
 .member M3 A B s
 .load dead C Fx=0 Fy=-50
-.static linear
-";
-
-/// A small truss on the Bridge's left bank (on its 2 m grid) carrying 1 t: it holds.
-const ON_THE_BANK: &str = "* bank.str
-.units SI kN m
-.material Steel E=200GPa fy=250MPa rho=7850
-.section Medium A=80cm2 I=A^2
-.node J1 0 0 fix=xy
-.node J2 4 0 fix=y
-.node J3 2 2
-.member M1 J1 J3 Medium
-.member M2 J3 J2 Medium
-.member M3 J1 J2 Medium
-.load weights J3 Fx=0 Fy=-1t
 .static linear
 ";
 
@@ -112,6 +106,9 @@ fn initialize_and_list_every_tool() {
         .copied()
         .collect();
     assert_eq!(names, want);
+    for old in RETIRED_TOOLS {
+        assert!(!names.contains(&old), "{old} is retired");
+    }
     for t in r["result"]["tools"].as_array().unwrap() {
         let d = t["description"].as_str().unwrap();
         assert!(d.len() > 80, "{} has a thin description", t["name"]);
@@ -431,33 +428,33 @@ fn drive_the_running_app_over_mcp() {
     let mut mcp = Mcp::started(&sock.path());
 
     // navigate → the app's route changes
-    assert_eq!(app.state().route(), Route::Bridge);
-    let r = mcp.call_tool(&mut app, "navigate", json!({"screen": "tower"}));
-    assert_eq!(text(&r), "Now showing Tower (Playground mode).");
-    assert_eq!(app.state().route(), Route::Tower);
+    assert_eq!(app.state().route(), Route::Playground);
+    let r = mcp.call_tool(&mut app, "navigate", json!({"screen": "advanced"}));
+    assert_eq!(text(&r), "Now showing Advanced (Advanced mode).");
+    assert_eq!(app.state().route(), Route::Advanced);
 
     // app_status / list_screens
     let r = mcp.call_tool(&mut app, "app_status", json!({}));
     let s = data(&r);
     assert_eq!(s["running"], true);
-    assert_eq!(s["screen"]["id"], "tower");
-    assert_eq!(s["screen"]["mode"]["id"], "playground");
+    assert_eq!(s["screen"]["id"], "advanced");
+    assert_eq!(s["screen"]["mode"]["id"], "advanced");
     assert_eq!(s["pid"], std::process::id());
     assert_eq!(s["window"]["width"], 1440.0);
     let r = mcp.call_tool(&mut app, "list_screens", json!({}));
-    assert_eq!(data(&r)["current"], "tower");
+    assert_eq!(data(&r)["current"], "advanced");
     assert!(
-        text(&r).contains("tower (Playground, showing)"),
+        text(&r).contains("advanced (Advanced, showing)"),
         "{}",
         text(&r)
     );
-    assert_eq!(data(&r)["screens"].as_array().unwrap().len(), 6);
+    assert_eq!(data(&r)["screens"].as_array().unwrap().len(), 3);
 
     // screenshot (navigating first) → a PNG of the rendered frame
-    let r = mcp.call_tool(&mut app, "screenshot", json!({"screen": "advanced"}));
+    let r = mcp.call_tool(&mut app, "screenshot", json!({"screen": "playground"}));
     assert_eq!(r["isError"], false, "{r}");
-    assert_eq!(app.state().route(), Route::Advanced);
-    assert_eq!(text(&r), "Advanced (Advanced mode) — 1440×900 px.");
+    assert_eq!(app.state().route(), Route::Playground);
+    assert_eq!(text(&r), "Playground (Playground mode) — 1440×900 px.");
     let img = &r["content"][1];
     assert_eq!(img["type"], "image");
     assert_eq!(img["mimeType"], "image/png");
@@ -495,163 +492,15 @@ fn drive_the_running_app_over_mcp() {
     // Bad arguments come back as tool errors the model can act on; nothing moves.
     let r = mcp.call_tool(&mut app, "navigate", json!({"screen": "lab"}));
     assert!(error(&r).contains("must be one of"), "{}", text(&r));
+    let r = mcp.call_tool(&mut app, "navigate", json!({"screen": "tower"}));
+    assert!(error(&r).contains("must be one of"), "{}", text(&r));
     assert_eq!(app.state().route(), Route::Series);
-    mcp.close();
-}
-
-/// Load a netlist into the Bridge and Test it: it holds (with the GUI showing the level);
-/// an empty river level collapses at once with a loose load.
-#[test]
-fn bridge_tools_load_and_test() {
-    let sock = TempSocket::new();
-    let mut app = app(&sock.path());
-    let mut mcp = Mcp::started(&sock.path());
-    app.state_mut().navigate(Route::Tower);
-    app.run_steps(2);
-
-    let r = mcp.call_tool(
-        &mut app,
-        "bridge_load_netlist",
-        json!({"netlist": ON_THE_BANK}),
-    );
-    let s = data(&r);
-    assert_eq!(s["level"], "sandbox");
-    assert_eq!(s["joints"], 3);
-    assert_eq!(s["members"], 3);
-    assert_eq!(app.state().route(), Route::Bridge, "show: true switches");
-    assert_eq!(app.state().document(), "sandbox");
-    assert!(has_label(&app, "sandbox"), "the header shows the Sandbox");
-
-    let r = mcp.call_tool(&mut app, "bridge_test", json!({}));
-    let t = data(&r);
-    assert_eq!(t["outcome"], "held", "{}", text(&r));
-    assert_eq!(t["held"], true);
-    assert_eq!(t["load_pct"], 100.0);
-    assert!(t["first_failure"].is_null());
-    assert_eq!(t["state"]["phase"], "held");
-    assert_eq!(
-        app.state().screens().bridge.game.phase(),
-        sp_engine::bridge::Phase::Held
-    );
-
-    // the river level with nothing built: the game refuses, and says why
-    let r = mcp.call_tool(&mut app, "bridge_test", json!({"level": "river"}));
-    let t = data(&r);
-    assert_eq!(t["outcome"], "refused", "{}", text(&r));
-    assert_eq!(t["stars"], 0);
-    assert_eq!(
-        text(&r),
-        "The Test didn't start: Connect the loaded joint to your structure first."
-    );
-    // a weak bridge across the river collapses: the first failure says which member and how
-    let weak = "* weak.str
-.material Steel E=200GPa fy=250MPa rho=7850
-.section Thin A=40cm2 I=A^2
-.node J1 6 0 fix=xy
-.node J2 50 0 fix=y
-.node J3 28 0
-.member M1 J1 J3 Thin
-.member M2 J3 J2 Thin
-.load weights J3 Fy=-50t
-.static linear
-";
-    let r = mcp.call_tool(&mut app, "bridge_load_netlist", json!({"netlist": weak}));
-    assert_eq!(data(&r)["level"], "sandbox");
-    let r = mcp.call_tool(&mut app, "bridge_test", json!({}));
-    let t = data(&r);
-    assert_eq!(t["outcome"], "collapsed", "{}", text(&r));
-    assert!(text(&r).starts_with("Collapse"), "{}", text(&r));
-    assert!(t["first_failure"].is_object(), "{t}");
-
-    // bad input: a netlist off the grid, an unknown level; nothing changes
-    let before = app.state().screens().bridge.game.summary();
-    let r = mcp.call_tool(
-        &mut app,
-        "bridge_load_netlist",
-        json!({"netlist": ".node A 1 0 fix=xy\n.node B 3 0 fix=y\n.material Steel E=200GPa fy=250MPa rho=7850\n.section Thin A=40cm2 I=A^2\n.member M1 A B Thin\n"}),
-    );
-    assert!(error(&r).contains("2 m grid"), "{}", text(&r));
-    let r = mcp.call_tool(&mut app, "bridge_load_netlist", json!({"netlist": ".node"}));
-    assert_eq!(r["isError"], true);
-    let r = mcp.call_tool(&mut app, "bridge_test", json!({"level": "moon"}));
-    assert_eq!(r["isError"], true, "{r}");
-    assert_eq!(app.state().screens().bridge.game.summary(), before);
-    mcp.close();
-}
-
-/// set_tower / set_ground / set_material change the screens (in the background with
-/// `show: false`) and return their numbers; the GUI shows them.
-#[test]
-fn world_tools_change_what_the_gui_shows() {
-    let sock = TempSocket::new();
-    let mut app = app(&sock.path());
-    let mut mcp = Mcp::started(&sock.path());
-
-    let r = mcp.call_tool(
-        &mut app,
-        "set_tower",
-        json!({"floors": 100, "system": "braced", "damper": true}),
-    );
-    let d = data(&r);
-    assert_eq!(d["settings"]["floors"], 100);
-    assert_eq!(app.state().route(), Route::Tower);
-    let input = app.state().screens().tower.input;
-    assert_eq!((input.floors, input.damper), (100, true));
-    assert!(
-        has_label(&app, "100 floors · 400 m"),
-        "the floors value shows"
-    );
-    // reading only: no change
-    let r = mcp.call_tool(&mut app, "set_tower", json!({}));
-    assert_eq!(data(&r)["settings"]["floors"], 100);
-    let r = mcp.call_tool(&mut app, "set_tower", json!({"floors": 3}));
-    assert_eq!(r["isError"], true);
-    assert_eq!(app.state().screens().tower.input.floors, 100);
-
-    let r = mcp.call_tool(
-        &mut app,
-        "set_ground",
-        json!({"foundation": "piles", "pile_length_m": 34, "show": false}),
-    );
-    let g = data(&r);
-    assert_eq!(g["settings"]["foundation"], "piles");
-    assert_eq!(app.state().route(), Route::Tower, "show: false stays put");
-    assert_eq!(
-        app.state().screens().ground.input.foundation,
-        sp_engine::ground::Foundation::Piles
-    );
-
-    let r = mcp.call_tool(
-        &mut app,
-        "set_material",
-        json!({"material": "timber", "pull": true}),
-    );
-    let m = data(&r);
-    assert_eq!(m["test"]["material"], "timber");
-    assert_eq!(m["test"]["broken"], true, "{}", text(&r));
-    assert_eq!(m["broken_so_far"], json!(["timber"]));
-    assert!(
-        text(&r).starts_with("Pulled the timber sample until it broke"),
-        "{}",
-        text(&r)
-    );
-    assert_eq!(app.state().route(), Route::Materials);
-    assert!(
-        app.state()
-            .screens()
-            .materials
-            .bench()
-            .broke(sp_engine::materials::curves::Kind::Timber)
-    );
-    // the sample's axis bounds the stretch
-    let r = mcp.call_tool(
-        &mut app,
-        "set_material",
-        json!({"material": "concrete", "strain_pct": 10}),
-    );
-    assert!(error(&r).contains("strain_pct"), "{}", text(&r));
-    let r = mcp.call_tool(&mut app, "set_material", json!({"material": "gold"}));
-    assert!(error(&r).contains("unknown material"), "{}", text(&r));
+    // the retired v1 tools are gone: calling one is a protocol error (unknown tool)
+    for old in RETIRED_TOOLS {
+        let r = mcp.call("tools/call", json!({"name": old, "arguments": {}}));
+        let msg = r["error"]["message"].as_str().unwrap_or_default();
+        assert!(msg.contains("Unknown tool"), "{old}: {r}");
+    }
     mcp.close();
 }
 
@@ -661,15 +510,15 @@ fn the_app_can_restart_under_a_running_server() {
     let mut mcp = Mcp::started(&sock.path());
     {
         let mut first = app(&sock.path());
-        let r = mcp.call_tool(&mut first, "navigate", json!({"screen": "ground"}));
+        let r = mcp.call_tool(&mut first, "navigate", json!({"screen": "advanced"}));
         assert_eq!(r["isError"], false, "{r}");
     } // the app quits (its socket goes away)
-    let r = mcp.tool("navigate", json!({"screen": "tower"}));
+    let r = mcp.tool("navigate", json!({"screen": "series"}));
     assert!(error(&r).starts_with("Structures Playground isn't running"));
     // …and comes back.
     let mut second = app(&sock.path());
     let r = mcp.call_tool(&mut second, "app_status", json!({}));
-    assert_eq!(data(&r)["screen"]["id"], "bridge");
+    assert_eq!(data(&r)["screen"]["id"], "playground");
     mcp.close();
 }
 
@@ -677,14 +526,15 @@ fn the_app_can_restart_under_a_running_server() {
 fn app_tools_say_clearly_when_the_app_is_not_running() {
     let (_s, mut mcp) = offline();
     let calls = [
-        ("navigate", json!({"screen": "tower"})),
+        ("navigate", json!({"screen": "advanced"})),
         ("screenshot", json!({})),
-        ("describe_screen", json!({"screen": "bridge"})),
-        ("bridge_load_netlist", json!({"netlist": ON_THE_BANK})),
-        ("bridge_test", json!({})),
-        ("set_tower", json!({"floors": 80})),
-        ("set_ground", json!({})),
-        ("set_material", json!({"material": "steel"})),
+        ("describe_screen", json!({"screen": "playground"})),
+        ("builder_level", json!({"level": "river"})),
+        ("builder_load_netlist", json!({"netlist": TRIANGLE})),
+        ("builder_conditions", json!({"wind_ms": 25})),
+        ("builder_run", json!({})),
+        ("builder_fast_forward", json!({})),
+        ("sample_test", json!({"piece": "steel"})),
     ];
     for (tool, args) in calls {
         let r = mcp.tool(tool, args);
@@ -703,7 +553,31 @@ fn app_tools_say_clearly_when_the_app_is_not_running() {
     assert_eq!(data(&r)["running"], false);
     assert!(text(&r).starts_with("Structures Playground isn't running"));
     let r = mcp.tool("list_screens", json!({}));
-    assert_eq!(data(&r)["screens"].as_array().unwrap().len(), 6);
+    assert_eq!(data(&r)["screens"].as_array().unwrap().len(), 3);
     assert!(data(&r)["current"].is_null());
+    mcp.close();
+}
+
+/// Arguments are checked against the tools' schemas before anything reaches the app.
+#[test]
+fn builder_tools_check_their_arguments() {
+    let (_s, mut mcp) = offline();
+    for (tool, args) in [
+        ("builder_level", json!({"level": "moon"})),
+        ("builder_level", json!({})),
+        ("builder_conditions", json!({"wind_ms": 99})),
+        ("builder_conditions", json!({"soil": "mud"})),
+        ("builder_conditions", json!({"rain": 3})),
+        ("builder_fast_forward", json!({"years": 31})),
+        ("sample_test", json!({"piece": "gold"})),
+        ("builder_load_netlist", json!({})),
+    ] {
+        let r = mcp.tool(tool, args.clone());
+        let msg = error(&r);
+        assert!(
+            !msg.starts_with("Structures Playground isn't running"),
+            "{tool} {args}: checked before calling the app: {msg}"
+        );
+    }
     mcp.close();
 }

@@ -2,14 +2,14 @@
 //! (headless) and the app tools (over the bridge) send exactly the same thing: a solved truss
 //! ([`TrussReport`]), a member's influence line ([`InfluenceReport`]), a tower in the wind
 //! ([`TowerReport`]), a building on its ground ([`GroundReport`]), a tensile test
-//! ([`TensileReport`]) and the Bridge game ([`BridgeState`], [`BridgeTestResult`]).
+//! ([`TensileReport`]), and the v2 builder: its state ([`BuilderState`]), a run's result
+//! ([`RunReport`]) and a sample test ([`SampleReport`]).
 //!
 //! Units are in the field names (`_kn`, `_mpa`, `_m`, `_mm`, `_pct`); forces are positive in
 //! tension. Every number comes from the engine (SPEC DONE-2); text fields are the strings the
 //! screens print.
 
 use serde::{Deserialize, Serialize};
-use sp_engine::bridge::{Game, Phase};
 use sp_engine::ground::{self, GroundInput};
 use sp_engine::influence;
 use sp_engine::materials::bench::Bench;
@@ -750,7 +750,7 @@ pub fn tensile_report(
     tensile_from_bench(&bench, curve_points)
 }
 
-/// The report for a bench as it stands (the Materials screen's state).
+/// The report for a bench as it stands.
 pub fn tensile_from_bench(bench: &Bench, curve_points: Option<usize>) -> TensileReport {
     let kind = bench.kind();
     let c = kind.curve();
@@ -788,185 +788,248 @@ pub fn tensile_from_bench(bench: &Bench, curve_points: Option<usize>) -> Tensile
     }
 }
 
-// ---- the Bridge game ----------------------------------------------------------------------------
+// ---- the builder (v2) ---------------------------------------------------------------------------
 
-/// The Bridge screen's game as it stands.
+/// The conditions as the builder shows them (BLD-12).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct BridgeState {
-    /// `river`, `overhang`, `haul`, `sandbox`.
+pub struct ConditionsInfo {
+    /// Wind at 10 m, m/s.
+    pub wind_ms: f64,
+    /// The wind chip ("Breezy"; "" between chips).
+    pub wind: String,
+    /// `left` (blowing →) or `right` (←).
+    pub wind_from: String,
+    /// Snow, kg/m.
+    pub snow_kg_m: f64,
+    /// The snow chip ("Heavy").
+    pub snow: String,
+    /// Earthquake peak ground motion, g (0: off).
+    pub quake_g: f64,
+    /// The earthquake chip ("Strong").
+    pub quake: String,
+    /// `rock`, `dense`, `stiff`, `soft`, `loose`.
+    pub soil: String,
+    /// "Soft clay".
+    pub soil_name: String,
+    /// `level`, `rush`, `buses`, `trucks`, `convoy` (river scenes).
+    pub traffic: String,
+    /// "Rush hour".
+    pub traffic_name: String,
+    /// Fire, °C (0: off).
+    pub fire_c: f64,
+}
+
+/// The builder as it stands (`builder.get` and every builder change).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BuilderState {
+    /// `river`, `bus`, `haul`, `t1`, `t2`, `t3`, `pisa`, `sandbox`.
     pub level: String,
-    /// "1 · River crossing".
+    /// "1 · First crossing" / "Sandbox".
     pub level_name: String,
+    /// `river` (a river crossing) or `flat` (open ground).
+    pub scene: String,
+    /// The header's document name (`river-level`, `sandbox`).
+    pub document: String,
     /// The level's goal sentence.
     pub goal: String,
-    /// The header's document name (`river-level`).
-    pub document: String,
-    /// "Steel", "Timber", "Aluminum", "Carbon fiber".
-    pub material: String,
+    /// `build`, `run` or `result`.
+    pub phase: String,
+    /// The conditions.
+    pub conditions: ConditionsInfo,
     /// Joints.
     pub joints: usize,
-    /// Members.
-    pub members: usize,
-    /// The status pill ("Holding", "Will break at 63% load", "Wobbly: not stable", …).
-    pub status: String,
+    /// Pieces.
+    pub pieces: usize,
+    /// Joints with a footing or a pile.
+    pub foundations: usize,
+    /// Crates hung, t in all.
+    pub crates_t: f64,
     /// Cost, $k.
     pub cost_k: f64,
-    /// Budget, $k (none in the Sandbox).
+    /// The level's budget, $k (`None`: the Sandbox).
     pub budget_k: Option<f64>,
-    /// Over budget.
-    pub over_budget: bool,
-    /// `build`, `testing`, `collapse`, `collapsed`, `held`.
-    pub phase: String,
-    /// The header clock (`building`, `load 63%`, `held`, `collapse`).
-    pub clock: String,
-    /// Best stars in this level so far.
+    /// The live preview's status pill ("Stands up", "Sags and folds", …).
+    pub status: String,
+    /// Easier conditions than the level's: a practice run, no stars.
+    pub practice: bool,
+    /// Best stars earned on this level so far (0–3).
     pub best_stars: u8,
-    /// "What's happening".
-    pub explain: String,
-    /// The one-line summary (`describe_screen`'s).
+    /// The last run's result, while it shows.
+    pub result: Option<Box<RunReport>>,
+    /// One line: the stage's summary ("Bridge with 9 joints and 15 pieces. Stands up.").
     pub summary: String,
 }
 
-/// `build`, `testing`, `collapse`, `collapsed`, `held`.
-pub fn phase_name(p: Phase) -> &'static str {
-    match p {
-        Phase::Build => "build",
-        Phase::Testing => "testing",
-        Phase::Collapse => "collapse",
-        Phase::Collapsed => "collapsed",
-        Phase::Held => "held",
-    }
-}
-
-/// The game's state.
-pub fn bridge_state(game: &Game) -> BridgeState {
-    let view = game.view();
-    let level = game.level();
-    let l = level.level();
-    BridgeState {
-        level: level.key().into(),
-        level_name: l.name.into(),
-        goal: l.goal.into(),
-        document: level.slug().into(),
-        material: game.material().spec().name.into(),
-        joints: game.design().nodes.len(),
-        members: game.design().members.len(),
-        status: view.status.label.clone(),
-        cost_k: game.analysis().cost,
-        budget_k: l.budget,
-        over_budget: view.over_budget,
-        phase: phase_name(game.phase()).into(),
-        clock: game.clock(),
-        best_stars: game.best_for(level),
-        explain: view.explain.clone(),
-        summary: game.summary(),
-    }
-}
-
-/// One step of a Test's failure: a member that broke, or how the structure gave way.
+/// The first piece that broke in a run.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct FailureInfo {
-    /// The member that broke (none for a mechanism or a loose load).
-    pub member: Option<String>,
-    /// The load when it happened, % of the level's load.
-    pub load_pct: f64,
-    /// `yield` (snapped), `buckling`, `crushing`.
-    pub mode: Option<String>,
-    /// The joint that swung free, or whose weight hung on nothing.
-    pub joint: Option<String>,
-    /// A weight hanging on nothing.
-    pub loose: bool,
+pub struct PieceFailure {
+    /// The piece ("M7").
+    pub piece: String,
+    /// Its type ("Wood").
+    pub piece_type: String,
+    /// "snapped", "cracked", "buckled", "crushed", "softened", "burned through".
+    pub mode: String,
+    /// When, s into the run.
+    pub t_s: f64,
 }
 
-/// What a Test did.
+/// The first foundation that gave way in a run.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct BridgeTestResult {
-    /// `held`, `collapsed`, `refused` (the Test didn't start: `title` says why, e.g. "Connect
-    /// the loaded joint to your structure first."), or `unfinished` (still running after the
-    /// tick limit).
-    pub outcome: String,
-    /// It carried the full load.
-    pub held: bool,
-    /// Stars (1–3 for a held level within budget; 0 otherwise).
-    pub stars: u8,
-    /// The result banner ("It held!", "Collapse: M7 buckled at 63%"), or why it was refused.
+pub struct FoundationFailure {
+    /// The joint ("J3").
+    pub joint: String,
+    /// "sank", "ripped out", "liquefied".
+    pub mode: String,
+    /// When, s into the run.
+    pub t_s: f64,
+}
+
+/// A run on open ground: height, sway and comfort (CMF-1).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TowerOutcome {
+    /// The top floor stayed above 80 % of its height.
+    pub standing: bool,
+    /// The top floor's height, m.
+    pub height_m: f64,
+    /// The level's target height, m.
+    pub target_m: Option<f64>,
+    /// It reached the target (or there is none).
+    pub reached: bool,
+    /// Peak sway at the top, m.
+    pub sway_m: f64,
+    /// Peak top-floor acceleration, milli-g.
+    pub comfort_mg: f64,
+    /// The level's comfort limit, milli-g.
+    pub comfort_limit_mg: Option<f64>,
+    /// Under the limit (or there is none).
+    pub comfy: bool,
+    /// The comfort meter's sentence ("Some people on the top floors notice.").
+    pub comfort: String,
+}
+
+/// Settlement over the years (TIME-1).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct YearsOutcome {
+    /// Years fast-forwarded.
+    pub years: f64,
+    /// Tilt at the end, degrees (towers; TIME-2).
+    pub tilt_deg: f64,
+    /// The most any foundation settled, mm.
+    pub settled_mm: f64,
+    /// The largest settlement difference between foundations, mm (bridges; TIME-2).
+    pub differential_mm: f64,
+    /// It toppled (a tower leaning past 5°) or a piece broke from the settlement.
+    pub failed: bool,
+    /// The result's sentence ("After 30 years: tilt 0.3°, settled 41 mm. …").
+    pub sentence: String,
+}
+
+/// The result of a run (`builder.run`, `builder_test`, `builder.fast_forward`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RunReport {
+    /// It passed: every vehicle across, or the tower stood, reached and stayed comfortable.
+    pub pass: bool,
+    /// The banner ("All across!", "5 of 8 made it", "It stood!", "It came down", "Too short",
+    /// "Too wobbly to live in", "…, but over budget").
     pub title: String,
-    /// The load reached, % (100 when it held).
-    pub load_pct: f64,
-    /// The first failure, if it failed.
-    pub first_failure: Option<FailureInfo>,
-    /// Every member that broke, in order.
-    pub broken: Vec<String>,
-    /// The whole failure log.
-    pub log: Vec<FailureInfo>,
-    /// The game afterwards.
-    pub state: BridgeState,
+    /// The banner's sentence: what happened first, with a tip.
+    pub explain: String,
+    /// Stars (1–3 within budget: ≤ budget, ≤ 80 %, ≤ 60 %; 0 for a fail, over budget, a
+    /// practice run or the Sandbox).
+    pub stars: u8,
+    /// Easier conditions than the level's.
+    pub practice: bool,
+    /// Cost, $k.
+    pub cost_k: f64,
+    /// The level's budget, $k.
+    pub budget_k: Option<f64>,
+    /// The first piece that broke.
+    pub first_failure: Option<PieceFailure>,
+    /// The first foundation that gave way.
+    pub first_foundation: Option<FoundationFailure>,
+    /// River scenes: vehicles across.
+    pub crossed: Option<usize>,
+    /// River scenes: vehicles in the run.
+    pub vehicles: Option<usize>,
+    /// Open ground: height, sway, comfort.
+    pub tower: Option<TowerOutcome>,
+    /// After a fast-forward: the settlement.
+    pub years: Option<YearsOutcome>,
+    /// Seconds simulated.
+    pub t_s: f64,
 }
 
-impl BridgeTestResult {
-    /// The banner, or the phase while unfinished.
+impl RunReport {
+    /// "All across! ★★☆ ($17.2k of $22k)" / "It came down — M7 (Wood) buckled at 3.1 s".
     pub fn summary(&self) -> String {
-        if self.outcome == "refused" {
-            return format!("The Test didn't start: {}", self.title);
-        }
-        let mut s = format!(
-            "{} ({} at {:.0}% load)",
-            self.title, self.outcome, self.load_pct
-        );
-        if self.held && self.stars > 0 {
+        let mut s = self.title.clone();
+        if self.stars > 0 {
             s.push_str(&format!(
-                ", {} star{}",
-                self.stars,
-                if self.stars == 1 { "" } else { "s" }
+                " {}{}",
+                "★".repeat(self.stars as usize),
+                "☆".repeat(3usize.saturating_sub(self.stars as usize))
             ));
+        }
+        if self.practice {
+            s.push_str(" (practice: easier than the level)");
+        }
+        match self.budget_k {
+            Some(b) => s.push_str(&format!(" — ${}k of ${}k", short(self.cost_k), short(b))),
+            None => s.push_str(&format!(" — ${}k", short(self.cost_k))),
+        }
+        if let Some(f) = &self.first_failure {
+            s.push_str(&format!(
+                "; first: {} ({}) {} at {} s",
+                f.piece,
+                f.piece_type,
+                f.mode,
+                sp_engine::jsnum::to_fixed(f.t_s, 1)
+            ));
+        } else if let Some(f) = &self.first_foundation {
+            s.push_str(&format!(
+                "; first: the foundation at {} {} at {} s",
+                f.joint,
+                f.mode,
+                sp_engine::jsnum::to_fixed(f.t_s, 1)
+            ));
+        }
+        if let Some(t) = &self.tower {
+            s.push_str(&format!(
+                "; {} m tall, {} mg",
+                short(t.height_m),
+                sp_engine::jsnum::to_fixed(t.comfort_mg, 0)
+            ));
+        }
+        if let Some(y) = &self.years {
+            s.push_str(&format!("; {}", y.sentence));
         }
         s
     }
 }
 
-/// Runs the game's Test to the end (at most `max_ticks` 33 ms ticks) and reports it.
-pub fn run_bridge_test(game: &mut Game, max_ticks: usize) -> BridgeTestResult {
-    let phase = game.run_test(max_ticks);
-    let log: Vec<FailureInfo> = game
-        .log()
-        .iter()
-        .map(|e| FailureInfo {
-            member: e.member.clone(),
-            load_pct: e.lam * 100.0,
-            mode: e.mode.map(|m| mode_name(m).to_string()),
-            joint: e.bad.clone(),
-            loose: e.loose,
-        })
-        .collect();
-    let held = phase == Phase::Held;
-    let outcome = match phase {
-        Phase::Held => "held",
-        Phase::Collapse | Phase::Collapsed => "collapsed",
-        // the game refuses to start (the level's weight isn't connected): it says why
-        Phase::Build => "refused",
-        Phase::Testing => "unfinished",
-    };
-    let view = game.view();
-    let title = match (&view.result, phase) {
-        (Some(r), _) => r.title.clone(),
-        (None, Phase::Build) => game.toast().unwrap_or("The Test didn't start.").to_string(),
-        (None, _) => game.clock(),
-    };
-    BridgeTestResult {
-        outcome: outcome.into(),
-        held,
-        stars: if held { game.stars() } else { 0 },
-        title,
-        load_pct: if held {
-            100.0
-        } else {
-            log.first().map_or(game.lam() * 100.0, |f| f.load_pct)
-        },
-        first_failure: log.first().cloned(),
-        broken: log.iter().filter_map(|f| f.member.clone()).collect(),
-        log,
-        state: bridge_state(game),
-    }
+/// A sample test in the sample lab (LAB-1).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SampleReport {
+    /// The piece type (`steel`).
+    pub piece: String,
+    /// `pull` or `push`.
+    pub mode: String,
+    /// Temperature, °C.
+    pub temperature_c: f64,
+    /// It broke (snapped, crushed or buckled).
+    pub broken: bool,
+    /// The status ("Snapped at 0.4 %").
+    pub status: String,
+    /// The peak force the sample took, t.
+    pub peak_t: f64,
+    /// The peak force, kN.
+    pub peak_kn: f64,
+    /// What a piece this size breaks at in the builder, t (the engine's capacity).
+    pub piece_breaks_at_t: f64,
+    /// `[strain %, stress MPa]` along the test.
+    pub curve: Vec<[f64; 2]>,
+    /// One line.
+    pub summary: String,
 }
 
 #[cfg(test)]

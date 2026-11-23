@@ -16,9 +16,9 @@ USAGE:
     structures-mcp [--socket <path>]
 
 Speaks the Model Context Protocol on stdin/stdout (protocol 2026-07-28, and 2025-11-25 back
-to 2024-11-05 via `initialize`). Engine tools (solve_truss, influence_line, tower_wind,
-ground_check, tensile_test) work on their own; app tools (navigate, screenshot, bridge_test,
-set_tower, …) need Structures Playground running.
+to 2024-11-05 via `initialize`). Engine tools (solve_truss, influence_line, builder_test,
+tower_wind, ground_check, tensile_test) work on their own; app tools (navigate, screenshot,
+builder_run, builder_conditions, …) need Structures Playground running.
 Add it to Claude Code with:
     claude mcp add structures-playground -- {exe}
 
