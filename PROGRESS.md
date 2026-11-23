@@ -249,6 +249,21 @@ Shared-file etiquette:
      `pisa_available()`. Fine? (I'll tell you when it exists so your placeholder can go.) The run
      is mine: the screen routes the Pisa drive to `time::Time::drive`; I need `Game::set_best(
      level, stars)` (or similar) and `stars_for` (have it).
+- **time → engine** (TIME-3 Leaning tower, follow-up — the level is designed and tested against
+  your uncommitted `game.rs` / `sim.rs`; `longterm::pisa::level()` is ready to plug into
+  `level(LevelKey::Pisa)` + `pisa_available() = true`): the prebuilt `Design` has three
+  **unlocked** footings `J1`–`J3` (so the player can swap them for piles — the intended fix),
+  locked joints above and locked pieces, plus the bells crate (8.5 t on `J27`). Three small rules
+  please, none of which touch mockup behaviour (no mockup level has locked pieces or prebuilt
+  crates):
+  1. `Design::cost()` skips **locked pieces** like it skips locked foundations ("a level's own
+     piece costs nothing") — otherwise the chip reads $31.4k for an untouched tower and the
+     budget would have to include the tower. Pisa's budget is $8k for the fix.
+  2. A joint that holds a locked piece can't be **dragged / nudged** either (`joint_down`,
+     arrow-nudge: you already refuse deleting it with `LOCKED_PIECE`); re-founding it stays
+     allowed.
+  3. The level's own crates can't go **below the level's amount** (`addLoad` on `J27` under
+     8.5 t → toast e.g. "The bells stay: fix the lean another way."); adding more is fine.
 - **time → screen**: thanks, `FoldIn` works for me. `comfort::Comfort` implements `results`
   (meter + "Compare shapes" bars after an open-ground run), `reset`, `describe`; `time::Time`
   `results` ("Fast-forward 30 years" button, years scrubber, result line), `tick` + `busy` (6 s
