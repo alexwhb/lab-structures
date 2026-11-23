@@ -290,6 +290,48 @@ Shared-file etiquette:
   outside the stage, AccessKit (37 controls at 1440 and 390, no duplicate or empty labels; Tab
   reaches every tool, chip, joint, level and material), test suites (all green, < 0.2 s).
 
+- **worlds → advanced** [severity: med] `crates/sp-engine/src/netlist/edit.rs:87` (`set_truck`) +
+  `crates/structures-playground/src/screens/advanced/doc.rs:357` — the x slider / Drive across
+  write the truck position in **metres as a bare number** (`x=6`), but bare lengths are read in
+  the netlist's `.units` length unit. — Verified with a probe: a netlist with `.units SI kN cm`
+  (nodes in cm, lane 0–800 cm) after `set_truck(None, Some(6.0))` reads `x=6` → truck at
+  **0.06 m**; the slider and clock jump to 0.1 m, and Drive across stalls near 0 (each step writes
+  x + 0.5 "m" = 0.005 m). — Write the unit (`x=6m`, which the parser already accepts) or divide
+  by `units.length.per_metre()`; add a cm/mm test to `netlist_roundtrip.rs`.
+- **worlds → advanced** [severity: med] `crates/structures-playground/src/screens/advanced/doc.rs:233`
+  (`influence_line` cache) + `advanced.rs:79` + `crates/sp-engine/src/influence.rs:297` — the
+  cache key includes the truck weight, so **every Truck-slider step** (and every pick change)
+  re-runs the whole sweep synchronously inside `ui`. On a Bridge-sized custom netlist (450 nodes,
+  25 full solves) a release build measures **64 ms per drag step** with the nodes interleaved
+  B0,T0,B1,T1… and **506 ms** with the same truss declared bottom chord then top chord (21 ms vs
+  6 ms per solve: `solve_dense`'s zero-skip only helps a narrow band) — the UI freezes while
+  dragging Truck on a sandbox handed over by the Bridge (whose joint order is arbitrary). —
+  Linear statics: N(x) = N_static + W·n(x), so cache the unit-truck line per (model without the
+  truck weight, member) and scale by W (no re-solve on a weight change); and number the DOFs by
+  x (or RCM) before the dense solve to keep K banded (`to_truss`, or ask the lead for
+  `truss.rs`).
+- **worlds → advanced** [severity: low] `crates/sp-engine/src/influence.rs:132` (`picks`) +
+  `crates/sp-engine/src/netlist.rs:250` (`Plot::member`) — `.plot N(M3) vs truck.x 0 48 1`
+  parses and stores the member, but nothing reads it (only `plot.range` is used, `influence.rs:277`).
+  — Change the generated netlist's last line to `.plot N(M3) vs truck.x 0 48 1`: the panel
+  still plots the standard pick and is titled `.plot N(M8) vs truck x`, contradicting the
+  netlist. — When `plot.member` is set, put that member first in `picks` and select it on
+  parse / load.
+- **worlds → advanced** [severity: low] `crates/structures-playground/src/screens/advanced/doc.rs:498`
+  (`drive_step`) — Drive across on a custom netlist **with errors** never moves: `x()` reads
+  the last good netlist, each step patches the text with that x + 0.5, the re-parse fails, so
+  the next step writes the same x again; the button says Pause and the clock stays put. —
+  Edit `.node B1 8 0` to `.node B1 8 oops`, press Drive across: `x = 24.0 m` forever. — Step
+  from `params.x` (which `set_truck` already updates) or pause the drive while `stale`.
+- **worlds → advanced** — also checked, no findings: the parser (two passes, cascades
+  suppressed, ranges bounded, CRLF, U+2212, units for E/fy/A/I/rho/forces/tonnes, every
+  directive's errors on the right line/column), writer → parser round trips (materials,
+  non-box I in cm4, static + `+self`, moving load, `.plot`, other units), `edit::set_truck`
+  text preservation, the report strings and checks against `Advanced.dc.html`, picks, the
+  editor (Tab leaves it, AccessKit name + error description, error bands / chips, typing while
+  Drive across runs keeps the cursor), the Material select (Enter / Space / arrows, ComboBox),
+  1440 and 390 renders against the references (crowded member labels at 390 are the mockup's).
+
 ## Candidates for labkit
 
 - **materials**: `sp_engine::materials::jsnum` (JavaScript-exact `toFixed` / `String(n)` /
