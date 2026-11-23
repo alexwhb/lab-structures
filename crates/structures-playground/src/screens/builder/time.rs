@@ -577,7 +577,9 @@ impl FoldIn for Time {
     }
 
     fn drive_button(&self, game: &Game) -> Option<Drive> {
-        (years_level(game) && game.phase() == Phase::Build)
+        // the level's run is called "Fast-forward 30 years" (as other levels' "Run the test");
+        // while it plays the header shows the core's "Pause"
+        (years_level(game) && game.phase() != Phase::Run)
             .then(|| Drive::new("Fast-forward 30 years"))
     }
 
