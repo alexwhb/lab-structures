@@ -104,6 +104,21 @@ fn readme_screenshots() {
         save(&img, &path);
         println!("screenshot: {}", path.display());
     }
+    // the README's hero: the Bridge's Sandbox with its starter truss, solved
+    if wanted(Route::Bridge) {
+        let (w, h) = Route::Bridge.board_size();
+        let mut app = harness_at(Route::Bridge, w, h);
+        {
+            let game = &mut app.state_mut().screens_mut().bridge.game;
+            game.pick_level(sp_engine::bridge::LevelKey::Sandbox);
+            game.starter();
+        }
+        settle(&mut app);
+        let img = render(&mut app);
+        let path = repo().join("docs/screenshots/bridge-built.png");
+        save(&img, &path);
+        println!("screenshot: {}", path.display());
+    }
 }
 
 /// The header (56 px) and the world tab row (45 px) at 1440 stay close to each world's
