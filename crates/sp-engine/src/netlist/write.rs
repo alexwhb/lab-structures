@@ -2,8 +2,8 @@
 //! elsewhere (the Bridge's "Open in Advanced", NAV-4 / ADV-9). Parsing the output gives the same
 //! model back (to ~12 significant digits).
 
-use crate::jsnum::{js_number, tidy};
 use super::{MovingLoad, NetMember, Netlist, Plot, Section, StaticLoad, fix_text};
+use crate::jsnum::{js_number, tidy};
 use crate::truss::{G, NodalLoad, Truss};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;

@@ -13,7 +13,7 @@
 
 use crate::router::Route;
 use sp_engine::generate::{self, Params, SPAN};
-use sp_engine::influence::{self, InfluenceLine, Pick, Report};
+use sp_engine::influence::{self, InfluenceLine, Pick, Report, UnitSweep};
 use sp_engine::netlist::{self, Diagnostic, Netlist, Severity};
 
 /// Seconds after the last keystroke before the netlist is re-parsed.
@@ -61,11 +61,20 @@ struct Snapshot {
 }
 
 #[derive(Debug, Clone)]
-struct IlCache {
-    /// The netlist it was computed for, truck position zeroed.
-    key: Netlist,
-    member: usize,
-    line: Option<InfluenceLine>,
+enum IlCache {
+    /// A small truss: one member's line, solved in full at every position (mockup-exact).
+    Exact {
+        /// The netlist it was computed for, truck position zeroed.
+        key: Netlist,
+        member: usize,
+        line: Option<InfluenceLine>,
+    },
+    /// A big truss: every member for a unit truck; any weight and pick without re-solving.
+    Sweep {
+        /// The netlist it was computed for, truck position and weight zeroed.
+        key: Netlist,
+        sweep: Option<UnitSweep>,
+    },
 }
 
 /// The document.
@@ -90,6 +99,8 @@ pub struct Doc {
     /// The influence-line pick (`topmid`, …, or a member id).
     pub pick: String,
     dirty_at: Option<f64>,
+    /// The member the last parsed `.plot N(…)` named (its pick is selected when it changes).
+    plot_member: Option<String>,
     undo: Vec<Snapshot>,
     last_change: Option<(&'static str, f64)>,
     il: Option<IlCache>,
@@ -115,6 +126,7 @@ impl Doc {
             stale: false,
             pick: "topmid".into(),
             dirty_at: None,
+            plot_member: None,
             undo: Vec::new(),
             last_change: None,
             il: None,
@@ -229,27 +241,47 @@ impl Doc {
             .cloned()
     }
 
-    /// The influence line of the current pick (cached; `None` without a moving load).
-    pub fn influence_line(&mut self) -> Option<&InfluenceLine> {
+    /// The influence line of the current pick (`None` without a moving load). Cached: a small
+    /// truss per model (truck position aside) and member; a big one as a [`UnitSweep`] per model
+    /// (truck position and weight aside), so dragging Truck or changing the pick doesn't solve.
+    pub fn influence_line(&mut self) -> Option<InfluenceLine> {
         let pick = self.current_pick()?;
         let good = self.good.as_ref()?;
         let mut key = good.netlist.clone();
         if let Some(t) = key.truck.as_mut() {
             t.x = 0.0;
         }
-        let fresh = self
-            .il
-            .as_ref()
-            .is_some_and(|c| c.member == pick.member && c.key == key);
-        if !fresh {
-            let line = influence::influence_line(&good.netlist, pick.member);
-            self.il = Some(IlCache {
-                key,
-                member: pick.member,
-                line,
-            });
+        if good.netlist.nodes.len() <= influence::EXACT_SWEEP_NODES {
+            let fresh = matches!(&self.il, Some(IlCache::Exact { key: k, member, .. })
+                if *member == pick.member && *k == key);
+            if !fresh {
+                let line = influence::influence_line_exact(&good.netlist, pick.member);
+                self.il = Some(IlCache::Exact {
+                    key,
+                    member: pick.member,
+                    line,
+                });
+            }
+            return match &self.il {
+                Some(IlCache::Exact { line, .. }) => line.clone(),
+                _ => None,
+            };
         }
-        self.il.as_ref()?.line.as_ref()
+        if let Some(t) = key.truck.as_mut() {
+            t.weight = 0.0;
+            t.tonnes = None;
+        }
+        let fresh = matches!(&self.il, Some(IlCache::Sweep { key: k, .. }) if *k == key);
+        if !fresh {
+            let sweep = influence::unit_sweep(&good.netlist);
+            self.il = Some(IlCache::Sweep { key, sweep });
+        }
+        match &self.il {
+            Some(IlCache::Sweep {
+                sweep: Some(sw), ..
+            }) => influence::line_from_sweep(&good.netlist, sw, pick.member),
+            _ => None,
+        }
     }
 
     // ---- changing ------------------------------------------------------------------------
@@ -300,6 +332,18 @@ impl Doc {
     fn adopt(&mut self, net: Netlist) {
         match influence::analyse(&net) {
             Ok(report) => {
+                // `.plot N(M3)` selects that member's pick when the line (re)names it
+                let named = net.plot.as_ref().and_then(|p| p.member.clone());
+                if named != self.plot_member {
+                    if let Some(m) = influence::plot_member(&net)
+                        && let Some(p) = influence::picks(&net, &report)
+                            .into_iter()
+                            .find(|p| p.member == m)
+                    {
+                        self.pick = p.key;
+                    }
+                    self.plot_member = named;
+                }
                 self.diagnostics = net.warnings.clone();
                 self.good = Some(Good {
                     netlist: net,
@@ -592,6 +636,35 @@ mod tests {
         assert_eq!(d.netlist().unwrap().materials[0].fy, 275e6);
         assert_eq!(d.netlist().unwrap().members.len(), 21);
         assert!(!d.paste_material("no material here", 2.0));
+    }
+
+    #[test]
+    fn a_plot_line_naming_a_member_selects_it() {
+        let mut d = Doc::new();
+        let t = d.text.replace(".plot N(M*)", ".plot N(M3)");
+        d.edit(t, 1.0);
+        d.tick(2.0);
+        assert_eq!(d.current_pick().unwrap().name, "Bottom chord B2–B3");
+        let t = d.text.replace(".plot N(M3)", ".plot N(M13)");
+        d.edit(t, 3.0);
+        d.tick(4.0);
+        let p = d.current_pick().unwrap();
+        assert_eq!(p.name, "M13 B1–T1");
+        assert_eq!(d.picks()[0].key, "M13");
+        assert_eq!(d.influence_line().unwrap().id, "M13");
+        // the user's own pick isn't overridden by later re-parses
+        d.pick = "post".into();
+        d.set_truck(None, Some(10.0), "x", 5.0, true);
+        assert_eq!(d.current_pick().unwrap().key, "post");
+    }
+
+    #[test]
+    fn drive_needs_a_netlist_without_errors() {
+        let mut d = Doc::new();
+        let bad = d.text.replace(".node B1  8  0", ".node B1  8  oops");
+        d.edit(bad, 1.0);
+        d.tick(2.0);
+        assert!(d.stale);
     }
 
     #[test]

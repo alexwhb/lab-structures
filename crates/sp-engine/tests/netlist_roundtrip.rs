@@ -204,3 +204,15 @@ fn writer_makes_odd_names_parseable() {
     let n = netlist::parse(&odd).unwrap();
     assert!((n.loads[0].fx - 1234.5).abs() < 1e-9);
 }
+
+/// The Truck / x sliders write in the netlist's own length unit (review: `.units SI kN cm`).
+#[test]
+fn truck_edits_respect_the_length_unit() {
+    let text = ".units SI kN cm\n.material steel\n.section s A=10cm2\n.node B0 0 0 fix=xy\n.node B1 400 0\n.node B2 800 0 fix=y\n.node T1 400 300\n.member M1 B0 B1 s\n.member M2 B1 B2 s\n.member M3 B0 T1 s\n.member M4 T1 B2 s\n.member M5 B1 T1 s\n.load truck 10t x=200 lane=B0..B2\n";
+    let net = netlist::parse(text).unwrap();
+    assert_eq!(net.truck_x(), 2.0);
+    let edited = netlist::set_truck(text, Some(12.0), Some(6.5)).unwrap();
+    let back = netlist::parse(&edited).unwrap();
+    assert_eq!(back.truck_x(), 6.5);
+    assert_eq!(back.truck.unwrap().tonnes, Some(12.0));
+}

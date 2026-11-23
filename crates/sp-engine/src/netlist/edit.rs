@@ -4,12 +4,16 @@
 use crate::jsnum::js_number;
 
 /// Rewrites the moving-load line (the first `.load` with `lane=`): its weight as `<tonnes>t`
-/// and/or its `x=<m>` (inserted after the weight if missing). Everything else — spacing,
-/// comments, other lines, line endings — is kept. `None` when there is no moving-load line.
+/// and/or its `x=` (inserted after the weight if missing). `x` is in metres and is written as
+/// a bare number in the netlist's `.units` length unit (600 for 6 m under `.units SI kN cm`).
+/// Everything else — spacing, comments, other lines, line endings — is kept. `None` when there
+/// is no moving-load line.
 ///
 /// For the generated netlist this gives exactly the text the generator would write for the
 /// new truck and position.
 pub fn set_truck(text: &str, tonnes: Option<f64>, x: Option<f64>) -> Option<String> {
+    let per_metre = length_unit(text).per_metre();
+    let x = x.map(|x| x * per_metre);
     let mut out = String::with_capacity(text.len() + 8);
     let mut done = false;
     for raw in text.split_inclusive('\n') {
@@ -26,6 +30,32 @@ pub fn set_truck(text: &str, tonnes: Option<f64>, x: Option<f64>) -> Option<Stri
         }
     }
     done.then_some(out)
+}
+
+/// The length unit the text's `.units` line sets (metres without one).
+fn length_unit(text: &str) -> super::LengthUnit {
+    use super::LengthUnit;
+    let mut unit = LengthUnit::M;
+    for raw in text.lines() {
+        let code = raw.split(';').next().unwrap_or("");
+        let mut toks = code.split_whitespace();
+        if !toks
+            .next()
+            .is_some_and(|d| d.eq_ignore_ascii_case(".units"))
+        {
+            continue;
+        }
+        for t in toks {
+            match t.to_ascii_lowercase().as_str() {
+                "m" => unit = LengthUnit::M,
+                "cm" => unit = LengthUnit::Cm,
+                "mm" => unit = LengthUnit::Mm,
+                _ => {}
+            }
+        }
+        break;
+    }
+    unit
 }
 
 /// Byte spans of the whitespace-separated tokens of `code`.

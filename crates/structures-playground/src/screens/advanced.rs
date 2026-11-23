@@ -171,7 +171,7 @@ impl AdvancedScreen {
         let stale = self.doc.stale;
         let picks = self.doc.picks();
         let current = self.doc.current_pick();
-        let il = self.doc.influence_line().cloned();
+        let il = self.doc.influence_line();
         let Some(good) = self.doc.good.as_ref() else {
             return;
         };
@@ -235,7 +235,8 @@ impl Screen for AdvancedScreen {
         Some(
             Drive::new("Drive across")
                 .running(self.playing)
-                .enabled(self.doc.truck_t().is_some()),
+                // with errors the results can't follow the truck (review: worlds)
+                .enabled(self.doc.truck_t().is_some() && !self.doc.stale),
         )
     }
 
@@ -269,7 +270,7 @@ impl Screen for AdvancedScreen {
             ctx.wake_in(due as f32);
         }
         if self.playing {
-            if self.doc.truck_t().is_none() {
+            if self.doc.truck_t().is_none() || self.doc.stale {
                 self.playing = false;
                 return;
             }

@@ -10,7 +10,9 @@
 
 use crate::jsnum::{js_number, js_round, minus_fixed, to_fixed};
 use crate::netlist::Netlist;
-use crate::truss::{FailureMode, MemberResult, NodalLoad, Solution, SolveError, Truss, check};
+use crate::truss::{
+    FailureMode, Member, MemberResult, NodalLoad, Solution, SolveError, SolveOptions, Truss, check,
+};
 use serde::{Deserialize, Serialize};
 
 mod report;
@@ -111,7 +113,7 @@ pub fn analyse(net: &Netlist) -> Result<Report, SolveError> {
 pub fn analyse_at(net: &Netlist, x: f64) -> Result<Report, SolveError> {
     let truss = net.to_truss();
     let loads = net.loads_at(&truss, x);
-    let solution = truss.solve(&loads, &net.solve_options())?;
+    let solution = solve_ordered(&truss, &loads, &net.solve_options())?;
     Ok(report::build(net, truss, solution, x))
 }
 
@@ -128,7 +130,8 @@ pub struct Pick {
 
 /// The four influence-line picks: the mockup's Top chord T2–T3, Bottom chord B2–B3, End post
 /// B0–T1 and Vertical B2–T2 when all four exist as members; otherwise the four most-used
-/// members of `report` ("M8 T2–T3").
+/// members of `report` ("M8 T2–T3"). A member the netlist names in `.plot N(M3) …` comes first
+/// (added if it isn't one of them).
 pub fn picks(net: &Netlist, report: &Report) -> Vec<Pick> {
     let find = |a: &str, b: &str| {
         let (ia, ib) = (net.node_index(a)?, net.node_index(b)?);
@@ -143,27 +146,49 @@ pub fn picks(net: &Netlist, report: &Report) -> Vec<Pick> {
         ("vert", "Vertical B2–T2", "B2", "T2"),
     ];
     let found: Vec<Option<usize>> = std.iter().map(|(_, _, a, b)| find(a, b)).collect();
-    if found.iter().all(Option::is_some) {
-        return std
-            .iter()
+    let mut picks: Vec<Pick> = if found.iter().all(Option::is_some) {
+        std.iter()
             .zip(found)
             .map(|((key, name, _, _), m)| Pick {
                 key: (*key).into(),
                 name: (*name).into(),
                 member: m.unwrap_or(0),
             })
-            .collect();
+            .collect()
+    } else {
+        report
+            .rows
+            .iter()
+            .take(4)
+            .map(|r| Pick {
+                key: r.id.clone(),
+                name: format!("{} {}", r.id, r.nodes),
+                member: r.member,
+            })
+            .collect()
+    };
+    if let Some(m) = plot_member(net)
+        && !picks.iter().any(|p| p.member == m)
+    {
+        let mem = &net.members[m];
+        let id = |n: usize| net.nodes.get(n).map(|n| n.id.as_str()).unwrap_or("?");
+        picks.insert(
+            0,
+            Pick {
+                key: mem.id.clone(),
+                name: format!("{} {}\u{2013}{}", mem.id, id(mem.a), id(mem.b)),
+                member: m,
+            },
+        );
+        picks.truncate(4);
     }
-    report
-        .rows
-        .iter()
-        .take(4)
-        .map(|r| Pick {
-            key: r.id.clone(),
-            name: format!("{} {}", r.id, r.nodes),
-            member: r.member,
-        })
-        .collect()
+    picks
+}
+
+/// The member a `.plot N(M3) vs truck.x` line names (`None` for `N(M*)` or no `.plot`).
+pub fn plot_member(net: &Netlist) -> Option<usize> {
+    let id = net.plot.as_ref()?.member.as_deref()?;
+    net.member_index(id)
 }
 
 /// The force in one member as the truck moves (`.plot N(M8) vs truck.x 0 48 1`).
@@ -284,45 +309,232 @@ pub fn sweep(net: &Netlist) -> Option<(f64, f64, f64)> {
     (b > a).then_some((a, b, 1.0))
 }
 
-/// The influence line of member `member`: the truck at every sweep position, solved in full.
-/// `None` without a moving load or for a bad member index.
-pub fn influence_line(net: &Netlist, member: usize) -> Option<InfluenceLine> {
-    let mem = net.members.get(member)?;
+/// Up to this many nodes the influence line is solved in full at every position (the mockup's
+/// way, so its truss matches to the bit); above it, by superposition ([`unit_sweep`]).
+pub const EXACT_SWEEP_NODES: usize = 40;
+
+/// Solves `truss` like [`Truss::solve`], but numbers a big truss's joints (more than
+/// [`EXACT_SWEEP_NODES`]) along its longer side first, so the dense elimination meets a banded
+/// stiffness matrix whatever order the netlist declared them in; results come back in the
+/// truss's own order. Small trusses are solved as they are (bit-identical to the mockups).
+pub fn solve_ordered(
+    truss: &Truss,
+    loads: &[NodalLoad],
+    opts: &SolveOptions,
+) -> Result<Solution, SolveError> {
+    let n = truss.nodes.len();
+    if n <= EXACT_SWEEP_NODES {
+        return truss.solve(loads, opts);
+    }
+    let (mut x0, mut x1, mut y0, mut y1) = (f64::MAX, f64::MIN, f64::MAX, f64::MIN);
+    for p in &truss.nodes {
+        x0 = x0.min(p.x);
+        x1 = x1.max(p.x);
+        y0 = y0.min(p.y);
+        y1 = y1.max(p.y);
+    }
+    let along_x = (x1 - x0) >= (y1 - y0);
+    let mut perm: Vec<usize> = (0..n).collect();
+    perm.sort_by(|&a, &b| {
+        let (p, q) = (&truss.nodes[a], &truss.nodes[b]);
+        if along_x {
+            p.x.total_cmp(&q.x).then(p.y.total_cmp(&q.y))
+        } else {
+            p.y.total_cmp(&q.y).then(p.x.total_cmp(&q.x))
+        }
+    });
+    let mut inv = vec![0usize; n];
+    for (new, &old) in perm.iter().enumerate() {
+        inv[old] = new;
+    }
+    let map = |i: usize| inv.get(i).copied().unwrap_or(usize::MAX);
+    let sorted = Truss {
+        nodes: perm.iter().map(|&o| truss.nodes[o].clone()).collect(),
+        members: truss
+            .members
+            .iter()
+            .map(|m| Member {
+                a: map(m.a),
+                b: map(m.b),
+                ..m.clone()
+            })
+            .collect(),
+        materials: truss.materials.clone(),
+    };
+    let loads: Vec<NodalLoad> = loads
+        .iter()
+        .map(|l| NodalLoad {
+            node: map(l.node),
+            ..*l
+        })
+        .collect();
+    let s = sorted.solve(&loads, opts)?;
+    let back = |new: usize| perm.get(new).copied().unwrap_or(new);
+    Ok(Solution {
+        mechanism: s.mechanism.map(back),
+        displacements: (0..n).map(|o| s.displacements[inv[o]]).collect(),
+        reactions: (0..n).map(|o| s.reactions[inv[o]]).collect(),
+        active: (0..n).map(|o| s.active[inv[o]]).collect(),
+        loose_loads: s.loose_loads.iter().map(|&i| back(i)).collect(),
+        ..s
+    })
+}
+
+/// The sweep positions for a netlist (a big truss is coarsened to [`BIG_SWEEP`] steps).
+fn positions(net: &Netlist, nodes: usize) -> Option<(f64, f64, Vec<f64>)> {
     let (from, to, step) = sweep(net)?;
-    let truss = net.to_truss();
-    truss.validate().ok()?;
-    let base: Vec<NodalLoad> = net.static_loads(&truss);
-    let opts = net.solve_options();
-    // a big truss (dense solves cost ~n³) is swept in at most BIG_SWEEP steps
-    let step = if truss.nodes.len() > BIG_TRUSS {
+    let step = if nodes > BIG_TRUSS {
         step.max((to - from) / BIG_SWEEP as f64)
     } else {
         step
     };
     let n = (((to - from) / step) + 1e-9).floor().clamp(0.0, 10_000.0) as usize;
-    let mut points = Vec::with_capacity(n + 1);
-    let (mut peak, mut peak_at) = (0.0f64, 0.0f64);
+    Some((from, to, (0..=n).map(|i| from + i as f64 * step).collect()))
+}
+
+/// Every member's force over the sweep for a **unit** truck, plus the static forces: linear
+/// statics, so a truck of `W` newtons (weight × share) gives `base + W·unit` — one static solve
+/// and one solve per position, then any truck weight and any member without solving again.
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnitSweep {
+    /// Truck positions, m.
+    pub xs: Vec<f64>,
+    /// First and last position, m.
+    pub from: f64,
+    /// See [`UnitSweep::from`].
+    pub to: f64,
+    /// Static force of each member, N (self-weight and point loads, no truck).
+    pub base: Vec<f64>,
+    /// Per position, each member's force per newton of truck load (N/N).
+    pub unit: Vec<Vec<f64>>,
+    /// The structure is stable (else every force reads 0, as the mockup draws it).
+    pub stable: bool,
+}
+
+/// The [`UnitSweep`] of a netlist (`None` without a moving load or for an unsolvable model).
+pub fn unit_sweep(net: &Netlist) -> Option<UnitSweep> {
+    let truss = net.to_truss();
+    truss.validate().ok()?;
+    let (from, to, xs) = positions(net, truss.nodes.len())?;
+    let opts = net.solve_options();
+    let forces = |s: &Solution| -> Vec<f64> {
+        s.members
+            .iter()
+            .map(|r| r.map(|r| r.force).unwrap_or(0.0))
+            .collect()
+    };
+    let st = solve_ordered(&truss, &net.static_loads(&truss), &opts).ok()?;
+    let stable = st.stable;
+    let mut unit_net = net.clone();
+    if let Some(t) = unit_net.truck.as_mut() {
+        t.weight = 1.0;
+        t.share = 1.0;
+    }
+    let unit = if stable {
+        xs.iter()
+            .map(|&x| {
+                let loads = unit_net.truck_loads(x);
+                if loads.is_empty() {
+                    return vec![0.0; truss.members.len()];
+                }
+                match solve_ordered(&truss, &loads, &opts) {
+                    Ok(s) if s.stable => forces(&s),
+                    _ => vec![0.0; truss.members.len()],
+                }
+            })
+            .collect()
+    } else {
+        vec![vec![0.0; truss.members.len()]; xs.len()]
+    };
+    Some(UnitSweep {
+        xs,
+        from,
+        to,
+        base: forces(&st),
+        unit,
+        stable,
+    })
+}
+
+/// Member `member`'s influence line from a [`UnitSweep`] for the netlist's truck weight.
+pub fn line_from_sweep(net: &Netlist, sw: &UnitSweep, member: usize) -> Option<InfluenceLine> {
+    let t = net.truck.as_ref()?;
+    let w = t.weight * t.share;
+    let base = *sw.base.get(member)?;
+    let points: Vec<[f64; 2]> = sw
+        .xs
+        .iter()
+        .zip(&sw.unit)
+        .map(|(&x, u)| {
+            let v = if sw.stable {
+                (base + w * u.get(member).copied().unwrap_or(0.0)) / 1000.0
+            } else {
+                0.0
+            };
+            [x, v]
+        })
+        .collect();
+    finish_line(net, member, points, sw.from, sw.to)
+}
+
+/// The influence line of member `member`: solved in full at every position for a small truss
+/// ([`influence_line_exact`], the mockup's way), by superposition for a big one
+/// ([`unit_sweep`]). `None` without a moving load or for a bad member index.
+pub fn influence_line(net: &Netlist, member: usize) -> Option<InfluenceLine> {
+    if net.nodes.len() <= EXACT_SWEEP_NODES {
+        influence_line_exact(net, member)
+    } else {
+        line_from_sweep(net, &unit_sweep(net)?, member)
+    }
+}
+
+/// The influence line with a full solve at every truck position (what the mockup does).
+pub fn influence_line_exact(net: &Netlist, member: usize) -> Option<InfluenceLine> {
+    net.members.get(member)?;
+    let truss = net.to_truss();
+    truss.validate().ok()?;
+    let (from, to, xs) = positions(net, truss.nodes.len())?;
+    let base: Vec<NodalLoad> = net.static_loads(&truss);
+    let opts = net.solve_options();
     let mut loads = base.clone();
-    for i in 0..=n {
-        let x = from + i as f64 * step;
-        loads.truncate(base.len());
-        loads.extend(net.truck_loads(x));
-        let v = match truss.solve(&loads, &opts) {
-            Ok(s) if s.stable => s
-                .members
-                .get(member)
-                .and_then(|r| r.as_ref())
-                .map(|r| r.force / 1000.0)
-                .unwrap_or(0.0),
-            _ => 0.0,
-        };
-        points.push([x, v]);
-        if v.abs() > peak.abs() {
-            peak = v;
-            peak_at = x;
+    let points = xs
+        .iter()
+        .map(|&x| {
+            loads.truncate(base.len());
+            loads.extend(net.truck_loads(x));
+            let v = match solve_ordered(&truss, &loads, &opts) {
+                Ok(s) if s.stable => s
+                    .members
+                    .get(member)
+                    .and_then(|r| r.as_ref())
+                    .map(|r| r.force / 1000.0)
+                    .unwrap_or(0.0),
+                _ => 0.0,
+            };
+            [x, v]
+        })
+        .collect();
+    finish_line(net, member, points, from, to)
+}
+
+/// Peak, limits and scale for sampled `points`.
+fn finish_line(
+    net: &Netlist,
+    member: usize,
+    points: Vec<[f64; 2]>,
+    from: f64,
+    to: f64,
+) -> Option<InfluenceLine> {
+    let mem = net.members.get(member)?;
+    let (mut peak, mut peak_at) = (0.0f64, 0.0f64);
+    for p in &points {
+        if p[1].abs() > peak.abs() {
+            peak = p[1];
+            peak_at = p[0];
         }
     }
-    let m = &truss.members[member];
+    let truss = net.to_truss();
+    let m = truss.members.get(member)?;
     let mat = truss.materials.get(m.material)?;
     let r = check(
         0.0,
