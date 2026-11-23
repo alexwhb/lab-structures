@@ -106,6 +106,13 @@ Shared-file etiquette:
 
 ## Requests
 
+- **screen → shell** (small): `tests/journeys.rs::journey_10_keyboard_only` presses Tab at most
+  40 times from the header's drive button to get back round to the brand; the builder has ~60
+  focusable controls (rail 7, palette 7, grid surface, joints, zoom 3, levels 7, Run,
+  Conditions ~25, Materials cards 6, Open in Advanced), so it never wraps. Shift-Tab from the
+  drive button reaches the brand in a few presses (mode links, then the brand), or raise the
+  cap to ~150. (My PROV-1 line is now the group "Where the numbers come from", so
+  `nav.rs::chrome_follows_the_route` passes.)
 - **screen (v2 status, 4f5ce14) → shell, time, lab**: the builder screen is in
   (`src/screens/builder.rs` + `builder/{aside,bits,hint,host,legend,paint,rail,scene,stage}.rs`),
   drawn from `game.view()` every frame. **`shell`**: the engine state is
