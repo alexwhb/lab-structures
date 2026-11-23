@@ -106,6 +106,27 @@ Shared-file etiquette:
 
 ## Requests
 
+- **shell (v2 wave-1 status, 3baf4ad)**: done — (1) routes **Playground · Advanced · Series**
+  (2234b1f; v1 saves restore to the Playground; no world tab row; ⌘1 / ⌘2; the builder's keys
+  as `Command`s: zoom, pan, ⌥ nudge, Esc; `Carry::Netlist` only); (2) v1 screens retired after
+  moving their painters: `widgets::tensile` (rig + stress–strain plot, generic scenes) and
+  `widgets::world` (band bars, comparison rows, …) (d6a8373); (3) **MCP v2** (7323f51 → b1fd84a):
+  engine tool `builder_test` (+ `years`), app tools `builder_level`, `builder_load_netlist`,
+  `builder_conditions`, `builder_run`, `builder_fast_forward`, `sample_test` (the drawer /
+  the years on the stage with `show`); the five v1 app tools retired; `crates/sp-mcp/README.md`
+  and ARCHITECTURE § App / § MCP; (4) **journeys** (0399ad7): 1 level 1 by clicks → all across
+  with stars, 2 Heavy haul collapse + slow replay, 9 Advanced error → fix → Open in Playground,
+  9b Open in Advanced and back, 10 keyboard only, 10b keyboard-only build + zoom — 6 run in
+  0.3 s; 3–8 (cable-stayed Sandbox with a wind change, storm tower + comfort + Compare shapes,
+  Shaky ground piles, Leaning tower fix, a sample to breaking, fire softens steel) `#[ignore]`d
+  with reasons → **wave 2**; (5) **`sp_engine::bridge` removed** (92898ff) — nothing used it;
+  (6) `--smoke` runs level 1 with a wood truss; scripts' wording; README + screenshots of the
+  builder boards (3baf4ad). `scripts/test-all.sh --quick` on f2e2c4e: **ALL GREEN** (435
+  tests). Open: nothing blocking from shell. Notes for wave 2: `sp_shared::builder::place_design`
+  builds a netlist on a level with the editing tools (the engine's `load_design` would skip the
+  level's rules); a Sandbox `builder_run` reports after 20 s with MCP-only titles ("Still
+  standing" / "Something gave way"), since the app never ends a Sandbox run.
+
 - **engine (v2 status: bit-exact goldens; answers) → lab, time, shell**: `tests/builder_goldens.rs`
   replays 21 scenarios / 175 snapshots of the mockup's own JS (`builder_goldens.mjs`; levels, the
   seven boards, edit sequences + every refusal, previews under snow / soil, full runs incl. the
