@@ -90,8 +90,19 @@ fn side_by_side_with_mockup() {
     }
 }
 
+/// The builder boards the README shows (`docs/screenshots/builder-<board>.png`): the mockup's
+/// presets (SPEC MB-10), the running ones 16 s into their run like the `-16s` references.
+pub const README_BOARDS: [&str; 5] = [
+    "BridgeStorm",
+    "BridgeCable",
+    "BridgeCollapse",
+    "TowerBuild",
+    "TowerStorm",
+];
+
 /// `scripts/screenshots.sh` (`SP_SCREENSHOTS=1`): every screen at its board size into
-/// `docs/screenshots/<route id>.png` (the README's).
+/// `docs/screenshots/<route id>.png`, and the builder boards (`README_BOARDS`) into
+/// `docs/screenshots/builder-<board>.png` (the README's).
 #[test]
 fn readme_screenshots() {
     if std::env::var_os("SP_SCREENSHOTS").is_none() {
@@ -101,6 +112,33 @@ fn readme_screenshots() {
         let (w, h) = route.board_size();
         let (_, img) = app_render(route, w, h);
         let path = repo().join(format!("docs/screenshots/{}.png", route.id()));
+        save(&img, &path);
+        println!("screenshot: {}", path.display());
+    }
+    if !wanted(Route::Playground) {
+        return;
+    }
+    use sp_engine::builder::{Game, Preset};
+    for board in README_BOARDS {
+        let preset = Preset::board(board).expect("a board");
+        let (w, h) = Route::Playground.board_size();
+        let mut app = harness_at(Route::Playground, w, h);
+        {
+            let game = &mut app.state_mut().screens_mut().builder.game;
+            *game = Game::with_preset(&preset);
+            if preset.run {
+                game.start_run(false);
+                for _ in 0..16 * 30 {
+                    game.tick();
+                }
+            }
+        }
+        app.run_steps(2);
+        let img = render(&mut app);
+        let path = repo().join(format!(
+            "docs/screenshots/builder-{}.png",
+            board.to_ascii_lowercase()
+        ));
         save(&img, &path);
         println!("screenshot: {}", path.display());
     }
