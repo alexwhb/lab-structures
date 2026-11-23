@@ -27,9 +27,21 @@ if [[ $# -gt 0 ]]; then
   only="$(IFS=,; echo "$*")"
 fi
 
+# a build failure or a panic must not pass silently (leaving last run's PNGs behind)
+log="$(mktemp "${TMPDIR:-/tmp}/compare-mockup.XXXXXX")"
+trap 'rm -f "$log"' EXIT
+set +e
 SP_COMPARE=1 SP_COMPARE_ONLY="$only" \
   cargo test -p structures-playground --test compare -- --nocapture side_by_side_with_mockup \
-  | grep -E '^compare:' || true
+  >"$log" 2>&1
+status=$?
+set -e
+grep -E '^compare:' "$log" || true
+if [[ $status -ne 0 ]]; then
+  tail -n 40 "$log" >&2
+  echo "compare-mockup: the render failed (exit $status); target/compare/ is not up to date" >&2
+  exit "$status"
+fi
 
 echo "side-by-side renders in $repo/target/compare/"
 ls -1 "$repo"/target/compare/*.png 2>/dev/null | sed 's|^|  |'

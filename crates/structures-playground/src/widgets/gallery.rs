@@ -34,6 +34,8 @@ pub struct Gallery {
     pub select_open: bool,
     /// The wrapping pick.
     pub pick: usize,
+    /// A disabled slider's value (it must not move).
+    pub truck: f32,
     /// Whether the drive button reads Pause.
     pub running: bool,
 }
@@ -53,6 +55,7 @@ impl Default for Gallery {
             select: 0,
             select_open: false,
             pick: 0,
+            truck: 40.0,
             running: false,
         }
     }
@@ -224,6 +227,11 @@ impl Gallery {
         {
             self.damper = !self.damper;
         }
+        ui.add_enabled_ui(false, |ui| {
+            Slider::new("Truck", &mut self.truck, 0.0..=120.0)
+                .step(1.0)
+                .show(ui);
+        });
         let text = format!("{:.0} floors", self.floors);
         Slider::new("Floors", &mut self.floors, 5.0..=120.0)
             .step(1.0)

@@ -97,14 +97,22 @@ impl<'a> Plot<'a> {
         }
     }
 
-    /// The y of value `v` in the content box `rect`.
+    /// The y of value `v` in the content box `rect`, over [`Plot::value_range`] (a non-finite
+    /// value sits on the zero line).
     pub fn y_of(&self, rect: Rect, v: f32) -> f32 {
-        let max = self.max();
-        rect.bottom() - self.bottom - v / max * (rect.height() - self.bottom - self.top)
+        let (lo, hi) = self.value_range();
+        let v = if v.is_finite() { v } else { 0.0 };
+        rect.bottom()
+            - self.bottom
+            - (v - lo) / (hi - lo) * (rect.height() - self.bottom - self.top)
     }
 
-    fn max(&self) -> f32 {
-        self.values.iter().copied().fold(10.0, f32::max)
+    /// The values' span: `[min(0, min), max(10, max)]` over the finite values, so a series that
+    /// dips below zero (a compression force) stays inside the box.
+    pub fn value_range(&self) -> (f32, f32) {
+        let finite = self.values.iter().copied().filter(|v| v.is_finite());
+        let (lo, hi) = finite.fold((0.0f32, 10.0f32), |(lo, hi), v| (lo.min(v), hi.max(v)));
+        (lo, hi)
     }
 
     /// Draws the plot full width at the cursor. AccessKit: an `Image` named by the label.
@@ -145,11 +153,12 @@ impl<'a> Plot<'a> {
                 .enumerate()
                 .map(|(i, v)| pos2(self.x_of(rect, i), self.y_of(rect, *v)))
                 .collect();
-            // fill under the line: one quad strip down to the bottom
+            // fill between the line and the zero line: one quad strip
+            let zero = self.y_of(rect, 0.0);
             let mut mesh = Mesh::default();
             for (k, p) in pts.iter().enumerate() {
                 mesh.colored_vertex(*p, t::PLOT_FILL);
-                mesh.colored_vertex(pos2(p.x, rect.bottom()), t::PLOT_FILL);
+                mesh.colored_vertex(pos2(p.x, zero), t::PLOT_FILL);
                 if k > 0 {
                     let i = (2 * k) as u32;
                     mesh.add_triangle(i - 2, i - 1, i);
@@ -201,5 +210,21 @@ mod tests {
         let r = Rect::from_min_size(pos2(0.0, 0.0), vec2(800.0, 120.0));
         assert!((p.x_of(r, 120) - 240.0).abs() < 1e-3);
         assert!((p.y_of(r, 5.0) - (114.0 - 5.0 / 10.0 * 104.0)).abs() < 1e-3);
+    }
+
+    /// A series that dips below zero (the gallery's compression force) stays inside the box,
+    /// non-finite values sit on the zero line, and an all-positive series maps as before.
+    #[test]
+    fn negative_values_stay_inside() {
+        let v = [0.0, -400.0, -1004.0, -400.0, 0.0, f32::NAN];
+        let p = Plot::series(&v);
+        let r = Rect::from_min_size(pos2(0.0, 0.0), vec2(800.0, 120.0));
+        assert_eq!(p.value_range(), (-1004.0, 10.0));
+        for x in v {
+            let y = p.y_of(r, x);
+            assert!(y >= r.top() - 1e-3 && y <= r.bottom() + 1e-3, "{x} → {y}");
+        }
+        assert!(p.y_of(r, -1004.0) > p.y_of(r, 0.0), "down is negative");
+        assert_eq!(p.y_of(r, f32::NAN), p.y_of(r, 0.0));
     }
 }

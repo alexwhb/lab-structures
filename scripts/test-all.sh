@@ -14,8 +14,13 @@
 #               Bridge solve < 1 ms, one Test tick < 8 ms, the influence line < 5 ms, …), and
 #               each line it prints as
 #                   PERF <label>: <value> ms (limit <limit> ms)
-#               is also listed as a gate; then start-up → first frame of `--smoke 3` < 2 s.
-#               A gate whose test does not exist yet is SKIP, never FAIL.
+#               is also listed as a gate (anywhere on the line: libtest prints the first
+#               one after `test name ... `). The engine's perf checks that live in other test
+#               targets — test functions whose names contain `perf`, `budget`, `_is_fast` or
+#               `_are_cheap` (bridge_props `performance_budget`, tower_props `calc_is_fast`,
+#               dynamics `sway_steps_are_cheap`) — run in release too and must pass. Then
+#               start-up → first frame of `--smoke 3` < 2 s. A gate whose test does not exist
+#               yet is SKIP, never FAIL.
 #   bundle      macOS only: scripts/bundle-macos.sh --check — builds "dist/Structures
 #               Playground.app" (PLAT-2) and runs scripts/check-bundle.sh (signature, Info.plist,
 #               icon, no machine paths, document types, sandboxed smoke runs)
@@ -37,7 +42,7 @@ mkdir -p "$LOGS"
 SKIP="${SKIP:-}"
 case "${1:-}" in
   --quick) SKIP="$SKIP,perf,bundle" ;;
-  -h|--help) sed -n '2,28p' "$0"; exit 0 ;;
+  -h|--help) sed -n '2,32p' "$0"; exit 0 ;;
   "") ;;
   *) echo "unknown option $1 (try --help)" >&2; exit 2 ;;
 esac
@@ -82,6 +87,12 @@ perf_gate() {
 }
 # perf_skip <gate> <op> <limit> <unit> <why>: the test / example does not exist yet
 perf_skip() { PERF+=("$1|$5|$2 $3 $4|SKIP"); }
+
+# perf_lines <log>: every `PERF <label>: <v> ms (limit <l> ms)` in it as "label|v|l" (not
+# anchored: libtest prints the first one after `test name ... `)
+perf_lines() {
+  sed -n 's/.*PERF \([^:]*\): \([0-9.][0-9.]*\) ms (limit \([0-9.][0-9.]*\) ms).*/\1|\2|\3/p' "$1"
+}
 
 # workspace facts from cargo metadata, e.g. `has_target perf test`
 META="$(cargo metadata --no-deps --format-version 1 2>/dev/null || echo '{"packages":[]}')"
@@ -205,8 +216,24 @@ for p in json.load(sys.stdin)["packages"]:
       while IFS='|' read -r label value limit; do
         [ -z "$label" ] && continue
         perf_gate "$label" "$value" "<" "$limit" "ms"
-      done < <(sed -n 's/^PERF \(.*\): \([0-9.][0-9.]*\) ms (limit \([0-9.][0-9.]*\) ms).*/\1|\2|\3/p' "$LOGS/perf-$tgt.log")
+      done < <(perf_lines "$LOGS/perf-$tgt.log")
     done
+  fi
+
+  # the engine's perf checks inside its other test targets (property suites, dynamics)
+  if [[ " $(has_target sp_engine lib) " == *" sp-engine "* ]]; then
+    if run_step "perf: sp-engine checks named perf / budget / _is_fast / _are_cheap (release)" perf-engine \
+        cargo test --release -p sp-engine --tests -- --nocapture --test-threads=1 \
+          perf budget _is_fast _are_cheap; then
+      n=$(grep -E "^test .*(perf|budget|_is_fast|_are_cheap).* \.\.\. ok" "$LOGS/perf-engine.log" | wc -l | tr -d ' ')
+      PERF+=("sp-engine in-suite perf checks ($n)|passed|asserts|PASS")
+    else
+      PERF+=("sp-engine in-suite perf checks|failed|asserts|FAIL")
+    fi
+    while IFS='|' read -r label value limit; do
+      [ -z "$label" ] && continue
+      perf_gate "$label" "$value" "<" "$limit" "ms"
+    done < <(perf_lines "$LOGS/perf-engine.log")
   fi
 
   if run_step "perf: build the release app" build-release \

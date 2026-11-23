@@ -306,12 +306,13 @@ impl StructuresApp {
     }
 
     /// Presses the current screen's drive button, as a click or Space would (the smoke run,
-    /// the MCP bridge). Returns whether there was an enabled one.
-    pub fn press_drive(&mut self) -> bool {
+    /// the MCP bridge), with the app's real egui context so the screen's pacing (`animate`,
+    /// `wake_in`), clipboard and toasts reach the window; asks for a frame. Returns whether
+    /// there was an enabled drive button.
+    pub fn press_drive(&mut self, egui_ctx: &egui::Context) -> bool {
         let route = self.route;
-        let egui_ctx = eframe::egui::Context::default();
-        let body_h = 0.0;
-        let (mut ctx, screens) = self.ctx(&egui_ctx, body_h);
+        let body_h = (egui_ctx.content_rect().height() - self.chrome_height).max(0.0);
+        let (mut ctx, screens) = self.ctx(egui_ctx, body_h);
         let screen = screens.get(route);
         if !screen.drive_button().is_some_and(|d| d.enabled) {
             return false;
@@ -322,6 +323,7 @@ impl StructuresApp {
         if let Some(req) = nav {
             self.apply(req);
         }
+        egui_ctx.request_repaint();
         true
     }
 

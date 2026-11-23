@@ -228,7 +228,16 @@ SB
       [ -n "$line" ] && break
       sleep 0.1
     done
-    if [ -n "$line" ]; then ok "open → SMOKE line"; echo "        $line"; else bad "no SMOKE line within 20 s of \`open\` (log: $(tail -3 "$log" | tr '\n' ' '))"; fi
+    if [ -z "$line" ]; then
+      bad "no SMOKE line within 20 s of \`open\` (log: $(tail -3 "$log" | tr '\n' ' '))"
+    elif [[ "$line" != *"status=ok"* ]]; then
+      bad "open → the smoke run failed: $line"
+    elif grep -qF "$repo" "$log"; then
+      bad "open → output mentions the checkout: $(grep -F "$repo" "$log" | head -2 | tr '\n' ' ')"
+    else
+      ok "open → SMOKE line, status=ok, no checkout paths"
+      echo "        $line"
+    fi
     for _ in $(seq 1 50); do pgrep -f "$copy/Contents/MacOS/structures-playground" >/dev/null || break; sleep 0.1; done
     if pgrep -f "$copy/Contents/MacOS/structures-playground" >/dev/null; then bad "the app was still running 5 s after its smoke run"; else ok "exited by itself"; fi
 

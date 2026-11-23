@@ -166,6 +166,106 @@ fn wrapping_seg_and_select() {
     assert_eq!(h.state().select, 3);
 }
 
+/// A click near the bottom edge of a menu item picks that item, not the next (the targets
+/// tile the column instead of overlapping).
+#[test]
+fn menu_item_targets_do_not_overlap() {
+    let mut h = gallery();
+    click(&mut h, "Material", Role::ComboBox);
+    let steel = h.get_by_role_and_label(Role::MenuItem, "Steel").rect();
+    let alu = h.get_by_role_and_label(Role::MenuItem, "Aluminum").rect();
+    assert!(steel.bottom() <= alu.top() + 0.01, "{steel:?} {alu:?}");
+    // 2 px above the drawn boundary between them: that's Steel
+    let drawn_boundary = (steel.bottom() + alu.top()) / 2.0;
+    let pos = egui::pos2(steel.center().x, drawn_boundary - 2.0);
+    h.event(egui::Event::PointerMoved(pos));
+    for pressed in [true, false] {
+        h.event(egui::Event::PointerButton {
+            pos,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::NONE,
+        });
+    }
+    h.run_steps(3);
+    assert!(!h.state().select_open, "an item was picked");
+    assert_eq!(h.state().select, 0, "picked Steel, not Aluminum");
+}
+
+/// A disabled slider can't be moved by AccessKit (VoiceOver, MCP) and doesn't offer to be;
+/// an enabled one can.
+#[test]
+fn a_disabled_slider_refuses_accesskit_actions() {
+    use eframe::egui::accesskit::Action;
+    let mut h = gallery();
+    let truck = h.get_by_role_and_label(Role::Slider, "Truck");
+    assert!(truck.accesskit_node().is_disabled());
+    assert!(
+        !truck
+            .accesskit_node()
+            .data()
+            .supports_action(Action::Increment)
+    );
+    assert!(
+        !truck
+            .accesskit_node()
+            .data()
+            .supports_action(Action::SetValue)
+    );
+    truck.increment_accesskit();
+    h.run_steps(2);
+    h.get_by_role_and_label(Role::Slider, "Truck")
+        .set_value_accesskit(90.0);
+    h.run_steps(2);
+    h.get_by_role_and_label(Role::Slider, "Truck").click();
+    h.run_steps(2);
+    assert_eq!(h.state().truck, 40.0, "it didn't move");
+    // the enabled one does
+    let floors = h.get_by_role_and_label(Role::Slider, "Floors");
+    assert!(
+        floors
+            .accesskit_node()
+            .data()
+            .supports_action(Action::Increment)
+    );
+    floors.increment_accesskit();
+    h.run_steps(2);
+    assert_eq!(h.state().floors, 61.0);
+    h.get_by_role_and_label(Role::Slider, "Floors")
+        .set_value_accesskit(90.0);
+    h.run_steps(2);
+    assert_eq!(h.state().floors, 90.0);
+}
+
+/// A slider with an inverted or non-finite range (or a NaN value) never panics.
+#[test]
+fn a_slider_with_a_bad_range_never_panics() {
+    use structures_playground::widgets::Slider;
+    for (lo, hi, v) in [
+        (10.0, 0.0, 5.0),
+        (f32::NAN, 1.0, 0.5),
+        (0.0, f32::INFINITY, 2.0),
+        (0.0, 1.0, f32::NAN),
+    ] {
+        let mut h = Harness::builder()
+            .with_size(egui::vec2(400.0, 120.0))
+            .with_context_setup(sp_theme::install)
+            .build_ui_state(
+                move |ui, v: &mut f32| {
+                    Slider::new("Bad", v, lo..=hi).show(ui);
+                },
+                v,
+            );
+        h.run_steps(2);
+        h.get_by_role_and_label(Role::Slider, "Bad").click();
+        h.run_steps(2);
+        h.get_by_role_and_label(Role::Slider, "Bad")
+            .increment_accesskit();
+        h.run_steps(2);
+        assert!(h.state().is_finite(), "{lo}..={hi} from {v}: {}", h.state());
+    }
+}
+
 /// Badges and readouts are labelled text (PROV-1, readouts).
 #[test]
 fn badges_and_readouts_are_labels() {

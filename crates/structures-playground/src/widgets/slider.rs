@@ -67,10 +67,19 @@ impl<'a> Slider<'a> {
         }
         let w = self.width.unwrap_or_else(|| ui.available_width());
         let (id, rect) = ui.allocate_space(vec2(w, 28.0));
-        // 28 px drawn, 44 px target
-        let mut resp = ui.interact(rect.expand2(vec2(0.0, 8.0)), id, Sense::click_and_drag());
+        let enabled = ui.is_enabled();
+        // 28 px drawn, 44 px target; a disabled slider only shows its value
+        let sense = if enabled {
+            Sense::click_and_drag()
+        } else {
+            Sense::hover()
+        };
+        let mut resp = ui.interact(rect.expand2(vec2(0.0, 8.0)), id, sense);
         super::reveal_on_focus(&resp);
-        let (lo, hi) = (*self.range.start(), *self.range.end());
+        let (lo, hi) = safe_range(*self.range.start(), *self.range.end());
+        if !self.value.is_finite() {
+            *self.value = lo;
+        }
         let thumb_r = 8.0;
         let x0 = rect.left() + thumb_r;
         let x1 = rect.right() - thumb_r;
@@ -84,7 +93,8 @@ impl<'a> Slider<'a> {
             }
         };
         let before = *self.value;
-        if let Some(p) = resp.interact_pointer_pos()
+        if enabled
+            && let Some(p) = resp.interact_pointer_pos()
             && (resp.dragged() || resp.clicked() || resp.is_pointer_button_down_on())
             && x1 > x0
         {
@@ -92,7 +102,7 @@ impl<'a> Slider<'a> {
             *self.value = snap(lo + f * (hi - lo));
         }
         let key_step = if step > 0.0 { step } else { (hi - lo) / 100.0 };
-        if resp.has_focus() {
+        if enabled && resp.has_focus() {
             // a slider has no use for Space: it still presses the drive button (NAV-5)
             super::space_passes_through(ui, id);
             ui.memory_mut(|m| {
@@ -123,24 +133,29 @@ impl<'a> Slider<'a> {
                 *self.value = snap(*self.value + key_step);
             }
         }
-        if let Some(v) = ui.input(|i| {
-            i.events.iter().find_map(|e| match e {
-                eframe::egui::Event::AccessKitActionRequest(req)
-                    if req.target_node == id.accesskit_id() =>
-                {
-                    match (&req.action, &req.data) {
-                        (
-                            accesskit::Action::SetValue,
-                            Some(accesskit::ActionData::NumericValue(v)),
-                        ) => Some(*v as f32),
-                        (accesskit::Action::Increment, _) => Some(f32::INFINITY),
-                        (accesskit::Action::Decrement, _) => Some(f32::NEG_INFINITY),
-                        _ => None,
+        let action = if enabled {
+            ui.input(|i| {
+                i.events.iter().find_map(|e| match e {
+                    eframe::egui::Event::AccessKitActionRequest(req)
+                        if req.target_node == id.accesskit_id() =>
+                    {
+                        match (&req.action, &req.data) {
+                            (
+                                accesskit::Action::SetValue,
+                                Some(accesskit::ActionData::NumericValue(v)),
+                            ) => Some(*v as f32),
+                            (accesskit::Action::Increment, _) => Some(f32::INFINITY),
+                            (accesskit::Action::Decrement, _) => Some(f32::NEG_INFINITY),
+                            _ => None,
+                        }
                     }
-                }
-                _ => None,
+                    _ => None,
+                })
             })
-        }) {
+        } else {
+            None
+        };
+        if let Some(v) = action {
             *self.value = if v == f32::INFINITY {
                 snap(*self.value + key_step)
             } else if v == f32::NEG_INFINITY {
@@ -154,16 +169,19 @@ impl<'a> Slider<'a> {
         }
         let value = *self.value;
         let label = self.label.to_string();
-        resp.widget_info(|| WidgetInfo::slider(true, value as f64, &label));
+        resp.widget_info(|| WidgetInfo::slider(enabled, value as f64, &label));
         ui.ctx().accesskit_node_builder(id, |b| {
             b.set_min_numeric_value(lo as f64);
             b.set_max_numeric_value(hi as f64);
             if step > 0.0 {
                 b.set_numeric_value_step(step as f64);
             }
-            b.add_action(accesskit::Action::Increment);
-            b.add_action(accesskit::Action::Decrement);
-            b.add_action(accesskit::Action::SetValue);
+            // only an enabled slider offers to be moved (VoiceOver, the MCP describe)
+            if enabled {
+                b.add_action(accesskit::Action::Increment);
+                b.add_action(accesskit::Action::Decrement);
+                b.add_action(accesskit::Action::SetValue);
+            }
         });
         paint_range(
             ui,
@@ -175,7 +193,22 @@ impl<'a> Slider<'a> {
             },
         );
         focus_ring_if(ui, &resp, rect, CornerRadius::same(t::radius::BUTTON));
-        resp.on_hover_cursor(eframe::egui::CursorIcon::PointingHand)
+        if enabled {
+            resp.on_hover_cursor(eframe::egui::CursorIcon::PointingHand)
+        } else {
+            resp
+        }
+    }
+}
+
+/// `lo..=hi` made safe for `clamp`: swapped when inverted, `0..=1` when a bound isn't finite.
+pub fn safe_range(lo: f32, hi: f32) -> (f32, f32) {
+    if !(lo.is_finite() && hi.is_finite()) {
+        (0.0, 1.0)
+    } else if lo > hi {
+        (hi, lo)
+    } else {
+        (lo, hi)
     }
 }
 
@@ -196,4 +229,17 @@ pub fn paint_range(ui: &Ui, rect: Rect, frac: f32) {
     let filled = Rect::from_min_max(track.min, pos2(tx.max(track.left() + 8.0), track.bottom()));
     painter.rect_filled(filled, CornerRadius::same(4), t::ACCENT);
     painter.circle_filled(pos2(tx, cy), thumb_r, t::ACCENT);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ranges_are_made_safe() {
+        assert_eq!(safe_range(0.0, 10.0), (0.0, 10.0));
+        assert_eq!(safe_range(10.0, 0.0), (0.0, 10.0), "inverted");
+        assert_eq!(safe_range(f32::NAN, 10.0), (0.0, 1.0));
+        assert_eq!(safe_range(0.0, f32::INFINITY), (0.0, 1.0));
+    }
 }

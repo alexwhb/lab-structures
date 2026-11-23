@@ -146,26 +146,38 @@ impl<'a> Menu<'a> {
                     StrokeKind::Inside,
                 );
                 let font = lab_theme::font::medium(13.0);
+                // the items' rects (and the separators above them), then targets that tile
+                // the column: each grows towards 44 px but never into its neighbour's (a click
+                // at the bottom of one item never picks the next)
                 let mut y = frame.top() + 1.0 + PAD;
-                let mut responses: Vec<Response> = Vec::with_capacity(self.items.len());
-                for (i, it) in self.items.iter().enumerate() {
+                let mut rects = Vec::with_capacity(self.items.len());
+                let mut separators = Vec::new();
+                for it in self.items {
                     if it.separator {
-                        let sy = (y + 4.0).round() + 0.5;
-                        painter.hline(
-                            (frame.left() + 1.0 + PAD)..=(frame.right() - 1.0 - PAD),
-                            sy,
-                            Stroke::new(1.0, t::BORDER),
-                        );
+                        separators.push((y + 4.0).round() + 0.5);
                         y += 9.0;
                     }
-                    let r = Rect::from_min_size(
+                    rects.push(Rect::from_min_size(
                         pos2(frame.left() + 1.0 + PAD, y),
                         vec2(frame.width() - 2.0 - 2.0 * PAD, ITEM_H),
+                    ));
+                    y += ITEM_H;
+                }
+                for sy in separators {
+                    painter.hline(
+                        (frame.left() + 1.0 + PAD)..=(frame.right() - 1.0 - PAD),
+                        sy,
+                        Stroke::new(1.0, t::BORDER),
                     );
+                }
+                let targets = hit::tile(&rects);
+                let mut responses: Vec<Response> = Vec::with_capacity(self.items.len());
+                for (i, it) in self.items.iter().enumerate() {
+                    let r = rects[i];
                     let resp = interact(
                         &menu,
                         menu.scope_id().with(i),
-                        hit::target(r),
+                        targets[i],
                         true,
                         Role::MenuItem,
                         it.label,
@@ -183,7 +195,6 @@ impl<'a> Menu<'a> {
                         out.clicked = Some(i);
                     }
                     responses.push(resp);
-                    y += ITEM_H;
                 }
                 if self.focus_first
                     && let Some(first) = responses.first()
