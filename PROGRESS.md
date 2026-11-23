@@ -814,6 +814,50 @@ Shared-file etiquette:
 
 ## Review findings
 
+- **time → screen** [med] `crates/structures-playground/src/screens/builder/stage.rs:235`
+  (`onWheel` loop) — every `MouseWheel` event is one ×1.15 step, whatever its `unit` / `source`,
+  so on a Mac trackpad (many small `Point` events per gesture, then `Momentum` events after the
+  fingers lift) a gentle two-finger scroll zooms the stage several-fold. — Repro (kittest): hover
+  the stage at 100 %, send ten `MouseWheel { unit: Point, delta: (0, 4), source: Trackpad }`
+  (a 40-point flick) → zoom 1.0 → 4.05 (1.15¹⁰); the momentum tail keeps going until 500 %. A
+  mouse wheel (`Line`, one event per notch) is fine. — Keep one ×1.15 step per `Line` notch;
+  for `Point` deltas (trackpad / momentum) zoom continuously, e.g. `1.15^(−Δy / 50)` per event
+  (≈ one step per 50 points of scroll), and test that ten 4-point trackpad events stay under
+  ×1.15 while one `Line` notch is exactly ×1.15.
+- **time → screen** [low] `crates/structures-playground/src/screens/builder/stage.rs:193`
+  + `:198` (keyboard building) — Enter / Space on the focused grid always builds at the stage
+  centre (560, 300), but the hover dot only moves there while the pointer is *off* the stage;
+  with the mouse resting on the stage the dot stays under the mouse and Enter builds elsewhere,
+  unannounced. — Repro: level 1, Build; move the pointer over the stage at (16, 0) m (dot there),
+  focus "Building grid" (Tab), press Enter → a joint at (28, 4), not at the dot (16, 0). — While
+  the grid has keyboard focus, show the dot at the centre whenever a key arrives (or build at
+  `v.hover` when it is set and the last input was the pointer), so the dot is always where
+  Enter builds.
+- **time → screen** [low] `crates/structures-playground/src/screens/builder.rs:237`
+  (`refresh_view`) + `:538` (`describe`) — the cached view the header reads (`clock()`,
+  `drive_button()`'s `hdr_run`) and the MCP summary are `game.view()` without the fold-ins'
+  `adjust_view`; per frame the app calls `tick` (→ `refresh_view`) then the header, then `ui`, so
+  nothing a fold-in adjusts reaches the header or `describe_screen`. — On the Leaning tower the
+  header clock is empty for the whole 30-year run (`clock` is "" in `Run` without a sim) and
+  `describe` reports the engine's fallback banner title ("It still leans") while the banner says
+  the fold-in's ("Still leaning", "It toppled"). — Apply the fold-ins' `adjust_view` in
+  `refresh_view` (and use the cached view in `describe`); I'll then set `view.clock` ("year
+  12.0") from `time`.
+- **time → screen / lead** [low] `crates/structures-playground/src/screens/builder/stage.rs:454`
+  (`overlays`: result banner) + `:407` (`hud`) — the result banner (top centre, up to 92 % wide)
+  covers the HUD chips (top right, up to 60 % wide) exactly when the run's numbers matter: after
+  TowerStorm the banner hides "Height 64 m / 64" and most of "Sway 2.90 m", leaving "Comfort"
+  and "Wind". The mockup's CSS (`top: 14px` vs `top: 12px; right: 12px`) does the same, so this
+  is a mockup bug candidate (MB) for the lead. — While the banner shows, start the HUD below it
+  (`y = banner.bottom() + 8`), or narrow the banner's line so it wraps left of the chips.
+- **time → screen** (no defect found, checked with probes): pointer → world and snapping at 35 /
+  100 / 260 / 400 % on 390 / 800 / 1440 px (clicked grid points land exactly; the wheel keeps
+  the world point under the pointer); clicks pass through the HUD chips to the grid; a joint drag
+  released over the aside ends cleanly; switching levels and Clear mid-run stop the run; a
+  mouse click doesn't give the grid keyboard focus; a focused grid with the pointer away asks
+  for no frames; 390 / 800 layouts follow the references; level rows and chips report their
+  pressed / selected state.
+
 - **screen → shell** [high] `crates/sp-shared/src/builder.rs:408` (`place_design`, the crates
   loop `game.add_crate(id, *t)`) — a level's own crates are added on top of the design's: the
   Leaning tower's 8 t bells on J27 become 16 t when a structure from that level's Share is built
