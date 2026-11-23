@@ -218,7 +218,7 @@ owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample
   60 % as wide; same pieces and crates), `applies(&Design, &Setup)` (open ground with Floors),
   `compare(&Design, &Setup, &Conditions) -> Comparison { bars: [Bar { variant, mg, standing,
   width }; 4], best, verdict }` — four 18 s `run_headless` tests on scoped threads,
-  deterministic, the as-built bar equals the live run (`Bar::{value, tone(limit), label}`).
+  deterministic, the as-built bar equals the live run (`Bar::{value, tone(limit), label}`); in the Sandbox it runs the level's 18 s test. The UI compares in the run's own `sim.setup` / `sim.cond`.
 - **`builder::longterm`** (TIME-1 / TIME-2) — `fast_forward_design(&Design, &Setup,
   &Conditions) -> LongTerm` = `structure(…) -> (statics::Structure, Kind)` (joint masses,
   foundation grips and piece stiffness / capacities from `Sim::new(…, live = false)`; `Kind::
@@ -235,7 +235,7 @@ owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample
   preview: its 520 steps don't converge the rocking mode on soft soil.) `LongTerm { kind,
   frames: Vec<YearFrame { year, pos, force, broken, slack, settle, reaction, tilt, max_settle,
   differential }>, giving: Vec<Giving::{Broke, Ripped}>, ending: Ending::{Stood, Toppled(yr),
-  CameDown(yr), Nothing}, joint_ids, piece_ids, found }` with `at(year) -> Snapshot`
+  CameDown(yr), Nothing}, joint_ids, piece_ids, found /* foundations a piece uses: a level's unused anchors don't count */, on_rock }` with `at(year) -> Snapshot`
   (interpolated), `chips(year)` ("Year " "12.0", "Tilt " "1.8°" / "Differential " "12 mm",
   "Settled " "214 mm"), `lean_line(year)` (foundations' and top floor's centroids),
   `result_line()` ("After 30 years: tilt 0.3°, settled 41 mm."), `sentence()`, `end_year()`,
