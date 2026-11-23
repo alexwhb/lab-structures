@@ -258,6 +258,19 @@ fn the_leaning_tower_leans_unless_fixed() {
     let lt = screen(&h).fold.time.long_term().unwrap().clone();
     assert!(has_label(&h, &lt.result_line()));
     assert_eq!(game(&h).best_for(LevelKey::Pisa), 0);
+    // "Replay in slow motion" plays the years again, slowly
+    screen_mut(&mut h).game.replay();
+    h.run_steps(3);
+    assert_eq!(game(&h).phase(), Phase::Run);
+    assert!(game(&h).slow());
+    assert!(screen(&h).fold.time.playing());
+    assert!(screen(&h).fold.time.pisa_result().is_none());
+    skip_years(&mut h);
+    assert_eq!(game(&h).phase(), Phase::Result);
+    assert_eq!(
+        screen(&h).fold.time.pisa_result().unwrap().title,
+        "Still leaning"
+    );
 
     // the named fix: piles under all three footings
     screen_mut(&mut h).game.stop_run();
