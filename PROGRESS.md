@@ -5,8 +5,22 @@
 | Wave | Work | Status |
 |---|---|---|
 | 0 | repo, spec, architecture, mockup + references, `sp-theme`, `sp-engine` truss core | done (lead) |
-| 1 | app shell + Series + packaging · Bridge · Advanced · Tower + Ground · Materials | in progress (shell: done — skeleton, header + world tabs + provenance badges, keyboard, Share, hand-offs, persistence, Series, smoke, pacing, packaging + scripts, icon; see shell status under Requests) |
-| 2 | MCP · e2e journeys · visual pass · README · independent review + fixes | not started |
+| 1 | app shell + Series + packaging · Bridge · Advanced · Tower + Ground · Materials | done |
+| 2 | MCP · e2e journeys · README · independent reviews (advanced → bridge, worlds → advanced, materials → worlds + shell) + fixes · lead's live MCP e2e against the bundle | done (2026-11-22): `scripts/test-all.sh` ALL GREEN; see "Lead verification" below |
+
+## Lead verification (2026-11-22)
+
+- `scripts/test-all.sh` on the final tree: fmt, shellcheck, clippy `-D warnings`, the whole
+  workspace test suite (engine goldens against the mockups' own JS, property / fuzz tests, GUI
+  tests and the cross-screen journeys in egui_kittest, MCP end-to-end with the real binary),
+  release perf gates, the real-window smoke run and the sandboxed bundle check.
+- Live end to end against `dist/Structures Playground.app` opened with `open -n`, driven by its
+  own `structures-mcp` over stdio while the window was covered by another app: a netlist loaded
+  into the Sandbox holds under Test ("It held!"), a weakened copy collapses ("Collapse: M5
+  buckled at 33%"), Advanced / Tower (100 floors, all four goals lit) / Ground (piles to rock,
+  FS 14.86) / Materials (concrete "Crushed at 0.35%") / Series all answer, and every screenshot
+  comes back (offscreen render, 2880 × 1800).
+- Mockup bugs and lead decisions: SPEC "Mockup bugs not to copy" MB-1…MB-8.
 
 ## Decisions (lead, 2026-11-22)
 

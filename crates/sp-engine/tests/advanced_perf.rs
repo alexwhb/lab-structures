@@ -82,6 +82,14 @@ fn a_bridge_sized_netlist_stays_interactive() {
     let il = influence::influence_line(&net, 0).unwrap();
     assert!(il.points.len() <= influence::BIG_SWEEP + 1);
     let all = t.elapsed();
-    println!("PERF advanced 450-node: parse+solve {solve:?}, + influence line {all:?}");
+    // `PERF <label>: <ms> ms (limit <ms> ms)` — the line format scripts/test-all.sh gates on.
+    println!(
+        "PERF advanced 450-node parse + solve + influence line: {:.3} ms (limit 1000 ms)",
+        all.as_secs_f64() * 1e3
+    );
+    println!(
+        "  (parse + solve alone: {:.3} ms)",
+        solve.as_secs_f64() * 1e3
+    );
     assert!(all < Duration::from_secs(1), "{all:?}");
 }
