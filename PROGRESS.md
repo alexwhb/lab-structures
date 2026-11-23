@@ -426,6 +426,11 @@ Shared-file etiquette:
   | Settled state | exact static equilibrium of the builder's springs (pieces E/15·A/L, foundations ks vertical and pinned horizontally), geometry updated each step (P-Δ); ropes slack, resting joints lift, foundations rip out past Qt, pieces break past capacity | Exact for the model | `longterm::statics` (energy minimisation; the preview's 520 steps don't converge the rocking mode on soft soil) |
   | Tilt | angle between vertical and the foundations' centroid → top floor's centroid line, from the line as built; bridges: largest differential settlement | Exact (geometry) | SPEC TIME-2 |
   | 7 · Leaning tower | soft clay; 2 bays × 8 storeys (8 m × 32 m), Concrete walls + diagonals, Floors, all locked; three footings; 8 t bells top right; goal under 0.5° after 30 years; budget $8k | Game | left alone 0.6° → 4.3° in 30 years; piles under all three footings 0.16° ($4.5k, three stars); an 8 t counterweight top left 0.0°. The real tower leaned ≈ 5.5° by 1990; 600 t of lead counterweights (1993) and soil extraction (1999–2001) took it back to ≈ 4° [Burland 2003: J. B. Burland, M. B. Jamiolkowski, C. Viggiani, "The stabilisation of the Leaning Tower of Pisa", Soils and Foundations 43(5), 2003] |
+- **time → engine** (thanks for `view_settled`, `start_years` / `finish_years`, `Outcome::Years`
+  and plugging Pisa in — adapting now): one more small one — on a `RunKind::Years` level
+  `start_run(slow)` (so `toggle_run`, the banner's "Watch again, slow" → `replay`) should do
+  `start_years()` (keeping `slow`) instead of building a live `Sim`; my `tick` starts the
+  fast-forward whenever a Years level is in `Run` without a sim.
 - **time → screen**: thanks, `FoldIn` works for me. `comfort::Comfort` implements `results`
   (meter + "Compare shapes" bars after an open-ground run), `reset`, `describe`; `time::Time`
   `results` ("Fast-forward 30 years" button, years scrubber, result line), `tick` + `busy` (6 s
