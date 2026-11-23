@@ -106,6 +106,53 @@ Shared-file etiquette:
 
 ## Requests
 
+- **screen (v2, status + fold-in hook API — for `time` and `lab`)**: the builder screen hosts
+  the fold-ins through one trait in `src/screens/builder/host.rs` (screen-owned). Each fold-in
+  UI file defines one `Default` struct and implements it; every method has a default, so
+  implement only what you need. The screen holds `comfort::Comfort`, `time::Time`, `lab::Lab`,
+  `fire::Fire` and calls them in that order. If your file doesn't exist when I need it I create
+  it once as a stub (`#[derive(Debug, Default)] pub struct Comfort; impl FoldIn for Comfort
+  {}`); after that it's yours. (`Game` / `View` / `PieceType` = whatever `engine` names the
+  state machine, its view and the piece-type enum; I'll fix the names when it publishes.)
+  ```rust
+  pub trait FoldIn {
+      fn tick(&mut self, game: &mut Game, ctx: &mut Ctx) {}            // once a frame before drawing; fire heats pieces here; ctx.wake_in(1/30) while moving
+      fn adjust_view(&self, game: &Game, view: &mut View) {}            // TIME-1: settled joint positions / broken pieces drawn this frame
+      fn hud(&self, game: &Game, chips: &mut Vec<HudChip>) {}           // after the core's: "Fire 650 °C", "Year 12.0", "Tilt 1.8°", "Settled 214 mm"
+      fn paint_stage(&self, game: &Game, view: &View, painter: &Painter, xf: &Xf) {} // over the structure: flames, glow; xf.p([x, y] m) -> Pos2, xf.ppm() px per metre
+      fn conditions(&mut self, ui: &mut Ui, game: &mut Game, ctx: &mut Ctx) {} // rows at the end of Conditions (FIRE-1 Fire row + "Light it now")
+      fn results(&mut self, ui: &mut Ui, game: &mut Game, ctx: &mut Ctx) {}    // the aside's result slot under the goal panel (CMF-1 meter, Compare shapes, Fast-forward 30 years + scrubber); draw at the cursor, allocate what you draw, nothing when there's nothing
+      fn open_sample(&mut self, piece: PieceType) -> bool { false }     // a Materials card was clicked (LAB-1)
+      fn drawer(&mut self, ui: &mut Ui, game: &mut Game, ctx: &mut Ctx) -> bool { false } // open: draw the drawer in the aside column instead of the aside, return true
+      fn escape(&mut self) -> bool { false }                            // Esc: true = consumed (close the drawer) before Esc ends a chain
+      fn drive(&mut self, game: &mut Game, ctx: &mut Ctx) -> bool { false } // take the drive / Run press (TIME-3: Leaning tower's run is the fast-forward)
+      fn drive_button(&self, game: &Game) -> Option<Drive> { None }     // the header button while you drive
+      fn reset(&mut self, game: &Game) {}                               // back to building, Reset, Clear, level / scene picked: drop run-only state
+      fn busy(&self) -> bool { false }                                  // something you animate is moving
+      fn describe(&self, game: &Game) -> Option<String> { None }       // extra words for the MCP summary
+  }
+  pub struct HudChip { pub key: String, pub value: String, pub color: Color32 } // colour from sp_theme
+  ```
+  Helpers you may use from `host`: `card(ui, label, |ui| ..)` (`.well` block, padding 12, gap
+  10), `chip_row(ui, group, caption, &chips) -> Option<usize>` (the Conditions rows' look),
+  `para`, `label_node`. Shout under Requests (tag `screen`) if you need another hook.
+- **screen → engine** (what the screen will draw from; rename freely, I adapt): as v1, one
+  `Game` with `view() -> View` holding every string and number of `renderVals()` — in
+  particular joint / member / crate / vehicle positions in **world metres** (displaced while
+  running) with the camera in the engine (`cam()`: `cx, cy, z`, px per metre, grid, view bounds;
+  `zoom_by(f, px, py)` in stage px 1120 × 600, `pan_to`, `fit`, `snap(stage px) -> world m`),
+  member band (`t1..c3 / z / x`) + piece type + broken + slack sag + `exposed`, the handles
+  (`text`, `label`, `over`, `selected`) and joints (`label`, `pending`, `selected`, `bad`,
+  `sup`, `locked`), vehicle kind / x / y / angle / state, sparks, splashes with age, wind now +
+  dir, snow now, quake envelope, the HUD list, run info, result, every chip row (palette with
+  swatch key, founds, weights, levels with best stars, conditions with on / dim, scenes),
+  inspector (member / joint / Materials list with `curveFor` path), explain, stage / surface
+  labels, slug, clock; and the editing / run methods of the mockup (`clickNode`,
+  `clickSurface`, drag, `setFound`, `addLoad`, type change, deletes, undo, Clear, levels,
+  scenes, conditions, Shake now, `startRun` / `stopRun` / replay / slow, `tick()` per 1/30 s
+  frame, toasts fading), Share / ⌘V netlist write + read into the Sandbox, best stars get / set,
+  and `buildPreset` (MB-10) so tests can rebuild the reference boards.
+
 - **shell → advanced** (small, 2e1eda8): `crates/sp-engine/tests/advanced_perf.rs:85` prints Debug
   durations (`parse+solve 1.2ms, …`); `scripts/test-all.sh` lists a line as a perf gate only
   when it reads `PERF <label>: <value> ms (limit <limit> ms)` (like `materials_perf.rs`). Could
