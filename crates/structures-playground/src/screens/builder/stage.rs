@@ -187,9 +187,16 @@ fn stage(
         let (x, y) = to_stage(p);
         actions.push(Action::ClickSurface(x, y));
     }
-    // keyboard activation of the surface (Enter / Space): click its centre
+    // keyboard building: with the grid focused, Enter / Space clicks the stage centre (pan
+    // with the arrow keys to move it) and the hover dot shows where
     if surface.clicked() && surface.interact_pointer_pos().is_none() {
         actions.push(Action::ClickSurface(560.0, 300.0));
+    }
+    let pointer_on_stage = ui
+        .input(|i| i.pointer.latest_pos())
+        .is_some_and(|p| rect.contains(p));
+    if surface.has_focus() && !pointer_on_stage {
+        actions.push(Action::PointerMove(560.0, 300.0));
     }
     if surface.hovered() {
         let icon = match v.cursor {
@@ -250,7 +257,7 @@ fn stage(
             if dragging && let Some(p) = pointer {
                 let (x, y) = to_stage(p);
                 actions.push(Action::PointerMove(x, y));
-            } else if v.hover.is_some() {
+            } else if v.hover.is_some() && !surface.has_focus() {
                 actions.push(Action::ClearHover);
             }
         }

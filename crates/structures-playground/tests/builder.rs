@@ -227,6 +227,13 @@ fn level_one_from_scratch_gets_all_across_with_stars() {
         row.accesskit_node().description().as_deref(),
         Some(format!("Best: {} of 3 stars", r.stars).as_str())
     );
+    // the banner's replay runs it again in slow motion
+    click_button(&mut h, "Replay in slow motion");
+    assert_eq!(game(&h).phase(), Phase::Run);
+    assert!(game(&h).slow());
+    assert!(has_label(&h, "Normal speed"));
+    finish_run(&mut h);
+    assert!(has_label(&h, "All across!"));
     // back to building (the banner's button; the goal panel's says the same)
     click_in(&mut h, "Goal", "Back to building");
     assert_eq!(game(&h).phase(), Phase::Build);
@@ -533,6 +540,59 @@ fn keyboard_editing() {
     click_header(&mut h, "Reset");
     assert_eq!(game(&h).design().nodes.len(), 2);
     assert_eq!(game(&h).tool(), Tool::Select);
+}
+
+/// BLD-6: Select drags a joint along the grid (one undo step); the level's joints don't move;
+/// keyboard building places a joint at the stage centre (BLD-14, NAV-5).
+#[test]
+fn dragging_and_keyboard_building() {
+    let mut h = harness(Route::Playground);
+    click_joint(&mut h, "J1");
+    click_grid(&mut h, 16.0, 4.0);
+    click_button(&mut h, "Finish line");
+    click_button(&mut h, "Select");
+    let a = at(&h, 16.0, 4.0);
+    h.hover_at(a);
+    press_at(&mut h, a, true);
+    h.step();
+    let b = at(&h, 14.0, 6.0);
+    for k in 1..=4 {
+        h.hover_at(a + (b - a) * (k as f32 / 4.0));
+        h.step();
+    }
+    press_at(&mut h, b, false);
+    settle(&mut h);
+    let n = game(&h).design().node("J3").expect("J3").clone();
+    assert_eq!((n.x, n.y), (14.0, 6.0));
+    press_cmd(&mut h, egui::Key::Z);
+    settle(&mut h);
+    let n = game(&h).design().node("J3").expect("J3").clone();
+    assert_eq!((n.x, n.y), (16.0, 4.0), "one undo step for the drag");
+    // the level's joint stays put
+    let a = at(&h, 8.0, 0.0);
+    h.hover_at(a);
+    press_at(&mut h, a, true);
+    h.step();
+    h.hover_at(a + egui::vec2(0.0, -40.0));
+    h.step();
+    press_at(&mut h, a + egui::vec2(0.0, -40.0), false);
+    settle(&mut h);
+    let j1 = game(&h).design().node("J1").expect("J1").clone();
+    assert_eq!((j1.x, j1.y), (8.0, 0.0));
+    // keyboard: focus the grid, Enter places a joint at the stage centre (Build tool)
+    click_button(&mut h, "Build");
+    h.get_by_role_and_label(Role::Button, "Building grid")
+        .focus();
+    h.step();
+    settle(&mut h);
+    assert!(
+        game(&h).hover().is_some(),
+        "the hover dot shows where Enter builds"
+    );
+    let before = game(&h).design().nodes.len();
+    press(&mut h, egui::Key::Enter);
+    settle(&mut h);
+    assert_eq!(game(&h).design().nodes.len(), before + 1);
 }
 
 /// PLAT-3 / BLD-15: nothing repaints at rest; a run asks for ~30 frames a second and

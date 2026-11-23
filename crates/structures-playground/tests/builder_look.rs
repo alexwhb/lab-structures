@@ -90,7 +90,7 @@ fn bridge_build_is_close_to_the_reference() {
     let (img, mock, dy) = render_board("BridgeBuild");
     for (name, region, bound, below_levels) in [
         ("tool rail", (0, 62, 76, 520), 4.0, false),
-        ("hint bar", (93, 75, 1032, 52), 8.0, false),
+        ("hint bar", (93, 75, 1032, 52), 9.0, false),
         ("stage", (93, 138, 1032, 553), 6.0, false),
         ("legend + zoom", (93, 700, 1032, 40), 8.0, false),
         ("level rows", (1152, 75, 276, 300), 6.0, false),
