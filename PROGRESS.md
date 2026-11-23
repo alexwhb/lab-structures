@@ -107,6 +107,21 @@ Shared-file etiquette:
   `bridge::netlist::read(text)` + `game.open_in_sandbox(design, mat)`; `describe()` =
   `game.summary()`. `SP_BRIDGE_SHOTS=1 cargo test --test bridge state_gallery` writes review
   screenshots of every state.
+- **bridge (status, wave 2 done)**: MB-5 (68a55e9: the starter truss is cross-braced, holds,
+  also with 20 t at a middle joint; goldens apply the same two members after the mockup's
+  `starter()`, noted); `bridge::fmt` replaced by `sp_engine::jsnum` and deleted (247c55e);
+  advanced's four review findings fixed (247c55e, replies under Review findings); **DONE-4
+  journeys** in `crates/structures-playground/tests/journeys.rs` (1f370cf), all 7 green in
+  < 1 s, driven and read through AccessKit only (the header through its `Banner` node), with
+  expected numbers from the engine run independently: level 1 by clicks → held ★ → best stars
+  on the row; thin timber → "Collapse: M6 buckled at 7%" → replay → back; Open in Advanced →
+  all 13 members' kN and use % equal the Bridge inspector's, Share → ⌘V round trip; netlist
+  error on its line with the last result dimmed → fix → Open in Playground; Tower 100 floors
+  braced tapered + damper → all four goals (MB-6) → Ground note → Pisa scenario, piles to rock,
+  30 years → three goals → back to the Tower with 6 floors; Materials all five broken (the
+  status text comes from a headless `Bench`, so MB-8's "Crushed at" for concrete is followed);
+  keyboard only (⌘1–⌘5, Space, Tab to the drive button + Enter, Tab to the brand → Series →
+  Esc). The journeys found no bugs in other screens.
 - **bridge → lead** (FYI, small change made with tests green): `truss.rs` gained `pub fn
   hypot(dx, dy)` — V8's `Math.hypot` algorithm (scaled, Kahan-summed), used for every member
   length. A correctly rounded hypot differs from the mockups' in the last bit (e.g. 10 × 6 m
@@ -270,6 +285,10 @@ Shared-file etiquette:
   (BR-6 "best stars remembered per level", NAV-7). — Persist `game.best()` (e.g. a `best: [u8; 4]`
   in `Persisted` with `#[serde(default)]`, written by the app, restored with `set_best`); needs
   **shell** for `Persisted`.
+  - **Fixed** (247c55e): the Bridge keeps best stars in egui's persisted memory
+    (`screens::bridge::BEST_STARS_KEY`, saved by eframe with the window), restored on `enter`
+    (never lowering this run's) — no shell change needed. Test `tests/bridge.rs::
+    best_stars_survive_a_restart`; level rows also expose them ("Best: 1 of 3 stars").
 - **advanced → bridge** [severity: low] `crates/sp-engine/src/bridge/game.rs:981` (`test_tick`) — on
   the λ = 1 tick, if the break loop uses all `MAX_BREAKS_PER_TICK` (30) breaks, `finish_hold`
   runs without re-solving: the structure is declared "It held!" (with stars) although it may
@@ -277,6 +296,11 @@ Shared-file etiquette:
   same hole.) — A large Sandbox truss whose cascade starts on the last ramp step (λ 54/55 → 1)
   and breaks > 30 members in that tick ends Held. — Before `finish_hold`, re-analyse at λ = 1
   with `broken`: if `!ok` collapse, if worst > 1 keep `Testing` at λ = 1 for another tick.
+  - **Fixed** (247c55e): at λ = 1 the Test holds only once the cascade settled within the
+    tick; if the 30 breaks run out, the next tick goes on at λ = 1. Regression test
+    `a_cascade_on_the_last_tick_is_not_called_held` (60 thin members, first break inside the
+    last ramp step: the old code said "It held!" on a mechanism, now it collapses); the random
+    edit test checks Held ⇒ stable and nothing over its limit.
 - **advanced → bridge** [severity: low] `crates/sp-engine/src/bridge/game.rs:529, 550, 557, 709` —
   undo steps that change nothing (the class your decision (d) fixed for Select clicks):
   `click_grid` with Joint / Member pushes before `add_node` refuses an underground spot;
@@ -285,12 +309,17 @@ Shared-file etiquette:
   -4)` on level 1: toast "That spot is underground.", `undo_depth` 0 → 1, design unchanged; same
   for 200 t and "Those two are already joined."). — ⌘Z then appears to do nothing. — Push only
   after the change is accepted (compare the design before / after, or check first).
+  - **Fixed** (247c55e): every edit snapshots and records a step only if the design changed
+    (refused spot / pair / 200 t / same size, and a drag that didn't move, leave none); the
+    golden harness drops the mockup's no-op steps the same way, so undo depths stay compared.
+    Test `refused_edits_leave_no_undo_step`.
 - **advanced → bridge** [severity: low] `crates/structures-playground/src/screens/bridge.rs:509` —
   `ctx.animate()` every frame while testing / collapsing repaints at display rate (60–240 fps)
   although the simulation ticks at 30 /s; PLAT-3 asks for ~30 fps while something moves. —
   A 5 s Test + collapse on a 120 Hz display draws ~600 frames instead of ~150. — `ctx.wake_in(
   self.ticker.due_in(1.0 / TICK_SECONDS as f32))` (the Ctx docs' pattern), or cap the flow
   animation at 30 fps.
+  - **Fixed** (247c55e): `ctx.wake_in(ticker.due_in(30.3))` while testing / collapsing.
 - **advanced → lead** [none] `crates/sp-engine/src/{truss,linalg}.rs` — reviewed (incl. bridge's
   `hypot`, matches V8 for NaN / ∞ / 0); no defects found. Note only: a supported joint with no
   members (e.g. a lone roller placed in the Sandbox) keeps a free x unknown and makes the whole
