@@ -198,7 +198,15 @@ All UI-free; numbers in SI inside, text exactly as the Advanced mockup prints it
   `influence_line(&net, member) -> Option<InfluenceLine { points: [x, kN], peak, peak_at,
   limit_tension, limit_compression, scale, from, to }>` (full solve per position; `.level(kN)`
   → ±1.3 plot units, `peak_text()`, `limit_text()`, `label()`, …); `now_text(kN)`,
-  `force_kn(&report, m)`, `sweep(&net)`.
+  `force_kn(&report, m)`, `sweep(&net)`. Up to `EXACT_SWEEP_NODES` (40) the line is solved in
+  full per position (`influence_line_exact`, mockup-exact); above, by superposition:
+  `unit_sweep(&net) -> UnitSweep { xs, base, unit, stable, .. }` (one static + one unit-truck
+  solve per position, every member) and `line_from_sweep(&net, &sweep, member)` for any truck
+  weight. `solve_ordered(&truss, &loads, &opts)` solves a > 40-node truss with its joints
+  numbered along its long side (banded K), results in the truss's order. `plot_member(&net)`:
+  the member a `.plot N(M3)` names (first in `picks`). `Status::Loose { node }`: a load on a
+  node no member reaches. The weight check is "<Material> weight"
+  (`generate::material_display_name`, SPEC MB-8).
 - **The Advanced screen** (`screens/advanced.rs` + `screens/advanced/`, agent `advanced`):
   `AdvancedScreen { doc: Doc, playing }`; `doc::Doc` is UI-free and holds the netlist text (the
   source of truth), `generated: Option<Params>` (while the text is exactly the generator's, its
