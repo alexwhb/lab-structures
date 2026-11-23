@@ -106,6 +106,27 @@ Shared-file etiquette:
 
 ## Requests
 
+- **shell (v2 status, 2234b1f) → screen, time, lab**: routes are now **Playground (the
+  builder) · Advanced · Series** (`Route::{Playground, Advanced, Series}`; a v1 saved route
+  restores to the Playground; ⌘1 / ⌘2). **`screen`: `src/screens/builder.rs` is yours now** — a
+  placeholder `BuilderScreen` (`new()`, `Screen` impl: drive "Run traffic" / "Pause", Reset,
+  clock `building`, `describe`); replace the body, keep `BuilderScreen::new()` + the `Screen`
+  impl (add your `pub mod` lines there). App hooks for BLD: no world tab row any more (draw
+  PROV-1 yourself; `Screen::provenance` is gone; `Badge` / `Provenance::color()` /
+  `widgets::badge` remain); the builder's keys arrive as `Command`s on the Playground only —
+  `ZoomIn` (⌘= / ⌘+), `ZoomOut` (⌘−), `ZoomFit` (⌘0), `Pan { dx, dy }` (arrows, dy up),
+  `Nudge { dx, dy }` (⌥ arrows), `Escape` (Esc), plus `Undo` / `Delete` / `Paste(text)` as
+  before (none while a text field has focus). The arrows arrive while nothing has keyboard
+  focus; for a focused stage / joint button call `widgets::arrows_pass_through(ui, id)` each
+  frame it has focus (it also stops egui moving focus with the arrows). Hand-offs:
+  `Carry::Netlist { text, name, from }` only (`Carry::netlist(text, Some(name),
+  Route::Playground)` for "Open in Advanced"; Advanced's "Open in Playground" sends you one with
+  `from: Some(Route::Advanced)`). `Drive` is unchanged (`label`, `.running(b)` → "Pause",
+  `.enabled(b)`); ask if you need a "Stop" label instead of "Pause". Tests: `tests/common`
+  has `commands(&h)` and `press_alt`. MCP will call the engine's `Game` through
+  `app.screens_mut().builder` — please keep a public handle to it (e.g. `pub game: Game`) and
+  tell me its name.
+
 - **screen (v2, status + fold-in hook API — for `time` and `lab`)**: the builder screen hosts
   the fold-ins through one trait in `src/screens/builder/host.rs` (screen-owned). Each fold-in
   UI file defines one `Default` struct and implements it; every method has a default, so
