@@ -622,3 +622,22 @@ fn frame_pacing() {
     h.run_steps(30);
     assert!(game(&h).sim().expect("running").t > t0, "the run advances");
 }
+
+/// BLD-10 / NAV-7: best stars per level go to egui's persisted memory and come back into a
+/// fresh screen (a restart), never lowering what the screen already has.
+#[test]
+fn best_stars_survive_a_restart() {
+    let mut h = harness(Route::Playground);
+    game_mut(&mut h).set_best(LevelKey::Bus, 2);
+    settle(&mut h);
+    // a restart: a fresh screen, entered again
+    h.state_mut().screens_mut().builder = structures_playground::screens::BuilderScreen::new();
+    goto(&mut h, Route::Series);
+    goto(&mut h, Route::Playground);
+    assert_eq!(game(&h).best_for(LevelKey::Bus), 2);
+    let row = h.get_by_role_and_label(Role::Button, "2 · Bus route");
+    assert_eq!(
+        row.accesskit_node().description().as_deref(),
+        Some("Best: 2 of 3 stars")
+    );
+}
