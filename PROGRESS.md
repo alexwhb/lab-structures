@@ -153,6 +153,40 @@ Shared-file etiquette:
   frame, toasts fading), Share / ⌘V netlist write + read into the Sandbox, best stars get / set,
   and `buildPreset` (MB-10) so tests can rebuild the reference boards.
 
+- **lab → engine** (FIRE-1 hook — please confirm or rename; I adapt): `builder::fire` (mine)
+  defines `FireLevel::{Off, Small, Big, Inferno}` (400 / 700 / 900 °C; `ALL`, `name()`,
+  `temp_c()`, `Default = Off`) and `FireState` (`Default`; per-piece temperatures, when it was
+  lit, reach). What I need in the core:
+  1. `Conditions { .., fire: fire::FireLevel }` (the condition chips set it like `quake`; it
+     never makes a run a practice run) and the sim holds `fire: fire::FireState`.
+  2. Per piece in the sim, three factors, default 1.0, that I set:
+     `strength_t` (× `A·fT`), `strength_c` (× `A·fC`, the crushing term) and `stiffness`
+     (× the XPBD `kk` and × the Euler load). So capT = A·fT·strength_t and capC =
+     min(A·fC·strength_c, π²·E·k·A²/L²·stiffness). Concrete needs the two strengths (EN 1992-1-2
+     tension and compression differ). Please expose that formula as one pub fn (e.g.
+     `capacity(type, len, strength_t, strength_c, stiffness) -> { tension, compression, crush,
+     euler, buckles }`, all N) and use it in `makeSim`: the sample drawer (LAB-1) calls the same
+     fn so "a piece this size breaks at N t" equals the engine's capacity by construction.
+  3. Call `fire::update(&mut sim, h)` once per **live** substep (before the break checks),
+     always — it returns at once when the fire is off and nothing is hot (pieces must cool after
+     Fire → Off). Not in the build-mode preview. It reads `sim.t`, the scene (river / open
+     ground), joint positions + supports, each piece's ends, type and `broken`, `cond.fire`.
+  4. Breaks: when a piece breaks, `mode = fire::break_mode(piece_type, strength_t.min(strength_c))
+     .unwrap_or(usual)` → `Some(Softened)` (steel, cable) / `Some(BurnedThrough)` (wood, rope)
+     when the fire took a real part of its strength; and a piece whose strength factor is 0 (I set
+     0 when wood / rope has burned through) breaks whatever its force. Break-mode names "softened"
+     / "burned through"; tips from `fire::tip(mode) -> Option<&'static str>` in the result explain.
+  5. `Game::sim_mut() -> Option<&mut Sim>` (or a `fire_light_now()` passthrough) for "Light it
+     now", and read access to the sim for the glow / HUD.
+  Piece types: I read your type table (area, E, k, fT, fC, ductile, tension-only, max length,
+  name) for `builder::sample` — tell me its name when it lands; until then `sample` has its own
+  copy of `types()` that a test will check equal to yours.
+- **lab → screen**: thanks — `lab::Lab` will implement `open_sample` / `drawer` / `escape` /
+  `tick` / `busy` / `describe`; `fire::Fire` `conditions` / `hud` / `paint_stage` / `reset` /
+  `describe`. For the glow I need each member's two end positions (world m), piece type and
+  broken flag from the `View` (as you listed) and the piece index into the sim. Create the two
+  files as stubs when you need them; after that I fill them.
+
 - **shell → advanced** (small, 2e1eda8): `crates/sp-engine/tests/advanced_perf.rs:85` prints Debug
   durations (`parse+solve 1.2ms, …`); `scripts/test-all.sh` lists a line as a perf gate only
   when it reads `PERF <label>: <value> ms (limit <limit> ms)` (like `materials_perf.rs`). Could
