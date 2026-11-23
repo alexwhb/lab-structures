@@ -189,3 +189,18 @@ fn weird_structures_do_not_panic() {
     assert_eq!(c.verdict, "None of the four shapes rides out this storm.");
     let _ = comfort::tapered(&d);
 }
+
+/// engine's review: "Compare shapes" in the Sandbox runs the same 18 s test (the Sandbox itself
+/// never ends a run).
+#[test]
+fn compare_shapes_works_in_the_sandbox() {
+    let g = Game::with_preset(&Preset::board("TowerStorm").unwrap());
+    let d = g.design().clone();
+    let mut sb = Game::new();
+    sb.open_in_sandbox(sp_engine::builder::Scene::Flat, d.clone());
+    sb.set_wind(35.0);
+    let c = comfort::compare(&d, &sb.setup(), sb.cond());
+    assert!(sb.setup().sandbox);
+    assert!(c.bars.iter().any(|b| b.standing), "{:?}", c.bars);
+    assert!(c.best.is_some());
+}

@@ -343,6 +343,17 @@ fn run_variant(design: &Design, setup: &Setup, cond: &Conditions, v: Variant) ->
         design
     };
     let (drag, shedding) = v.factors();
+    // the Sandbox never ends a run: compare over the same 18 s test as a level
+    let level_like;
+    let setup = if setup.sandbox {
+        level_like = Setup {
+            sandbox: false,
+            ..setup.clone()
+        };
+        &level_like
+    } else {
+        setup
+    };
     let (res, sim) = run_headless(design, setup, cond, false, test_frames(), |s| {
         s.drag = drag;
         s.shedding = shedding;

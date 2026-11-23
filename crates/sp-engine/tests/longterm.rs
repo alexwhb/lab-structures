@@ -261,3 +261,129 @@ fn weird_structures_do_not_panic() {
         );
     }
 }
+
+/// A braced steel tower on its own footings: `bays` × 8 m wide from `x0`, `levels` × 4 m, a
+/// Floor per level, and optionally the open-ground level's two anchors (92 / 108 m) left unused.
+fn sandbox_tower(x0: f64, bays: usize, levels: usize, crate_t: f64, anchors: bool) -> Design {
+    let mut d = Design::default();
+    let mut add_joint = |d: &mut Design, x: f64, y: f64, sup: Option<Foundation>| {
+        d.n_n += 1;
+        let id = format!("J{}", d.n_n);
+        d.nodes.push(Joint {
+            id: id.clone(),
+            x,
+            y,
+            sup,
+            locked: false,
+        });
+        id
+    };
+    if anchors {
+        add_joint(&mut d, 92.0, 0.0, Some(Foundation::Footing));
+        add_joint(&mut d, 108.0, 0.0, Some(Foundation::Footing));
+    }
+    let piece = |d: &mut Design, kind: PieceType, a: &str, b: &str| {
+        d.n_m += 1;
+        d.members.push(Piece {
+            id: format!("M{}", d.n_m),
+            a: a.into(),
+            b: b.into(),
+            kind,
+            locked: false,
+        });
+    };
+    let xs: Vec<f64> = (0..=bays).map(|i| x0 + 8.0 * i as f64).collect();
+    let mut below: Vec<String> = xs
+        .iter()
+        .map(|&x| add_joint(&mut d, x, 0.0, Some(Foundation::Footing)))
+        .collect();
+    for k in 1..=levels {
+        let cur: Vec<String> = xs
+            .iter()
+            .map(|&x| add_joint(&mut d, x, 4.0 * k as f64, None))
+            .collect();
+        for i in 0..=bays {
+            piece(&mut d, PieceType::Steel, &below[i], &cur[i]);
+        }
+        for i in 0..bays {
+            piece(&mut d, PieceType::Floor, &cur[i], &cur[i + 1]);
+            piece(&mut d, PieceType::Steel, &below[i], &cur[i + 1]);
+        }
+        below = cur;
+    }
+    d.set_load(below.last().unwrap(), crate_t);
+    d
+}
+
+fn sandbox_run(d: &Design, soil: Soil) -> LongTerm {
+    let mut cond = Conditions::for_level(&LevelKey::Sandbox.level());
+    cond.soil = soil;
+    let setup = Setup::new(LevelKey::Sandbox, Scene::Flat, &cond);
+    longterm::fast_forward_design(d, &setup, &cond)
+}
+
+/// engine's review: a level's unused anchors don't count as the tower's foundations.
+#[test]
+fn unused_anchors_do_not_count() {
+    let with = sandbox_run(&sandbox_tower(20.0, 2, 6, 10.0, true), Soil::Soft);
+    let without = sandbox_run(&sandbox_tower(20.0, 2, 6, 10.0, false), Soil::Soft);
+    let (tw, to) = (with.last().unwrap().tilt, without.last().unwrap().tilt);
+    assert!(to.abs() > 0.3, "the eccentric tower leans: {to}");
+    assert!(
+        (tw - to).abs() < 1e-9,
+        "anchors left at 92 / 108 m change nothing: {tw} vs {to}"
+    );
+    assert_eq!(with.found.len(), 3);
+    let (base, _) = with.lean_line(30.0).unwrap();
+    assert!(
+        base[0] > 19.0 && base[0] < 37.0,
+        "the lean line starts under the tower: {base:?}"
+    );
+
+    // Bus route: the back-stay piles aren't used by the truss; the banks settle alike
+    let mut g = Game::with_preset(&Preset::board("BridgeBuild").unwrap());
+    g.pick_level(LevelKey::Bus);
+    g.set_soil(Soil::Soft);
+    g.build_preset(PresetBuild::Truss {
+        chord: PieceType::Steel,
+    });
+    let lt = longterm::fast_forward_design(g.design(), &g.setup(), g.cond());
+    let f = lt.last().unwrap();
+    assert!(
+        f.max_settle > 0.05,
+        "soft clay banks settle: {}",
+        f.max_settle
+    );
+    assert!(f.differential < 0.01, "evenly: {}", f.differential);
+    assert_eq!(
+        lt.sentence(),
+        "Its foundations sank about evenly, so nothing in between is strained."
+    );
+}
+
+/// engine's review: on rock a frame that racks a little isn't "exactly as built"; on a soil
+/// that barely settles the sentence doesn't call it rock.
+#[test]
+fn rock_and_barely_settling_sentences() {
+    let d = sandbox_tower(20.0, 2, 6, 10.0, false);
+    let rock = sandbox_run(&d, Soil::Rock);
+    assert!(rock.on_rock);
+    let t = rock.last().unwrap().tilt.abs();
+    assert!(
+        rock.sentence().starts_with("Rock doesn\u{2019}t settle"),
+        "{}",
+        rock.sentence()
+    );
+    if t >= 0.05 {
+        assert!(
+            rock.sentence().contains("the frame itself"),
+            "{}",
+            rock.sentence()
+        );
+    }
+    let mut light = sandbox_tower(20.0, 1, 1, 0.0, false);
+    light.loads.clear();
+    let dense = sandbox_run(&light, Soil::Dense);
+    assert!(!dense.on_rock);
+    assert!(!dense.sentence().contains("Rock"), "{}", dense.sentence());
+}

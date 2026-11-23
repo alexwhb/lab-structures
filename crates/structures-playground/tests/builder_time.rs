@@ -115,6 +115,20 @@ fn compare_shapes_shows_the_four_bars_and_the_verdict() {
         Some(&want),
         "the screen shows the engine's comparison"
     );
+    // the bars describe the run: changing the conditions afterwards keeps them, and a new
+    // comparison still uses the run's storm (the as-built bar equals the meter)
+    let mg = match game(&h).result().unwrap().outcome {
+        Outcome::Tower { mg, .. } => mg,
+        _ => panic!("open ground"),
+    };
+    screen_mut(&mut h).game.set_wind(50.0);
+    h.run_steps(2);
+    assert_eq!(screen(&h).fold.comfort.comparison(game(&h)), Some(&want));
+    let again = {
+        let s = screen_mut(&mut h);
+        s.fold.comfort.compare(&s.game).clone()
+    };
+    assert_eq!(again.bars[0].mg, mg, "the same storm as the run");
     // back to building drops it
     screen_mut(&mut h).game.stop_run();
     h.run_steps(2);

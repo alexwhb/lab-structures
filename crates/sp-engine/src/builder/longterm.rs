@@ -90,7 +90,10 @@ pub fn structure(design: &Design, setup: &Setup, cond: &Conditions) -> (Structur
             x: n.x,
             y: n.y,
             mass: p.m,
-            found: p.sup.map(|_| Spring {
+            // only foundations that carry a piece count: a level's unused anchors (open ground's
+            // 92 / 108 m footings, Bus route's back-stay piles) would drag the tilt line and
+            // the differential settlement toward empty ground
+            found: p.sup.filter(|_| p.used).map(|_| Spring {
                 qc: p.qc,
                 qt: p.qt,
                 ks: p.ks,
@@ -251,8 +254,10 @@ pub struct LongTerm {
     pub joint_ids: Vec<String>,
     /// Piece ids, in the frames' piece order.
     pub piece_ids: Vec<String>,
-    /// The joints with a foundation (indices).
+    /// The joints with a foundation that carries a piece (indices).
     pub found: Vec<usize>,
+    /// Every one of those stands on rock (nothing consolidates).
+    pub on_rock: bool,
 }
 
 /// One moment between frames, interpolated (what the animation and the scrubber show).
@@ -353,6 +358,11 @@ pub fn fast_forward(s: &Structure, kind: Kind) -> LongTerm {
         found: (0..s.joints.len())
             .filter(|&j| s.joints[j].found.is_some())
             .collect(),
+        on_rock: s
+            .joints
+            .iter()
+            .filter_map(|j| j.found)
+            .all(|f| f.long_term_stiffness().is_infinite()),
     };
     let carrying = s.joints.iter().any(|j| j.found.is_some())
         && s.joints
@@ -693,8 +703,17 @@ impl LongTerm {
             }
             Ending::Stood => {
                 let moved = f.max_settle >= 0.0005;
-                let base = if !moved {
-                    "Rock doesn\u{2019}t settle: it stands exactly as built.".to_string()
+                let base = if !moved && self.on_rock {
+                    if self.is_tower() && f.tilt.abs() >= 0.05 {
+                        "Rock doesn\u{2019}t settle, so it didn\u{2019}t sink at all: the \
+                         little lean is the frame itself giving under its own weight."
+                            .to_string()
+                    } else {
+                        "Rock doesn\u{2019}t settle: it stands exactly as built.".to_string()
+                    }
+                } else if !moved {
+                    "It barely settled: this soil was done squeezing within the first year."
+                        .to_string()
                 } else if self.is_tower() {
                     let t = f.tilt.abs();
                     if t < LEAN_OK_DEG {

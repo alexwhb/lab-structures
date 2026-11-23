@@ -15,7 +15,7 @@ use crate::widgets::{ghost, world::compare_row};
 use eframe::egui::{Color32, CornerRadius, Rect, Sense, Ui, pos2, vec2};
 use lab_theme::font;
 use sp_engine::builder::comfort::{self, Comparison, Meter};
-use sp_engine::builder::{Conditions, Game, Outcome, Phase, Scene};
+use sp_engine::builder::{Conditions, Game, Outcome, Phase, Scene, Setup};
 use sp_engine::tower::Tone;
 use sp_theme::{self as t, time as tt};
 
@@ -72,20 +72,31 @@ pub struct Comfort {
     shapes: Option<(u64, Conditions, Comparison)>,
 }
 
+/// The level and conditions of the run on show ("the same storm"): the simulation's — the
+/// conditions chips may have changed since the run ended — or the current ones without a run.
+fn run_basis(game: &Game) -> (Setup, Conditions) {
+    match game.sim() {
+        Some(s) => (s.setup.clone(), s.cond),
+        None => (game.setup(), *game.cond()),
+    }
+}
+
 impl Comfort {
-    /// The comparison on show (for the current design and conditions).
+    /// The comparison on show (for the current design and the run's conditions).
     pub fn comparison(&self, game: &Game) -> Option<&Comparison> {
+        let (_, cond) = run_basis(game);
         self.shapes
             .as_ref()
-            .filter(|(rev, cond, _)| *rev == game.revision() && cond == game.cond())
+            .filter(|(rev, c, _)| *rev == game.revision() && *c == cond)
             .map(|(_, _, c)| c)
     }
 
-    /// Runs "Compare shapes" for the game's design, level and conditions (what the button
-    /// does; MCP may call it too).
+    /// Runs "Compare shapes" for the game's design in the run's level and conditions (what
+    /// the button does; MCP may call it too).
     pub fn compare(&mut self, game: &Game) -> &Comparison {
-        let c = comfort::compare(game.design(), &game.setup(), game.cond());
-        &self.shapes.insert((game.revision(), *game.cond(), c)).2
+        let (setup, cond) = run_basis(game);
+        let c = comfort::compare(game.design(), &setup, &cond);
+        &self.shapes.insert((game.revision(), cond, c)).2
     }
 }
 
