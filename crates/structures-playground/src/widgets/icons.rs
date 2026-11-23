@@ -99,21 +99,17 @@ pub enum Icon {
     Chart,
     /// Back (Series): a left chevron (14 px).
     Back,
-    /// Bridge tools rail: Select (22 px).
+    /// Builder tools rail: Select (22 px).
     Select,
-    /// Bridge tools rail: Member.
+    /// Builder tools rail: Member.
     Member,
-    /// Bridge tools rail: Joint.
-    Joint,
-    /// Bridge tools rail: Support.
-    Support,
-    /// Bridge tools rail: Weight.
+    /// Builder tools rail: Weight.
     Weight,
-    /// Bridge tools rail: Erase.
+    /// Builder tools rail: Erase.
     Erase,
-    /// Bridge tools rail: Undo.
+    /// Builder tools rail: Undo.
     Undo,
-    /// Bridge tools rail: Clear (a bin).
+    /// Builder tools rail: Clear (a bin).
     Clear,
     /// The 26 px logo mark: the truss glyph in a sand-outlined rounded square with a tension
     /// blue joint.
@@ -122,7 +118,7 @@ pub enum Icon {
 
 impl Icon {
     /// Every icon (for the widget gallery).
-    pub const ALL: [Icon; 15] = [
+    pub const ALL: [Icon; 13] = [
         Icon::Play,
         Icon::Pause,
         Icon::Restart,
@@ -131,8 +127,6 @@ impl Icon {
         Icon::Back,
         Icon::Select,
         Icon::Member,
-        Icon::Joint,
-        Icon::Support,
         Icon::Weight,
         Icon::Erase,
         Icon::Undo,
@@ -151,8 +145,6 @@ impl Icon {
             Icon::Back => "back",
             Icon::Select => "select",
             Icon::Member => "member",
-            Icon::Joint => "joint",
-            Icon::Support => "support",
             Icon::Weight => "weight",
             Icon::Erase => "erase",
             Icon::Undo => "undo",
@@ -167,14 +159,9 @@ impl Icon {
             Icon::Play | Icon::Pause => (12.0, 12.0),
             Icon::Truss | Icon::Chart | Icon::Back => (14.0, 14.0),
             Icon::Restart => (16.0, 16.0),
-            Icon::Select
-            | Icon::Member
-            | Icon::Joint
-            | Icon::Support
-            | Icon::Weight
-            | Icon::Erase
-            | Icon::Undo
-            | Icon::Clear => (22.0, 22.0),
+            Icon::Select | Icon::Member | Icon::Weight | Icon::Erase | Icon::Undo | Icon::Clear => {
+                (22.0, 22.0)
+            }
             Icon::Logo => (26.0, 26.0),
         }
     }
@@ -228,10 +215,6 @@ impl Icon {
                     )]
                 }
             }
-            Icon::Joint => {
-                const { &[tool("M11 7a4 4 0 1 0 0.01 0M11 2v3M11 17v3M2 11h3M17 11h3")] }
-            }
-            Icon::Support => const { &[tool("M11 5L4 16H18Z M3 19H19")] },
             Icon::Weight => const { &[tool("M5 9h12v9H5ZM5 9l2-3h12l-2 3M17 18l2-3V6M11 2v4")] },
             Icon::Erase => const { &[tool("M6 6l10 10M16 6L6 16")] },
             Icon::Undo => const { &[tool("M8 6L4 10l4 4"), tool("M4 10h9a5 5 0 0 1 0 10h-3")] },

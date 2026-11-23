@@ -450,6 +450,7 @@ impl StructuresApp {
                 } else {
                     let other = screens.get(target);
                     other.enter(&mut ctx);
+                    log_delivery(target, &c);
                     events.push(AppEvent::Carried(target, c.clone()));
                     other.receive(c, &mut ctx);
                 }
@@ -459,6 +460,7 @@ impl StructuresApp {
                 screen.enter(&mut ctx);
             }
             for c in here {
+                log_delivery(route, &c);
                 events.push(AppEvent::Carried(route, c.clone()));
                 screen.receive(c, &mut ctx);
             }
@@ -533,6 +535,17 @@ impl StructuresApp {
             egui_ctx.request_repaint();
         }
     }
+}
+
+/// Logs a hand-off as it reaches its screen (`netlist truss delivered to advanced`; the bundle
+/// check looks for it after `open -a … truss.str`).
+fn log_delivery(route: Route, carry: &Carry) {
+    let Carry::Netlist { name, .. } = carry;
+    log::info!(
+        "netlist {} delivered to {}",
+        name.as_deref().unwrap_or("(unnamed)"),
+        route.id()
+    );
 }
 
 /// Offscreen frames drawn per screenshot / description (the last is the one taken): enough

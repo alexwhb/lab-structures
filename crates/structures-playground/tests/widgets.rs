@@ -295,7 +295,7 @@ fn icons_say_what_they_do() {
             || n.ends_with("-star");
         assert!(!banned, "{n}");
     }
-    assert_eq!(Icon::ALL.len(), 15);
+    assert_eq!(Icon::ALL.len(), 13);
 }
 
 /// The painters kept from the retired v1 screens for the builder's fold-ins draw and are

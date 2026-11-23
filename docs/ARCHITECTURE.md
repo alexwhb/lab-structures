@@ -760,7 +760,7 @@ user navigates on before that, it still reaches its target. Delivered carries ar
 | `Plot::series(&values)` | line + fill + guides + playhead | `.height()`, `.playhead(Some(i))`, `.label()` |
 | `Icon::*` | every mockup icon (play, pause, restart, truss, chart, back, tools, logo) | `icon.paint(painter, rect, colour)` |
 | `tensile::{rig, plot}` | the v1 Materials tensile rig and stress–strain plot (`0 0 420 560` / `0 0 560 400` viewBoxes, fitted "meet", on a `.graph` panel) | generic scenes: `RigScene::dogbone(stretch, necking, broken, necked_break, fill)` + `.readout(..)` / `.badge(..)` / `.label(..)`; `PlotScene::axes(x_max, &x_ticks, y_max, &y_ticks)` + `curve` / `done` / `marker` / `ghosts` / `labels`, `PlotScene::point(strain, stress, ..)`; `from_bench` adapters (the builder's sample drawer, LAB-1) |
-| `world::*` | the v1 Tower / Ground column widgets: `band_bar`, `compare_row`, `readout_grid`, `goal_row`, `status_pill`, `title_block`, `picture_tiles`, `stepper`, `value_row`, `challenge`, `stage_box`, `paint_path` | reused by the builder's fold-ins (CMF-1 meter, CMF-2 rows) |
+| `world::{band_bar, compare_row}` | the v1 Tower's comfort band bar and "Same storm, four shapes" row (the other v1 world widgets went with their screens) | the builder's fold-ins (CMF-1 meter, CMF-2 rows) |
 | `Toasts` | app toasts (2.6 s, bottom centre) | `ctx.toast(text)` |
 | `text::{galley, wrapped, text_top, lbl_galley, …}` | text helpers | |
 | `widgets::hit::{target, tile}`, `interact`, `set_bounds` | 44 px hit areas, AccessKit plumbing | |

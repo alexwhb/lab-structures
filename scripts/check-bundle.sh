@@ -252,14 +252,19 @@ SB
       mkdir -p "$scratch/home"
       open -n -F --env HOME="$scratch/home" --env STRUCTURES_MCP_SOCKET=off --env RUST_LOG=info \
         --stdout "$log" --stderr "$log" -a "$copy" "$scratch/truss.str" || bad "open -a failed"
+      # read from the file, then handed to Advanced (the delivery is logged once Advanced has it)
       opened=""
+      delivered=""
       for _ in $(seq 1 150); do
         opened=$(grep -F "opened netlist" "$log" | grep -F "truss.str" | head -1 || true)
-        [ -n "$opened" ] && break
+        delivered=$(grep -F "netlist truss delivered to advanced" "$log" | head -1 || true)
+        [ -n "$opened" ] && [ -n "$delivered" ] && break
         sleep 0.1
       done
-      if [ -n "$opened" ]; then
-        ok "open -a $name.app truss.str opens it in Advanced (${opened##*] })"
+      if [ -n "$opened" ] && [ -n "$delivered" ]; then
+        ok "open -a $name.app truss.str opens it in Advanced (${delivered##*] })"
+      elif [ -n "$opened" ]; then
+        bad "the app read truss.str but never handed it to Advanced (log: $(tail -3 "$log" | tr '\n' ' '))"
       else
         bad "the app did not open the netlist it was handed (log: $(tail -3 "$log" | tr '\n' ' '))"
       fi
