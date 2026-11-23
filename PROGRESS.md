@@ -334,7 +334,7 @@ Shared-file etiquette:
   your uncommitted `game.rs` / `sim.rs`; `longterm::pisa::level()` is ready to plug into
   `level(LevelKey::Pisa)` + `pisa_available() = true`): the prebuilt `Design` has three
   **unlocked** footings `J1`–`J3` (so the player can swap them for piles — the intended fix),
-  locked joints above and locked pieces, plus the bells crate (8.5 t on `J27`). Three small rules
+  locked joints above and locked pieces, plus the bells crate (8 t on `J27`). Three small rules
   please, none of which touch mockup behaviour (no mockup level has locked pieces or prebuilt
   crates):
   1. `Design::cost()` skips **locked pieces** like it skips locked foundations ("a level's own
@@ -344,7 +344,7 @@ Shared-file etiquette:
      arrow-nudge: you already refuse deleting it with `LOCKED_PIECE`); re-founding it stays
      allowed.
   3. The level's own crates can't go **below the level's amount** (`addLoad` on `J27` under
-     8.5 t → toast e.g. "The bells stay: fix the lean another way."); adding more is fine.
+     8 t → toast e.g. "The bells stay: fix the lean another way."); adding more is fine.
 - **time → engine** (TIME-1 drawing + TIME-3 run — two hooks, please; status: `comfort` /
   `longterm` / `longterm::pisa` are written against your uncommitted `game` / `sim` / `setup`
   API and pass their tests; I commit when your modules are in HEAD):

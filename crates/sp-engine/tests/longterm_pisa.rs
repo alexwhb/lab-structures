@@ -21,20 +21,7 @@ fn with_piles(ids: &[&str]) -> Design {
     d
 }
 
-/// The cost of the player's fix, $k: the design's cost without the level's own (locked)
-/// pieces, which cost nothing (requested from `engine` for `Design::cost`).
-fn fix_cost(d: &Design) -> f64 {
-    let mut c = 0.0;
-    for m in d.members.iter().filter(|m| !m.locked) {
-        c += d.length(m) * m.kind.spec().cost;
-    }
-    for n in d.nodes.iter().filter(|n| !n.locked) {
-        if let Some(f) = n.sup {
-            c += f.cost();
-        }
-    }
-    c / 1000.0
-}
+use pisa::fix_cost;
 
 fn show(label: &str, lt: &longterm::LongTerm) {
     let at = |y: f64| {
@@ -90,9 +77,9 @@ fn the_named_fix_piles_under_all_three_footings_earns_three_stars() {
 fn a_counterweight_on_the_high_side_also_fixes_it() {
     let mut d = pisa::prebuilt();
     let tl = pisa::top_ids()[0].clone();
-    d.set_load(&tl, 9.0);
+    d.set_load(&tl, pisa::BELLS_T);
     let lt = run(&d);
-    show("counterweight 9 t top-left", &lt);
+    show("counterweight as heavy as the bells, top left", &lt);
     let r = pisa::result(&lt, fix_cost(&d), false, pisa::BUDGET);
     assert!(r.pass, "{r:?}");
     assert_eq!(r.stars, 3);

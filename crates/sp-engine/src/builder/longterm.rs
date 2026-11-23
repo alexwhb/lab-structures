@@ -24,8 +24,9 @@
 //!   traffic: they come and go).
 //!
 //! **Tilt** (TIME-2) is the angle between vertical and the line from the foundations' centroid
-//! to the top floor's centroid, measured from where it stood at year 0; bridges report the
-//! largest differential settlement instead.
+//! to the top floor's centroid, measured from that line as built (a tower built crooked starts
+//! at 0°; the first, immediate settling counts); bridges report the largest differential
+//! settlement instead. "Settled" and the differential count the consolidation since year 0.
 
 pub mod pisa;
 pub mod statics;
@@ -176,7 +177,7 @@ pub struct YearFrame {
     pub settle: Vec<f64>,
     /// Foundation reaction per joint, N (pushing down on the soil positive).
     pub reaction: Vec<f64>,
-    /// Tilt since year 0, degrees (positive leans right; towers).
+    /// Tilt from the line as built, degrees (positive leans right; towers).
     pub tilt: f64,
     /// The largest consolidation settlement of any foundation, m.
     pub max_settle: f64,
@@ -246,6 +247,8 @@ pub struct LongTerm {
     pub joint_ids: Vec<String>,
     /// Piece ids, in the frames' piece order.
     pub piece_ids: Vec<String>,
+    /// The joints with a foundation (indices).
+    pub found: Vec<usize>,
 }
 
 /// One moment between frames, interpolated (what the animation and the scrubber show).
@@ -343,6 +346,9 @@ pub fn fast_forward(s: &Structure, kind: Kind) -> LongTerm {
         ending: Ending::Stood,
         joint_ids: s.joints.iter().map(|j| j.id.clone()).collect(),
         piece_ids: s.pieces.iter().map(|p| p.id.clone()).collect(),
+        found: (0..s.joints.len())
+            .filter(|&j| s.joints[j].found.is_some())
+            .collect(),
     };
     let carrying = s.joints.iter().any(|j| j.found.is_some())
         && s.joints
@@ -360,20 +366,16 @@ pub fn fast_forward(s: &Structure, kind: Kind) -> LongTerm {
         ));
         return out;
     }
-    let tilt_design = tilt_angle(s, &out.kind, &st.pos);
-    let first = s.settle(&mut st);
+    // tilt is measured from the line as built (so a tower built crooked starts at 0°), and
+    // includes the first, immediate settling
     let tilt0 = tilt_angle(s, &out.kind, &st.pos);
-    let tilt0 = if tilt0.is_finite() {
-        tilt0
-    } else {
-        tilt_design
-    };
+    let first = s.settle(&mut st);
     match first {
         Ok(ev) => record(s, &mut out, &ev, 0.0),
         Err(_) => {
             out.ending = Ending::CameDown(0.0);
             out.frames
-                .push(frame(s, &out.kind, &s.initial(), 0.0, tilt_design));
+                .push(frame(s, &out.kind, &s.initial(), 0.0, tilt0));
             return out;
         }
     }
@@ -538,6 +540,27 @@ impl LongTerm {
             differential: lerp(a.differential, b.differential),
             fallen: fallen_at.is_some_and(|t| y >= t - 1e-9),
         }
+    }
+
+    /// The tilt line at `year` (towers; TIME-2): the foundations' centroid and the top floor's
+    /// centroid, world m. The stage draws it against a plumb line.
+    pub fn lean_line(&self, year: f64) -> Option<([f64; 2], [f64; 2])> {
+        let Kind::Tower { top } = &self.kind else {
+            return None;
+        };
+        let s = self.at(year);
+        let mean = |ix: &[usize]| -> Option<[f64; 2]> {
+            let pts: Vec<[f64; 2]> = ix.iter().filter_map(|&j| s.pos.get(j).copied()).collect();
+            if pts.is_empty() {
+                return None;
+            }
+            let n = pts.len() as f64;
+            Some([
+                pts.iter().map(|p| p[0]).sum::<f64>() / n,
+                pts.iter().map(|p| p[1]).sum::<f64>() / n,
+            ])
+        };
+        Some((mean(&self.found)?, mean(top)?))
     }
 
     /// The HUD chips at `year` (TIME-1): `("Year ", "12.0")`, `("Tilt ", "1.8°")` (towers) or

@@ -106,6 +106,12 @@ fn readouts_interpolate_between_frames() {
     assert!(chips[1].1.ends_with('°'));
     assert_eq!(chips[2].0, "Settled ");
     assert!(chips[2].1.ends_with(" mm"));
+    let (base, top) = lt.lean_line(30.0).unwrap();
+    let f = lt.last().unwrap();
+    // the tower is built plumb, so the lean line's angle is the tilt
+    let angle = (top[0] - base[0]).atan2(top[1] - base[1]).to_degrees();
+    assert!((angle - f.tilt).abs() < 1e-9, "{angle} vs {}", f.tilt);
+    assert_eq!(lt.found.len(), 3);
     assert_eq!(longterm::anim_year(0.0, 30.0), 0.0);
     assert_eq!(longterm::anim_year(3.0, 30.0), 15.0);
     assert_eq!(longterm::anim_year(60.0, 30.0), 30.0);

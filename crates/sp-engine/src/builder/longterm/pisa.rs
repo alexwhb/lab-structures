@@ -25,7 +25,7 @@ pub const LEVELS: usize = 8;
 /// Its centre line, m.
 pub const CENTRE_X: f64 = 100.0;
 /// The bells hung at the top right, t.
-pub const BELLS_T: f64 = 8.5;
+pub const BELLS_T: f64 = 8.0;
 /// The budget, $k.
 pub const BUDGET: f64 = 8.0;
 /// The goal: under this tilt after 30 years, degrees.
@@ -144,6 +144,22 @@ pub fn level() -> Level {
         prebuilt: Some(prebuilt()),
         run: RunKind::Years,
     }
+}
+
+/// What the player's fix cost, $k: the design's cost without the level's own (locked) pieces,
+/// which cost nothing — like a level's locked foundations (requested of `Design::cost`; the
+/// same number once it skips locked pieces).
+pub fn fix_cost(d: &Design) -> f64 {
+    let mut c = 0.0;
+    for m in d.members.iter().filter(|m| !m.locked) {
+        c += d.length(m) * m.kind.spec().cost;
+    }
+    for n in d.nodes.iter().filter(|n| !n.locked) {
+        if let Some(f) = n.sup {
+            c += f.cost();
+        }
+    }
+    c / 1000.0
 }
 
 /// The result of a Leaning tower run (its 30-year fast-forward).
