@@ -157,7 +157,8 @@ owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample
   stars_text(&setup), explain(&setup)}` (the banner and result sentence without a `View`).
   TIME-3: `start_years()` (phase Run with no sim), `finish_years(RunResult::of_years(pass,
   stars, cost, practice, standing, height, Years { tilt, settled }, first))`, `RunResult::years:
-  Option<Years>`; `run_test` returns `None` for `RunKind::Years`.
+  Option<Years>`; `run_test` returns `None` for `RunKind::Years`, and `start_run` on such a
+  level is `start_years`. A pre-built level opens fitted to its structure.
 - **`builder::view`** — `Game::view() -> View`: every shape in **stage px** (1120 × 600; the
   screen maps with one scale + offset), every string (plus world metres where a fold-in paints in world space: `MemberView::{wa, wb}`, `JointView::{pos, sup}`, `VehicleView::{x, y, ang}`, `wind_now`, `wind_dir`, `snow_now`, `quake_env`, `sim_t`). Stage: `camera`, `grid { origin, step }`,
   `terrain { scene, soil, bed, soil_poly, bed_poly, water_poly, flow, tops, edges, grains }`,
@@ -169,7 +170,7 @@ owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample
   cab, windows, wheels }>`, `wind: Vec<WindArrow { from, to, head, streak }>`, `flakes`
   (centres, r 1.6), `target_y`, `sparks`, `splashes`, `rings` (r 13), `ghost`, `hover` (r 5),
   `handles: Vec<HandleView { id, at, text "+2.4 t", label "Steel M7, 63% of its limit", num,
-  selected, over }>`, `joints: Vec<JointView { id, at, label "Joint J3, on a pile, carrying a 5
+  selected, over }>`, `joints: Vec<JointView /* building only */ { id, at, label "Joint J3, on a pile, carrying a 5
   t crate", founded, locked, pending, selected, bad }>`, `hud: Vec<HudChip { key "Height ",
   value, tone: HudTone }>`, `shaking`, `cursor`, `stage_label`, `surface_label`, `toast`,
   `running`, `run_info`, `slow_label`, `result: Option<ResultView { title, pass, stars }>`.

@@ -736,6 +736,7 @@ impl Game {
         self.sb_scene = sb;
         self.cond = Conditions::for_level(&sp);
         self.view = ViewState::default_for(scene);
+        let prebuilt = sp.prebuilt.is_some();
         self.design = match &sp.prebuilt {
             Some(d) => d.clone(),
             None => {
@@ -770,6 +771,10 @@ impl Game {
             PieceType::Road
         };
         self.revision += 1;
+        if prebuilt {
+            // a pre-built level (Leaning tower) opens framed on its structure
+            self.fit();
+        }
     }
 
     /// Picks a level (resets to its anchors and conditions; clears undo; stops a run).
@@ -1664,9 +1669,15 @@ impl Game {
     // ---------- running ----------
 
     /// "Run traffic" / "Run the test" (`startRun`): warns when there is no Road / Floor yet,
-    /// then runs (deselects, ends the chain).
+    /// then runs (deselects, ends the chain). On a years level (Leaning tower) it is
+    /// [`Game::start_years`], keeping `slow`.
     pub fn start_run(&mut self, slow: bool) {
         let setup = self.setup();
+        if setup.run == RunKind::Years {
+            self.start_years();
+            self.slow = slow;
+            return;
+        }
         if setup.scene == Scene::River && !self.design.has(PieceType::Road) {
             self.say("Nothing to drive on yet: build some Road first.");
         }

@@ -132,6 +132,12 @@ Shared-file etiquette:
   - **shell**: `Game::load_design(design)` (a design on the current level as is: building,
     level + conditions kept, undo / run cleared) and `RunResult::{title(&setup),
     stars_text(&setup), explain(&setup)}` (`game.setup()` for the setup).
+  - **time (follow-ups, next commit)**: a Years level's `start_run(slow)` (so `toggle_run`,
+    `replay`) is `start_years()` keeping `slow`; `View::joints` is empty outside
+    `Phase::Build` (as the mockup: no joint buttons while running or on a result); a pre-built
+    level opens fitted to its structure (`fit()` in `level_state`, so no new `Level` field
+    your struct literal would need).
+  - **lab**: `fire_hook` → `fire::update` has been committed since da89bf6.
   - **whoever had uncommitted edits in `docs/ARCHITECTURE.md`** (the crate map line and the
     removed v1 `bridge` section): sorry — they went into my commit da89bf6 as they were in the
     tree; nothing was changed or lost, please check and carry on.

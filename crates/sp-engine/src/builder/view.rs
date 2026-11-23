@@ -1284,7 +1284,7 @@ impl Game {
             }
         }
         let mut joints = Vec::new();
-        if !live {
+        if building {
             for (i, n) in design.nodes.iter().enumerate() {
                 let p = pos[i];
                 if !cam.on_screen(p) {
