@@ -5,6 +5,7 @@
 //! |---|---|
 //! | `solve_truss` | a `.str` netlist → stable / mechanism, reactions, every member's force, stress, limit, utilisation and failure mode, the worst member, determinacy, mass, the Advanced screen's checks; parse errors with line and column |
 //! | `influence_line` | a netlist + a member id (+ the truck's weight) → the force in that member as the truck crosses, its peak and limits |
+//! | `builder_test` | a builder level or Sandbox scene + a structure (netlist) + conditions → run to the end → the result, the first failure, comfort, stars |
 //! | `tower_wind` | floors, system, shape, wind, damper → sway, drift, period, base shear, overturning, vortex lock-in, comfort, cost, status |
 //! | `ground_check` | soil, foundation, floors, piles, quake, years → pressure, capacity, safety factor, settlement, tilt, liquefaction, status |
 //! | `tensile_test` | material, temperature, stretch → stress, force, status, E, yield, peak, toughness, specific strength, the curve |
@@ -99,6 +100,19 @@ struct InfluenceArgs {
     member: String,
     #[serde(default)]
     truck_t: Option<f64>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BuilderTestArgs {
+    #[serde(default)]
+    level: Option<String>,
+    #[serde(default)]
+    scene: Option<String>,
+    #[serde(default)]
+    netlist: Option<String>,
+    #[serde(flatten)]
+    change: sp_shared::proto::ConditionsChange,
 }
 
 #[derive(Debug, Deserialize)]
@@ -199,6 +213,71 @@ pub fn register(tools: &mut ToolRegistry) -> Result<(), RegistryError> {
             let net = parse_netlist(&text)?;
             let r = report::influence_report(&net, args.member.trim()).map_err(ToolError::new)?;
             Ok(ToolOutput::json(&r).with_first(Content::text(r.summary())))
+        },
+    )?;
+
+    tools.register(
+        Tool::new(
+            "builder_test",
+            format!(
+                "Run a structure in the builder (the v2 Playground's settling engine), headless \
+                 and at once, no app needed: pick a level (or the Sandbox and its scene), give \
+                 the structure as a netlist (`.node`s are joints — `fix=` makes a foundation, \
+                 `* found J1=pile` picks its kind; `.member`s are pieces whose `.material` \
+                 names a piece type: Road, Floor, Wood, Steel, Concrete, Rope, Cable; static \
+                 `.load`s are crates in tonnes) on the builder's grid in whole metres, and \
+                 optionally change the conditions. On a level the structure is built with the \
+                 editing tools, so the level's rules apply (refused edits come back in \
+                 `refused`); in the Sandbox it is loaded as pasted. The netlist the app's Share \
+                 copies carries its level and conditions. Returns the result as the app's \
+                 banner shows it: `pass`, title, sentence, stars, cost against budget, the \
+                 first piece that broke (snapped / cracked / buckled / crushed / softened / \
+                 burned through) or foundation that gave way (sank / ripped out / \
+                 liquefied), vehicles across, height, sway and comfort in milli-g; plus the \
+                 builder's state. Without a netlist it runs the level as it starts (its \
+                 anchors only). {}",
+                crate::screens::LEVELS_DESC
+            ),
+        )
+        .title("Test a structure in the builder")
+        .read_only()
+        .input_schema(object(
+            {
+                let mut p = crate::screens::conditions_properties();
+                if let Value::Object(m) = &mut p {
+                    m.insert(
+                        "level".into(),
+                        json!({"type": "string", "enum": crate::screens::LEVELS,
+                               "description": "The level (default: the netlist's `* level` line, else the Sandbox for a netlist, else river)."}),
+                    );
+                    m.insert(
+                        "scene".into(),
+                        json!({"type": "string", "enum": ["river", "flat"],
+                               "description": "Sandbox only, without a netlist: river (River crossing) or flat (Open ground). A netlist's joints pick its scene."}),
+                    );
+                    m.insert("netlist".into(), netlist_schema());
+                }
+                p
+            },
+            &[],
+        )),
+        |call| {
+            let a: BuilderTestArgs = call.args()?;
+            let t = sp_shared::builder::test_structure(
+                a.level.as_deref(),
+                a.scene.as_deref(),
+                a.netlist.as_deref(),
+                &a.change,
+            )
+            .map_err(ToolError::new)?;
+            let mut summary = t.result.summary();
+            if !t.refused.is_empty() {
+                summary.push_str(&format!(
+                    " (the level refused: {})",
+                    t.refused.join(" ")
+                ));
+            }
+            Ok(ToolOutput::json(&t).with_first(Content::text(summary)))
         },
     )?;
 

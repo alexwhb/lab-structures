@@ -817,6 +817,8 @@ pub struct ConditionsInfo {
     pub traffic_name: String,
     /// Fire, °C (0: off).
     pub fire_c: f64,
+    /// The fire chip ("Big").
+    pub fire: String,
 }
 
 /// The builder as it stands (`builder.get` and every builder change).
@@ -880,8 +882,6 @@ pub struct FoundationFailure {
     pub joint: String,
     /// "sank", "ripped out", "liquefied".
     pub mode: String,
-    /// When, s into the run.
-    pub t_s: f64,
 }
 
 /// A run on open ground: height, sway and comfort (CMF-1).
@@ -987,10 +987,8 @@ impl RunReport {
             ));
         } else if let Some(f) = &self.first_foundation {
             s.push_str(&format!(
-                "; first: the foundation at {} {} at {} s",
-                f.joint,
-                f.mode,
-                sp_engine::jsnum::to_fixed(f.t_s, 1)
+                "; first: the foundation at {} {}",
+                f.joint, f.mode
             ));
         }
         if let Some(t) = &self.tower {

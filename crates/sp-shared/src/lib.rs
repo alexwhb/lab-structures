@@ -16,6 +16,7 @@
 
 #![warn(missing_docs)]
 
+pub mod builder;
 pub mod input;
 pub mod proto;
 pub mod report;

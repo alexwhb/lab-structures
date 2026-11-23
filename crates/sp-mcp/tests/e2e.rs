@@ -17,9 +17,10 @@ use serde_json::{Value, json};
 use sp_engine::generate::{Params, generate};
 use structures_playground::Route;
 
-const ENGINE_TOOLS: [&str; 5] = [
+const ENGINE_TOOLS: [&str; 6] = [
     "solve_truss",
     "influence_line",
+    "builder_test",
     "tower_wind",
     "ground_check",
     "tensile_test",
@@ -415,6 +416,71 @@ fn tensile_test_tool() {
     );
     assert_eq!(r["isError"], true);
     let r = mcp.tool("tensile_test", json!({}));
+    assert_eq!(r["isError"], true);
+    mcp.close();
+}
+
+/// builder_test runs a structure headless: a steel truss across level 1 (as the builder's own
+/// Share writes it) gets everyone across with the same result the engine gives directly; an
+/// empty level fails; a storm and a rule the level refuses come back too.
+#[test]
+fn builder_test_runs_a_structure_headless() {
+    use sp_engine::builder::data::{LevelKey, PieceType};
+    use sp_engine::builder::game::{Game, PresetBuild};
+    let (_s, mut mcp) = offline();
+    let mut g = Game::new();
+    g.build_preset(PresetBuild::Truss {
+        chord: PieceType::Steel,
+    });
+    let shared = g.share_text();
+    g.run_test(sp_shared::proto::MAX_RUN_FRAMES);
+    let direct = g.result().expect("a result").clone();
+
+    let r = mcp.tool("builder_test", json!({"level": "river", "netlist": shared}));
+    assert_eq!(r["isError"], false, "{r}");
+    let d = data(&r);
+    assert_eq!(d["result"]["pass"], direct.pass, "{}", text(&r));
+    assert_eq!(d["result"]["stars"], direct.stars);
+    assert_eq!(d["state"]["level"], "river");
+    assert_eq!(d["state"]["document"], "river-level");
+    assert_eq!(d["refused"], json!([]));
+    assert!(text(&r).starts_with(d["result"]["title"].as_str().unwrap()));
+    // without `level` the Share's `* level` line picks it
+    let r = mcp.tool("builder_test", json!({"netlist": g.share_text()}));
+    assert_eq!(data(&r)["state"]["level"], "river");
+
+    // nothing built: the cars can't cross
+    let r = mcp.tool("builder_test", json!({"level": "river"}));
+    let d = data(&r);
+    assert_eq!(d["result"]["pass"], false);
+    assert_eq!(d["result"]["crossed"], 0);
+    assert_eq!(d["result"]["vehicles"], 3);
+
+    // a tower on open ground in a storm: comfort comes back in milli-g
+    let mut t = Game::new();
+    t.pick_level(LevelKey::T1);
+    t.build_preset(PresetBuild::Tower {
+        h: 40.0,
+        bays: 2,
+        col: PieceType::Steel,
+        brace: PieceType::Wood,
+        found: sp_engine::builder::data::Foundation::Pile,
+    });
+    let r = mcp.tool(
+        "builder_test",
+        json!({"netlist": t.share_text(), "wind_ms": 35, "wind_from": "right"}),
+    );
+    let d = data(&r);
+    assert_eq!(d["state"]["level"], "t1");
+    assert_eq!(d["state"]["conditions"]["wind"], "Storm");
+    assert!(d["result"]["tower"]["comfort_mg"].as_f64().is_some(), "{d}");
+
+    // bad input is a tool error that says what to send
+    let r = mcp.tool("builder_test", json!({"level": "river", "scene": "flat"}));
+    assert!(error(&r).contains("Sandbox only"), "{}", text(&r));
+    let r = mcp.tool("builder_test", json!({"netlist": ".node A 1.5 0"}));
+    assert!(error(&r).contains("grid"), "{}", text(&r));
+    let r = mcp.tool("builder_test", json!({"wind_ms": 80}));
     assert_eq!(r["isError"], true);
     mcp.close();
 }
