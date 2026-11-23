@@ -15,7 +15,7 @@
 #    out of the checkout and run under sandbox-exec with the whole lab-series folder (this
 #    checkout, labkit, the sister apps) denied and the bundle read-only, from a scratch working
 #    directory: `structures-playground --smoke 3` must exit 0 within the timeout and print a
-#    line starting with `SMOKE ` (e.g. `SMOKE route=bridge … first_frame_ms=412 …`) — headless
+#    line starting with `SMOKE ` (e.g. `SMOKE route=playground … first_frame_ms=412 …`) — headless
 #    (STRUCTURES_HEADLESS=1) and, unless --no-window, in a real window; then the same through
 #    LaunchServices (`open -n … --args --smoke 3`). No output line may mention the checkout.
 # 4. Opening a netlist (NAV-6, unless --no-window; SKIP without a window server): `open -n -a

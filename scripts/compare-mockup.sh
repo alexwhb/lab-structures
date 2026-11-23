@@ -2,7 +2,7 @@
 # scripts/compare-mockup.sh — renders every app screen next to its mockup reference (LOOK-1).
 #
 #   scripts/compare-mockup.sh                  all screens
-#   scripts/compare-mockup.sh series tower     only some (route ids or mockup names)
+#   scripts/compare-mockup.sh series playground  only some (route ids or mockup names)
 #
 # For each screen it renders the real app (egui_kittest, wgpu, 1×) at the mockup's board size
 # (1440 × 900 / 1000 / 1400) and at 390 px wide (as tall as the reference or the page,
@@ -12,7 +12,9 @@
 #   target/compare/<Screen>-390.png
 #   target/compare/<Screen>-1440-app.png   the app alone
 #
-# The references are docs/design/screenshots/<Screen>-<width>.png (scripts/render-mockup.mjs).
+# The references are docs/design/screenshots/<Screen>-<width>.png (scripts/render-mockup.mjs),
+# and for the Playground the builder's first board, docs/design/v2/screenshots/BridgeBuild-<width>.png
+# (scripts/render-mockup-v2.mjs); `<Screen>` is Builder, Advanced, Series.
 # Animated screens are captured at rest, so compare layout, sizes and colours rather than
 # pixels. Each line printed is `compare: <Screen>-<width> mean |Δ| <n>`.
 set -euo pipefail

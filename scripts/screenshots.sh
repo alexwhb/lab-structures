@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # scripts/screenshots.sh — renders the README's screenshots: every screen at its mockup board
 # size (1440 px wide) with the real app in egui_kittest (wgpu, 1×), into
-# docs/screenshots/<screen>.png (route ids: bridge, tower, ground, materials, advanced, series).
+# docs/screenshots/<screen>.png (route ids: playground, advanced, series), plus the README's
+# hero shots of the builder (docs/screenshots/builder-*.png) once it renders.
 #
 #   scripts/screenshots.sh              all screens
-#   scripts/screenshots.sh tower        only some
+#   scripts/screenshots.sh advanced     only some
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

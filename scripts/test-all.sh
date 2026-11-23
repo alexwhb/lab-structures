@@ -10,15 +10,15 @@
 #               per crate and by kind. A test running longer than 60 s fails the step.
 #   perf        release perf gates (ENG-4, PLAT-1): every test target named `perf` or
 #               `*_perf` (e.g. crates/sp-engine/tests/advanced_perf.rs), run in release with
-#               --include-ignored --nocapture: the target must pass (its own asserts: 60-joint
-#               Bridge solve < 1 ms, one Test tick < 8 ms, the influence line < 5 ms, …), and
+#               --include-ignored --nocapture: the target must pass (its own asserts: the
+#               builder's live preview and run frames, the influence line < 5 ms, …), and
 #               each line it prints as
 #                   PERF <label>: <value> ms (limit <limit> ms)
 #               is also listed as a gate (anywhere on the line: libtest prints the first
 #               one after `test name ... `). The engine's perf checks that live in other test
 #               targets — test functions whose names contain `perf`, `budget`, `_is_fast` or
-#               `_are_cheap` (bridge_props `performance_budget`, tower_props `calc_is_fast`,
-#               dynamics `sway_steps_are_cheap`) — run in release too and must pass. Then
+#               `_are_cheap` (tower_props `calc_is_fast`, dynamics `sway_steps_are_cheap`, the
+#               builder's) — run in release too and must pass. Then
 #               start-up → first frame of `--smoke 3` < 2 s. A gate whose test does not exist
 #               yet is SKIP, never FAIL.
 #   bundle      macOS only: scripts/bundle-macos.sh --check — builds "dist/Structures
@@ -240,7 +240,7 @@ for p in json.load(sys.stdin)["packages"]:
       cargo build --release --locked -p structures-playground --bin structures-playground; then
     BIN="$CARGO_TARGET_DIR/release/structures-playground"
     if strings -a "$BIN" | grep -F -- '--smoke' >/dev/null; then   # not -q: SIGPIPE + pipefail
-      run_step "smoke: the Bridge 3 s with the GUI open" smoke with_timeout 60 "$BIN" --smoke 3
+      run_step "smoke: the Playground 3 s with the GUI open" smoke with_timeout 60 "$BIN" --smoke 3
       line=$(grep '^SMOKE' "$LOGS/smoke.log" | tail -1); echo "   ${line:-no SMOKE line}"
       ff=$(sed -n 's/.*first_frame_ms=\([0-9.]*\).*/\1/p' <<<"$line")
       perf_gate "start-up → first frame (--smoke)" "$ff" "<" 2000 "ms"
