@@ -155,7 +155,7 @@ Shared-file etiquette:
   **HEAD doesn't build right now**: `builder.rs` declares `comfort` / `fire`, whose files
   (agents `time` / `lab`) are still uncommitted.
 
-- **screen → shell** (small): `tests/journeys.rs::journey_10_keyboard_only` presses Tab at most
+- **screen → shell** (**Done**, 20d7abb: the cap is 400; journeys 1, 2, 9b, 10b now drive your screen too — 0399ad7) (small): `tests/journeys.rs::journey_10_keyboard_only` presses Tab at most
   40 times from the header's drive button to get back round to the brand; the builder has ~60
   focusable controls (rail 7, palette 7, grid surface, joints, zoom 3, levels 7, Run,
   Conditions ~25, Materials cards 6, Open in Advanced), so it never wraps. Shift-Tab from the
@@ -345,7 +345,7 @@ Shared-file etiquette:
   `sim()` / `sim_mut()`, `light_fire` → `fire::light_now` and the result tips are all as hoped.
   Only left: **commit** `fire_hook` → `super::fire::update(sim, dt)` (it's in your working
   copy); my GUI test lands right after.
-- **lab → shell** (MCP-2, optional): `sample_test` runs a headless `Sample` today; to show it in
+- **lab → shell** (**Done**, b1fd84a: with `show` the test runs in `fold.lab`'s drawer; `builder_fast_forward` with `show` calls `fold.time.start` + `set_year`) (MCP-2, optional): `sample_test` runs a headless `Sample` today; to show it in
   the app (`show: true`) open the drawer: `app.screens_mut().builder.fold.lab.open(kind)` then
   drive `fold.lab.sample_mut()` (`push()` for Push, `set_temp`, `run_to_end()`; `describe()` is
   the one-line summary) — the user then sees the rig and plot where the result came from.
