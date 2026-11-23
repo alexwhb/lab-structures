@@ -52,9 +52,139 @@ Units SI (m, N, Pa, kg); forces positive in tension. No panics on any input.
 
 ### `builder` (v2; agents `engine`, `time`, `lab`)
 
-TODO (owners fill in): the builder core (data, levels, camera, editing, the settling engine,
-preview, running, results, text) and the hooks for the fold-ins; `comfort`, `longterm`
-(agent `time`); `sample`, `fire` (agent `lab`).
+The v2 Playground: `v2/mockup/Builder.dc.html`'s `class Component` without the drawing, ported
+operation for operation so it is **bit-exact with the mockup** (golden test below). The screen
+owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample`, `fire`
+(agent `lab`). **Core (agent `engine`):**
+
+- **`builder::data`** — `PieceType::{Road, Floor, Wood, Steel, Concrete, Rope, Cable}`
+  (`spec() -> &TypeSpec { name, area, e, k, f_t, f_c, mpm, rho, cost, max_len, t_only, swatch_h,
+  scene, deck, ductile, blurb, tip }`, `mass_per_m()`, `allowed_in(scene)`, `for_scene(scene)`
+  (palette order), `too_long()` / `too_long_add_joint()` toasts, `key()` / `from_key` /
+  `from_name`), `Soil::{Rock, Dense, Stiff, Soft, Loose}` (`spec() -> SoilSpec { name, liq,
+  footing: [Qc, Qt, ks], pile }`, `grip(found)`), `Foundation::{Footing, Pile}` (`cost()` 300 /
+  1500 $, `chip()` "Footing · $0.3k", `tip()`), `VehicleKind::{Car, Bus, Truck}` (`spec() ->
+  VehicleSpec { m, len, ht, d, v, label }`), `TrafficSet::{Level, Rush, Buses, Trucks, Convoy}`
+  (`vehicles(level_list)`), chip tables `WINDS`, `SNOWS`, `QUAKES`, `FIRES` (Off / Small 400 /
+  Big 700 / Inferno 900 °C), `DIRS`, `WEIGHTS`, `MAX_CRATE_T`; `Scene::{River, Flat}`
+  (`ground(x)`), `Group`, `LevelKey::{River, Bus, Haul, T1, T2, T3, Pisa, Sandbox}` (`slug()` =
+  header document), `Level { key, group, name, goal, scene, soil, bed, wind, snow, quake, fire,
+  budget, target, comfort, sup: SupportRule::{Banks, Any}, traffic, anchors: Vec<Anchor { x, y,
+  found }>, prebuilt: Option<Design> /* whole starting design, locked parts */, run:
+  RunKind::{Traffic, Test, Years} }`, `levels()` (the aside's table; Pisa listed once
+  `longterm` provides it), `level(key)`, `stars_for(cost, budget)`, `stars_text(n)`.
+- **`builder::design`** — `Design { nodes: Vec<Joint { id "J3", x, y (world m), sup:
+  Option<Foundation>, locked }>, members: Vec<Piece { id "M7", a, b, kind, locked }>, loads:
+  Vec<(joint id, t)> /* first-hung order */, n_n, n_m }`: lookups, `load` / `set_load`,
+  `length(piece)` (`truss::hypot` = V8 `Math.hypot`), `cost()` ($k), `top()` (highest Floor
+  joint), `has(kind)`.
+- **`builder::setup`** — `Conditions { wind, dir (±1), snow, quake, soil, traffic, fire (°C, 0 =
+  off) }` (`for_level`), `spec(key, sb_scene)` (Sandbox scene applied), `Setup` = the mockup's
+  `L()`: the level with the conditions (`scene`, `soil`, `bed`, `traffic` resolved, `budget`,
+  `target`, `comfort`, `sup`, `anchors`, `run`, `sandbox`; `ground(x)`, `sup_ok(x, y)`,
+  `soil_at(joint)`, `sup_refusal()`), `practice(key, sb_scene, &cond)`.
+- **`builder::camera`** — `ViewState { cx, cy, z }` (`default_for(scene)`), `Camera::new(scene,
+  view)` (`sc` px/m, `grid`, clamp box, 2.5D `off`; `x(wx)` / `y(wy)` / `px(p)` world → stage
+  px on the 1120 × 600 stage, `to_world(px, py)`, `snap(px, py)`, `on_screen`, `zoomed(f, px,
+  py)`), `fit(scene, joints, target)`; `STAGE_W/H`, `ZOOM_MIN/MAX`, `ZOOM_STEP` 1.3,
+  `WHEEL_STEP` 1.15.
+- **`builder::sim`** — the settling engine. `Sim::new(&Design, &Setup, &Conditions, live)`
+  (`makeSim`), `step(h, damp)`, `frame(slow)` (fire hook, 20 substeps of 1/600 s (× 0.3 slow),
+  damping `1 − 0.4h`, top-floor sway and smoothed acceleration), `check_done()` (river: 1.2 s
+  after no vehicle drives or falls, or 45 s; open ground 18 s; Sandbox never), `support(x,
+  y_hint)`, `milli_g()`, `crossed()`, `laps()`. Public state: `p: Vec<Particle { id, x, y, px,
+  py, vx, vy, m, fx, fy, sup, x0, y0, ys, used, r, ripped, over_c, over_t, qc, qt, ks, liq, inv
+  }>`, `c: Vec<Constraint { id, a, b, kind, len, kk, cap_t, cap_c, crush, pcr, buckles, t_only,
+  deck, road, n, avg, broken, over, slack, exposed, strength, stiffness, temp, heat_mode }>`
+  (`cap_t_now()`, `cap_c_now()` with the factors, `utilisation()`), `v: Vec<Vehicle { kind, m,
+  len, ht, d, speed, x, y, ang, state: VehicleState::{Drive, Fall, Sunk, Crashed, Done}, vx, vy,
+  ax: [Option<Axle { c, f, y, dist }>; 2], laps }>`, `setup`, `cond` (the Game copies the live
+  conditions in every frame), `t`, `sparks`, `splashes`, `first_break: Option<FirstBreak { id,
+  kind, mode: BreakMode, t }>`, `first_found: Option<FirstFound { id, mode: FoundMode::{Sank,
+  Liquefied, RippedOut} }>`, `end_at`, `wind_l/r`, `width`, `top_i`, `top_y0`, `sway`, `peak_a`,
+  `a_s`, `env`, `wind_now`, `snow_now`, `quake_start`, `sandbox`. `BreakMode::{Snapped, Cracked,
+  Buckled, Crushed, Softened, BurnedThrough}.text()`. `capacity(kind, len) -> Capacity { cap_t,
+  crush, pcr, cap_c, buckles, kk }` (shared with the sample drawer). Constants `SUBSTEPS`,
+  `FRAME`, `SLOW`, `TEST_SECONDS`, `RIVER_MAX_SECONDS`, `RIVER_TAIL_SECONDS`.
+  **Fold-in hooks** (defaults are bit-identical to the mockup): per piece `strength` (× cap_t
+  and the crushing part of cap_c) and `stiffness` (× XPBD stiffness and P_cr), `temp` (°C),
+  `heat_mode` (a break reports it); `Sim::fire_start` (owned by `fire::update`, called by
+  `frame` every running frame); `Sim::drag` (× the floor wind force, Cd 1.3 built in) and
+  `Sim::shedding` (× the 0.3 vortex gust term) for CMF-2.
+- **`builder::preview`** — `preview(&Design, &Setup, &Conditions) -> Settled` (520 steps at
+  1/400 s, damping 0.985, gravity over 0.3 s, snow at its setting) and `settle(…,
+  &SettleOptions { steps, h, damping, offsets /* per joint, m: lowers a foundation's ys */ })`;
+  `Settled { pieces: Vec<PieceForce { id, n, over, slack, cap_t, cap_c, len, exposed }>, found:
+  Vec<Option<FoundForce { id, r, qc, qt, over_c, over_t }>> /* per joint */, positions, moved,
+  moved_id }` (`piece(id)`, `foundation(id)`, `over_any()`, `found_over()`), `settled_of(&sim,
+  &design)`.
+- **`builder::game`** — **`Game`**, the state machine. `Game::new()` (level 1, Build, Road,
+  building: MB-10), `Game::with_preset(&Preset)` (`Preset::board("TowerStorm")` for the seven
+  boards; `PresetBuild::{Truss { chord }, Cable, Tower { h, bays, col, brace, found }}`,
+  `build_preset(b)`). Reading: `level()`, `sb_scene()`, `scene()`, `cond()`, `setup()`,
+  `view_state()`, `camera()`, `design()`, `pending()`, `selection() -> Option<&Selection::{Node,
+  Member}>`, `phase() -> Phase::{Build, Run, Result}`, `building()`, `live()`, `hover()`,
+  `dragging()`, `result() -> Option<&RunResult { pass, stars, cost, practice, first,
+  first_found, outcome: Outcome::{River { crossed, total }, Tower { standing, reached, mg, comfy,
+  height, sway }} }>`, `piece_type()`, `tool() -> Tool::{Select, Build, Found, Crate, Erase}`,
+  `found_kind()`, `weight()`, `show_forces()`, `slow()`, `best_for(k)` / `best()` /
+  `set_best(k, n)`, `toast()` / `toast_remaining()`, `sim()` / `sim_mut()`, `preview()`,
+  `undo_depth()`, `revision()`, `cost()`, `practice()`, `animating()`. Editing (the mockup's
+  rules and toasts; building only): `pick_level`, `pick_scene` (Sandbox chips), `clear` (=
+  Clear and Reset), `pick_tool`, `pick_type`, `pick_found`, `pick_weight`, `toggle_forces`,
+  `finish_line`, `click_node(id)`, `click_surface(px, py)` (stage px; snaps) / `click_at([x,
+  y])` (a grid point), `pick_handle(id)`, `select`, `set_foundation(id, Option)`,
+  `add_crate(id, t)` / `crate_less` / `crate_more`, `set_piece_type(id, kind)`,
+  `delete_member`, `delete_joint`, `delete_selected`, `undo()` (40 steps; only edits that
+  change the design leave a step), `nudge(dx, dy)` (⌥ arrows: one grid step, drag rules).
+  Pointer: `joint_down(id)`, `surface_down(px, py)` (pan with Select or while running),
+  `pointer_move(px, py)` (pan / drag / hover), `pointer_up()`, `clear_hover()`. Camera:
+  `zoom_in`, `zoom_out`, `wheel(delta_y, px, py)`, `zoom_by`, `fit`, `pan_by(dx_px, dy_px)`,
+  `set_view`. Conditions (any time; soil and traffic refused while running): `set_wind`,
+  `set_dir`, `set_snow`, `set_quake`, `set_fire`, `set_soil`, `set_traffic`, `shake_now`,
+  `light_fire_now`. Running: `start_run(slow)`, `stop_run`, `toggle_run`, `replay`,
+  `toggle_slow`, `tick()` (one 33 ms frame; result, stars and best stars at the end),
+  `advance(dt)` (toasts fade after 2.6 s), `run_test(max_frames) -> Option<&RunResult>`
+  (headless). Netlists: `share_text()`, `paste_netlist(text)`, `open_in_sandbox(scene,
+  design)`. Free: `run_headless(&Design, &Setup, &Conditions, practice, max_frames, tweak:
+  FnOnce(&mut Sim)) -> (Option<RunResult>, Sim)` (CMF-2's runs: `tweak` sets `drag` /
+  `shedding`), `result_of(&sim, cost, practice)`.
+- **`builder::view`** — `Game::view() -> View`: every shape in **stage px** (1120 × 600; the
+  screen maps with one scale + offset), every string (plus world metres where a fold-in paints in world space: `MemberView::{wa, wb}`, `JointView::{pos, sup}`, `VehicleView::{x, y, ang}`, `wind_now`, `wind_dir`, `snow_now`, `quake_env`, `sim_t`). Stage: `camera`, `grid { origin, step }`,
+  `terrain { scene, soil, bed, soil_poly, bed_poly, water_poly, flow, tops, edges, grains }`,
+  `flowing`, `members: Vec<MemberView { index, id, kind, a, b, sag /* slack rope/cable: quad
+  control point */, band: Option<Band::{T1..T3, C1..C3, Over}>, deck: Option<DeckView { top,
+  front, line, facade, side, window, snow }>, back, temp }>`, `snow_px`, `foundations: Vec<
+  FoundationView { joint, kind, at, pad, pile, tri }>`, `crates: Vec<CrateView { joint, t,
+  wire, body, top, side, tag "5 t", tag_at }>`, `vehicles: Vec<VehicleView { kind, state, body,
+  cab, windows, wheels }>`, `wind: Vec<WindArrow { from, to, head, streak }>`, `flakes`
+  (centres, r 1.6), `target_y`, `sparks`, `splashes`, `rings` (r 13), `ghost`, `hover` (r 5),
+  `handles: Vec<HandleView { id, at, text "+2.4 t", label "Steel M7, 63% of its limit", num,
+  selected, over }>`, `joints: Vec<JointView { id, at, label "Joint J3, on a pile, carrying a 5
+  t crate", founded, locked, pending, selected, bad }>`, `hud: Vec<HudChip { key "Height ",
+  value, tone: HudTone }>`, `shaking`, `cursor`, `stage_label`, `surface_label`, `toast`,
+  `running`, `run_info`, `slow_label`, `result: Option<ResultView { title, pass, stars }>`.
+  Header / rail / hint bar: `level_slug`, `clock`, `playing`, `hdr_run`, `phase`, `tools`,
+  `can_undo`, `hint`, `show_types` / `types`, `show_founds` / `founds`, `show_weights` /
+  `weights`, `has_pending`, `show_forces`, `zoom_pct`. Aside: `level_groups`, `goal`,
+  `chips_info`, `status { label, tone: StatusTone }`, `cost_text`, `over_budget`, `run_label`,
+  `is_sandbox`, `is_river`, `sb_scenes`, `conditions: ConditionsView { winds, dirs, snows,
+  quakes, soils, traffic, show_traffic, fires, can_shake }` (`Chip<T> { value, name, on, dim
+  }`), `inspector: Inspector::{Piece(PieceInspector { id, kind, title, len, fill, ut, tone:
+  BarTone, text, types, locked }), Joint(JointInspector { id, title, pos, founds, load, note,
+  can_delete }), Materials(Vec<MaterialCard { kind, name, curve /* curveFor path */,
+  curve_lines, blurb, cost }>)}`, `explain`. Helpers `fmt_t`, `curve_for`, `curve_lines`,
+  `Band::of`. Colours: the screen maps `PieceType` / `Soil` / `Band` / tones to
+  `sp_theme::builder`.
+- **`builder::netlist`** — `write(&Design, level, scene, &cond, name) -> String` (one
+  `.material` per piece type used, sections from the type's area with I = k·A², foundations
+  `fix=xy`, crates `.load weights … Fy=-5t`, `.load self +self`; `* level …`, `* cond …`, `*
+  found J1=footing …` comment lines) and `read(text) -> Result<Imported { design, scene, level,
+  cond }, ReadError>` (whole metres; river scene when every joint fits it, else open ground).
+- Tests: `tests/builder_goldens.rs` replays `tests/builder_goldens.json`, written by `node
+  crates/sp-engine/tests/builder_goldens.mjs` (the mockup's `Component` run verbatim in Node);
+  `tests/builder_props.rs` (random edits, NaN / huge inputs, absurd zooms never panic);
+  `tests/builder_perf.rs` (BLD-15, `PERF` lines).
 
 ### `bridge` (v1, retiring in v2 wave 2; agent `bridge`)
 

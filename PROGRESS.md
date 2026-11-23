@@ -106,6 +106,44 @@ Shared-file etiquette:
 
 ## Requests
 
+- **engine (v2 status: API published) → screen, time, lab, shell**: `sp_engine::builder` core is
+  committed as a working port (not stubs): `data`, `design`, `setup`, `camera`, `sim`,
+  `preview`, `game`, `view`, `netlist` — full list in ARCHITECTURE § builder. The state machine
+  is **`builder::Game`** (`Game::new()` = level 1 in build mode, MB-10; `Game::with_preset(
+  &Preset::board("TowerStorm"))` for the seven boards), `game.view() -> View` (every shape in
+  **stage px** on the 1120 × 600 stage plus world metres where useful, every string), piece enum
+  **`PieceType`**, chips `Chip<T> { value, name, on, dim }`. Goldens against the mockup's JS are
+  next; names may still gain fields but won't be renamed without a note here. Answers:
+  - **screen**: positions are stage px (`MemberView::{a, b}`, `JointView::at`, …) with world
+    metres alongside (`MemberView::{wa, wb}`, `JointView::pos`, `VehicleView::{x, y, ang}`);
+    the camera is `game.camera()` (`x()/y()/px()/to_world()/snap()`), pan with
+    `pan_by(dx_px, dy_px)` / pointer drag, zoom `zoom_by(f, Some(px), Some(py))` / `wheel` /
+    `zoom_in` / `zoom_out` / `fit`. Pointer: `joint_down(id)`, `surface_down(px, py)`,
+    `pointer_move(px, py)`, `pointer_up()`, `click_surface(px, py)` (ignores the click that ends
+    a pan), `click_node(id)`, `pick_handle(id)`. Band `z` is `band: None`. Shell's `Nudge` →
+    `game.nudge(dx, dy)`, `Pan` → `pan_by`, `Paste(text)` → `game.paste_netlist(text)`, Share
+    → `game.share_text()`. Toasts: call `game.advance(dt)` each frame (`toast_remaining()` for
+    `wake_in`), `game.tick()` per 1/30 s while `game.animating()`.
+  - **lab**: done as asked except the two lines that call into your file — `frame()` now calls
+    `fire_hook(sim, dt)` **every** running frame and `Sim::new` leaves `fire_start: None`;
+    `capacity(kind, len) -> Capacity { cap_t, crush, pcr, cap_c, buckles, kk }` is what
+    `Sim::new` uses; `Game::sim()` / `sim_mut()` exist. **Commit `fire.rs` now** (it compiles
+    with this commit); tell me here and I'll switch `fire_hook` to `super::fire::update`,
+    `light_fire_now` to `fire::light_now`, and the result tip for Softened / BurnedThrough to
+    `fire::tip(FireBreak, kind)` the same hour.
+  - **time**: CMF-2 = `Sim::drag` / `Sim::shedding` (drag multiplies at the end of the wind line;
+    bit-identical at 1.0) and `run_headless(&Design, &Setup, &Conditions, practice, max_frames,
+    |sim| { sim.drag = …; sim.shedding = … }) -> (Option<RunResult>, Sim)` (no allocation per
+    substep; `Setup::new(level, sb_scene, &cond)` = `L()`); everything you listed on `Sim` /
+    `Particle` / `Constraint` is public, `Setup::soil_at(joint)`. `settle` with offsets stays
+    (`preview::settle`). TIME-3: yes — add `pub fn pisa_level() -> Level` and `pub const
+    PISA_AVAILABLE: bool` to `longterm.rs`, tell me here, and I'll call them from
+    `data::level(LevelKey::Pisa)` / `pisa_available()`. `Level::prebuilt: Option<Design>` is the
+    whole starting design (anchors ignored when set; `Joint::locked` / `Piece::locked` are
+    refused by edits with "Level pieces stay put."), `run: RunKind::Years` makes
+    `Game::run_test` return `None` (your drive owns it). `Game::set_best(level, stars)` exists.
+    For `adjust_view`: every `View` field is `pub`, mutate the copy before drawing.
+
 - **shell → lab, time** (d6a8373): the v1 painters you reuse are in `src/widgets/`.
   **`lab`: `widgets::tensile`** — `tensile::rig(ui, rect, &RigScene)` and
   `tensile::plot(ui, rect, &PlotScene)` draw on a `.graph` panel in the mockup's viewBox units
