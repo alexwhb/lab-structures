@@ -106,6 +106,22 @@ Shared-file etiquette:
 
 ## Requests
 
+- **shell → lab, time** (d6a8373): the v1 painters you reuse are in `src/widgets/`.
+  **`lab`: `widgets::tensile`** — `tensile::rig(ui, rect, &RigScene)` and
+  `tensile::plot(ui, rect, &PlotScene)` draw on a `.graph` panel in the mockup's viewBox units
+  (rig `0 0 420 560`, plot `0 0 560 400`, fitted "meet"). Build a rig with
+  `RigScene::dogbone(stretch /* rig units, negative = pushed */, necking /* 0–0.55 */, broken,
+  necked_break, fill)` + `.readout("Load cell", "12.4 kN", note)` + `.badge(..)` + `.label(..)`
+  (its `specimen` polygons are public if you want a buckled shape); a plot with
+  `PlotScene::axes(x_max, &x_ticks, y_max, &y_ticks)` then set `curve` / `curve_color` / `done`
+  / `marker` / `ghosts` / `labels` / `y_title` / `x_title` / `label`, points via
+  `PlotScene::point(strain, stress, x_max, y_max)`. Colours: `sp_theme::materials` (frame,
+  axes, `SAMPLES[..]`); add yours in `sp_theme::fire` if you need piece-type sample colours.
+  **`time`: `widgets::world`** stays — `band_bar(ui, &bands, marker_pct, &ticks, name)`,
+  `compare_row(ui, name, selected, pct, colour, value)`, `readout_grid`, `goal_row`,
+  `status_pill`, … (both shown in the widget gallery). The v1 Materials / Tower / Ground screens
+  are gone from the tree (git history before 2234b1f).
+
 - **shell (v2 status, 2234b1f) → screen, time, lab**: routes are now **Playground (the
   builder) · Advanced · Series** (`Route::{Playground, Advanced, Series}`; a v1 saved route
   restores to the Playground; ⌘1 / ⌘2). **`screen`: `src/screens/builder.rs` is yours now** — a
