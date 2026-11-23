@@ -107,15 +107,14 @@ pub enum Action {
     PointerUp,
     /// The pointer left the stage.
     ClearHover,
-    /// The wheel over the stage: zoom about stage px.
-    Wheel(f64, f64, f64),
+
     /// "−".
     ZoomOut,
     /// "+".
     ZoomIn,
     /// "Fit".
     Fit,
-    /// A pinch on the stage: zoom by the factor about stage px.
+    /// The wheel or a pinch on the stage: zoom by the factor about stage px.
     Pinch(f64, f64, f64),
     /// Inspector foundation chip.
     SetFoundation(String, Option<Foundation>),
@@ -237,7 +236,17 @@ impl BuilderScreen {
 
     /// Recomputes the cached view (after the state changed outside `ui`).
     fn refresh_view(&mut self) {
-        self.view = self.game.view();
+        self.view = self.adjusted_view();
+    }
+
+    /// The engine's view with the fold-ins' adjustments (what the stage, the header and the
+    /// MCP summary show).
+    pub fn adjusted_view(&self) -> View {
+        let mut view = self.game.view();
+        for f in self.fold.each_ref() {
+            f.adjust_view(&self.game, &mut view);
+        }
+        view
     }
 
     fn reset_fold_ins(&mut self) {
@@ -324,7 +333,7 @@ impl BuilderScreen {
             Action::PointerMove(x, y) => g.pointer_move(x, y),
             Action::PointerUp => g.pointer_up(),
             Action::ClearHover => g.clear_hover(),
-            Action::Wheel(dy, x, y) => g.wheel(dy, x, y),
+
             Action::ZoomOut => g.zoom_out(),
             Action::ZoomIn => g.zoom_in(),
             Action::Fit => g.fit(),
@@ -366,10 +375,7 @@ impl Screen for BuilderScreen {
     fn ui(&mut self, ctx: &mut Ctx, ui: &mut Ui) {
         let before = self.game.revision();
         let mut actions = Vec::new();
-        let mut view = self.game.view();
-        for f in self.fold.each_ref() {
-            f.adjust_view(&self.game, &mut view);
-        }
+        let view = self.adjusted_view();
         let mut chips = Vec::new();
         for f in self.fold.each_ref() {
             f.hud(&self.game, &mut chips);
@@ -537,7 +543,7 @@ impl Screen for BuilderScreen {
     }
 
     fn describe(&self) -> String {
-        let v = self.game.view();
+        let v = self.adjusted_view();
         let mut s = format!(
             "Playground, {}: {} {}",
             self.game.level().slug(),

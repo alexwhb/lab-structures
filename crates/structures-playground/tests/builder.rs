@@ -641,3 +641,114 @@ fn best_stars_survive_a_restart() {
         Some("Best: 2 of 3 stars")
     );
 }
+
+/// A trackpad's many small point deltas zoom continuously (one ×1.15 step per 50 points), a
+/// mouse-wheel notch is one ×1.15 step (time's review finding).
+#[test]
+fn trackpad_scrolls_zoom_gently() {
+    let mut h = harness(Route::Playground);
+    let p = at(&h, 28.0, 4.0);
+    h.hover_at(p);
+    for _ in 0..10 {
+        h.event(egui::Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Point,
+            delta: egui::vec2(0.0, 4.0),
+            modifiers: Modifiers::NONE,
+            phase: egui::TouchPhase::Move,
+            source: egui::MouseWheelSource::Trackpad,
+        });
+        h.step();
+    }
+    settle(&mut h);
+    let z = game(&h).view_state().z;
+    assert!(z > 1.0 && z < 1.15, "ten 4-point trackpad events: {z}");
+    assert!((z - 1.15f64.powf(40.0 / 50.0)).abs() < 1e-9, "{z}");
+}
+
+/// The keyboard builds where the hover dot is: under the pointer when it rests on the stage
+/// (time's review finding).
+#[test]
+fn keyboard_builds_at_the_hover_dot() {
+    let mut h = harness(Route::Playground);
+    let p = at(&h, 16.0, 4.0);
+    h.hover_at(p + egui::vec2(-20.0, 0.0));
+    h.step();
+    h.hover_at(p);
+    h.run_steps(2);
+    assert_eq!(game(&h).hover(), Some([16.0, 4.0]));
+    h.get_by_role_and_label(Role::Button, "Building grid")
+        .focus();
+    h.step();
+    press(&mut h, egui::Key::Enter);
+    settle(&mut h);
+    let n = game(&h).design().nodes.last().expect("a joint").clone();
+    assert_eq!((n.x, n.y), (16.0, 4.0), "built at the dot");
+}
+
+/// MB-12: after a tower run the result banner sits below the HUD chips, which stay readable.
+#[test]
+fn the_result_banner_keeps_the_hud_readable() {
+    let mut h = harness(Route::Playground);
+    let mut p = sp_engine::builder::Preset::board("TowerStorm").expect("board");
+    p.run = false;
+    p.demo_loop = false;
+    *game_mut(&mut h) = Game::with_preset(&p);
+    settle(&mut h);
+    click_drive(&mut h);
+    finish_run(&mut h);
+    // (egui keeps a label's text as its AccessKit value)
+    let rect_of = |h: &App, text: &str| {
+        h.root()
+            .children_recursive()
+            .find(|n| text_of(n) == text)
+            .unwrap_or_else(|| panic!("no node {text:?}"))
+            .rect()
+    };
+    let hud: Vec<String> = game(&h)
+        .view()
+        .hud
+        .iter()
+        .map(|c| format!("{} {}", c.key.trim(), c.value))
+        .collect();
+    assert!(hud.len() >= 3, "Height, Sway, Comfort: {hud:?}");
+    let chips: Vec<egui::Rect> = hud.iter().map(|t| rect_of(&h, t)).collect();
+    let title = game(&h).view().result.expect("a result").title;
+    for b in [title.as_str(), "Replay in slow motion", "Back to building"] {
+        let r = h
+            .root()
+            .children_recursive()
+            .filter(|n| text_of(n) == b)
+            .map(|n| n.rect())
+            .find(|r| r.top() < chips[0].bottom() + 200.0)
+            .unwrap_or_else(|| panic!("{b}"));
+        for c in &chips {
+            assert!(!r.intersects(*c), "{b} {r:?} covers a HUD chip {c:?}");
+        }
+    }
+}
+
+/// The header and the MCP summary read the view as the fold-ins adjust it (time's review
+/// finding): on the Leaning tower after its 30 years, the summary names the banner the stage
+/// shows.
+#[test]
+fn the_summary_reads_the_adjusted_view() {
+    let mut h = harness(Route::Playground);
+    click_shown(&mut h, "7 · Leaning tower");
+    click_drive(&mut h);
+    {
+        let s = &mut h.state_mut().screens_mut().builder;
+        s.fold.time.finish(&mut s.game);
+    }
+    settle(&mut h);
+    let shown = h
+        .state()
+        .screens()
+        .builder
+        .adjusted_view()
+        .result
+        .expect("a banner")
+        .title;
+    assert!(has_label(&h, &shown), "the stage shows {shown:?}");
+    let summary = structures_playground::Screen::describe(&h.state().screens().builder);
+    assert!(summary.contains(&shown), "{summary} vs {shown}");
+}

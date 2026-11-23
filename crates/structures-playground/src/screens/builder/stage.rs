@@ -25,6 +25,27 @@ use sp_engine::builder::Game;
 use sp_engine::builder::view::{Cursor, HudTone, ResultView, StatusTone, View};
 use sp_theme::{self as t, builder as b};
 
+/// The wheel's zoom step (`zoomBy(1.15)` per notch).
+pub const WHEEL_STEP: f64 = 1.15;
+/// Points of trackpad scroll per ×1.15 step.
+pub const WHEEL_POINTS_PER_STEP: f64 = 50.0;
+
+/// Zoom steps (positive: in) for one wheel event: egui's delta is "content moves down", so a
+/// positive y (wheel up, two fingers down the pad) zooms in; a `Line` is one notch, a `Page` a
+/// notch too, `Point`s count `WHEEL_POINTS_PER_STEP` to the step.
+pub fn wheel_steps(unit: eframe::egui::MouseWheelUnit, dy: f32) -> f64 {
+    use eframe::egui::MouseWheelUnit;
+    let dy = dy as f64;
+    if !dy.is_finite() {
+        return 0.0;
+    }
+    match unit {
+        MouseWheelUnit::Line => dy,
+        MouseWheelUnit::Page => dy.signum(),
+        MouseWheelUnit::Point => dy / WHEEL_POINTS_PER_STEP,
+    }
+}
+
 /// A core HUD tone's colour.
 pub fn hud_color(tone: HudTone) -> Color32 {
     match tone {
@@ -189,10 +210,12 @@ fn stage(
         let (x, y) = to_stage(p);
         actions.push(Action::ClickSurface(x, y));
     }
-    // keyboard building: with the grid focused, Enter / Space clicks the stage centre (pan
-    // with the arrow keys to move it) and the hover dot shows where
+    // keyboard building: with the grid focused, Enter / Space builds where the hover dot is —
+    // the stage centre while the pointer is away (pan with the arrow keys to move it), else
+    // under the pointer
     if surface.clicked() && surface.interact_pointer_pos().is_none() {
-        actions.push(Action::ClickSurface(560.0, 300.0));
+        let [x, y] = v.hover.unwrap_or([560.0, 300.0]);
+        actions.push(Action::ClickSurface(x, y));
     }
     let pointer_on_stage = ui
         .input(|i| i.pointer.latest_pos())
@@ -226,30 +249,34 @@ fn stage(
             if moved || dragging {
                 actions.push(Action::PointerMove(x, y));
             }
-            // `onWheel`: one ×1.15 step per wheel event (deltaY < 0 zooms in); the page
-            // doesn't scroll under the stage. ⌘ / ctrl + wheel and pinches come as zoom.
+            // `onWheel`: a mouse-wheel notch is one ×1.15 step (wheel up zooms in); a
+            // trackpad's many small point deltas (and its momentum) zoom continuously, one step
+            // per `WHEEL_POINTS_PER_STEP` points, so a gentle scroll doesn't zoom several-fold.
+            // The page doesn't scroll under the stage. ⌘ / ctrl + wheel and pinches come as zoom.
             let (steps, pinch) = ui.input_mut(|i| {
-                let steps: Vec<f32> = i
+                let steps: f64 = i
                     .raw
                     .events
                     .iter()
                     .filter_map(|e| match e {
                         eframe::egui::Event::MouseWheel {
-                            delta, modifiers, ..
+                            unit,
+                            delta,
+                            modifiers,
+                            ..
                         } if delta.y != 0.0 && !(modifiers.ctrl || modifiers.command) => {
-                            Some(delta.y)
+                            Some(wheel_steps(*unit, delta.y))
                         }
                         _ => None,
                     })
-                    .collect();
-                if !steps.is_empty() {
+                    .sum();
+                if steps != 0.0 {
                     i.smooth_scroll_delta = Vec2::ZERO;
                 }
                 (steps, i.zoom_delta())
             });
-            for d in steps {
-                // egui's wheel delta is "content moves down" (positive = wheel up): deltaY = −d
-                actions.push(Action::Wheel(-(d as f64), x, y));
+            if steps != 0.0 {
+                actions.push(Action::Pinch(WHEEL_STEP.powf(steps), x, y));
             }
             if (pinch - 1.0).abs() > 1e-4 {
                 actions.push(Action::Pinch(pinch as f64, x, y));
@@ -271,8 +298,8 @@ fn stage(
     handles(ui, &xf, v, actions);
     joints(ui, &xf, v, actions);
     tags(ui, &xf, v);
-    hud(ui, rect, v, extra_hud);
-    overlays(ui, rect, v, actions);
+    let hud_area = hud(ui, rect, v, extra_hud);
+    overlays(ui, rect, v, hud_area, actions);
     crate::layout::graph_panel_border(ui, rect);
 }
 
@@ -405,8 +432,8 @@ fn tags(ui: &Ui, xf: &Xf, v: &View) {
 }
 
 /// The HUD (top right, `max-width: 60%`, wrapping right-aligned lines, gap 6): the core's
-/// chips, then the fold-ins'.
-fn hud(ui: &Ui, rect: Rect, v: &View, extra: &[HudChip]) {
+/// chips, then the fold-ins'. Returns the area the chips cover.
+fn hud(ui: &Ui, rect: Rect, v: &View, extra: &[HudChip]) -> Option<Rect> {
     let chips: Vec<(String, String, Color32)> = v
         .hud
         .iter()
@@ -418,7 +445,7 @@ fn hud(ui: &Ui, rect: Rect, v: &View, extra: &[HudChip]) {
         )
         .collect();
     if chips.is_empty() {
-        return;
+        return None;
     }
     let sizes: Vec<Vec2> = chips
         .iter()
@@ -439,10 +466,12 @@ fn hud(ui: &Ui, rect: Rect, v: &View, extra: &[HudChip]) {
         }
     }
     let mut y = rect.top() + 12.0;
+    let mut area = Rect::NOTHING;
     for l in &lines {
         let w: f32 = l.iter().map(|&i| sizes[i].x).sum::<f32>() + 6.0 * (l.len() - 1) as f32;
         let mut x = rect.right() - 12.0 - w;
         let h = l.iter().map(|&i| sizes[i].y).fold(0.0, f32::max);
+        area = area.union(Rect::from_min_size(pos2(x, y), vec2(w, h)));
         for &i in l {
             let (k, val, c) = &chips[i];
             hud_pill(ui, Some(pos2(x, y)), k, val, *c);
@@ -450,14 +479,28 @@ fn hud(ui: &Ui, rect: Rect, v: &View, extra: &[HudChip]) {
         }
         y += h + 6.0;
     }
+    Some(area)
 }
 
-/// The toast (top centre), the run overlay (bottom centre) and the result banner (top centre).
-fn overlays(ui: &mut Ui, rect: Rect, v: &View, actions: &mut Vec<Action>) {
+/// `r` moved below the HUD when it would cover it (SPEC MB-12: the result banner and the run
+/// overlay keep the HUD readable; the mockup lets the banner cover it), staying on the stage.
+fn clear_of_hud(r: Rect, hud: Option<Rect>, stage: Rect) -> Rect {
+    match hud {
+        Some(h) if r.intersects(h.expand(2.0)) => {
+            let top = (h.bottom() + 8.0).min(stage.bottom() - r.height() - 4.0);
+            r.translate(vec2(0.0, top - r.top()))
+        }
+        _ => r,
+    }
+}
+
+/// The toast (top centre), the run overlay (bottom centre) and the result banner (top centre;
+/// both clear of the HUD, MB-12).
+fn overlays(ui: &mut Ui, rect: Rect, v: &View, hud: Option<Rect>, actions: &mut Vec<Action>) {
     let painter = ui.painter().clone();
     let cx = rect.center().x;
     if let Some(r) = &v.result {
-        result_banner(ui, rect, r, actions);
+        result_banner(ui, rect, r, hud, actions);
     }
     if let Some(text) = &v.toast {
         let g = galley(ui, text, lab_theme::font::body(13.0), t::TEXT);
@@ -482,6 +525,7 @@ fn overlays(ui: &mut Ui, rect: Rect, v: &View, actions: &mut Vec<Action>) {
         let inner = vec2(g.size().x + 12.0 + ss.x, g.size().y.max(ss.y));
         let size = inner + vec2(30.0, 18.0);
         let r = Rect::from_min_size(pos2(cx - size.x / 2.0, rect.bottom() - 12.0 - size.y), size);
+        let r = clear_of_hud(r, hud, rect);
         painter.rect(
             r,
             CornerRadius::same(10),
@@ -503,7 +547,13 @@ fn overlays(ui: &mut Ui, rect: Rect, v: &View, actions: &mut Vec<Action>) {
 /// The result banner: title (Space Grotesk 15, green / red), stars or "practice", "Replay in
 /// slow motion", "Back to building"; wrapping centred lines (`gap: 8px 12px`, `max-width:
 /// 92%`).
-fn result_banner(ui: &mut Ui, rect: Rect, r: &ResultView, actions: &mut Vec<Action>) {
+fn result_banner(
+    ui: &mut Ui,
+    rect: Rect,
+    r: &ResultView,
+    hud: Option<Rect>,
+    actions: &mut Vec<Action>,
+) {
     let painter = ui.painter().clone();
     let cx = rect.center().x;
     let color = if r.pass { t::OK } else { t::DANGER };
@@ -554,6 +604,7 @@ fn result_banner(ui: &mut Ui, rect: Rect, r: &ResultView, actions: &mut Vec<Acti
         pos2(cx - (inner_w + 30.0) / 2.0, rect.top() + 14.0),
         vec2(inner_w + 30.0, inner_h + 22.0),
     );
+    let banner = clear_of_hud(banner, hud, rect);
     painter.rect(
         banner,
         CornerRadius::same(12),
