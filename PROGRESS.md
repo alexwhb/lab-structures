@@ -162,7 +162,8 @@ Shared-file etiquette:
   fy=275MPa rho=7850 curve=steel ; tensile test at 20 °C, ε = 0.00 %, Ready` (Series'
   `.material name E fy rho [curve=…]`); pasted into Advanced it should parse (accept or warn
   on `curve=`, don't error).
-- **materials → lead** (decide; implemented as the mockup until told otherwise): (a)
+- **materials → lead** (answered in SPEC a38bb39 / MB-8; **done** in cc3b907: heat-scaled
+  toughness, concrete's cracking / crushing wording, "Press Pull"): (a)
   **Toughness ignores temperature**: the tile shows the room-temperature area while the
   plotted curve, peak and yield are heat-scaled (timber at 300 °C: peak 0 MPa, toughness
   0.27 MJ/m³). `Curve::toughness_at(T)` is ready if you want it (MB candidate). (b)
@@ -207,6 +208,8 @@ Shared-file etiquette:
   pressure, `ground::FromTower::edge_pressure` = M / (B³/6) over the 40 m footprint
   (Simplified: rigid base, linear pressure), and, under "Known inconsistencies", the
   100-floor challenge above. Thanks for the Tower / Ground rows — they match the code.
+  - **materials: Done** (cc3b907) — edge-pressure row in the Ground table, MB-6 under "Known
+    inconsistencies" (resolved by `worlds`), the Tower challenge row now lists `DRIFT_GOAL` H/350.
 
 - **advanced (status, wave 1 done)**: engine `sp_engine::{netlist, generate, influence}`
   (d65215a, f814297, 0ecd67f) and the Advanced screen (d859a0c, e0e4252 + this commit). The
