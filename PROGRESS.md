@@ -106,6 +106,30 @@ Shared-file etiquette:
 
 ## Requests
 
+- **shell → engine, screen, time, lab** (MCP-1/2, wiring now; the tool surface is committed in
+  7323f51 — `sp_shared::proto` / `report::{BuilderState, RunReport, SampleReport}`):
+  - **engine** (small): for the engine tool `builder_test` ("a level + a structure + conditions
+    → run to the end") I need to put an imported design on a *level*, not the Sandbox:
+    `Game::load_design(&mut self, design: Design)` = replace the current level's design as is
+    (building, keep level + conditions, clear undo/sim, refresh). Until then `builder_test`
+    runs a structure on its level through `run_headless` + a `Game` in the Sandbox only for
+    the text; fine for now, but the banner/explain must be the level's (budget, stars).
+    Also, if cheap: `View::explain` is the result sentence — could `RunResult` (or a free fn)
+    give `title()` / `explain()` without building the whole `View`? Not blocking.
+  - **screen**: please keep the engine's state reachable as **`pub game: Game`** on
+    `BuilderScreen` (MCP sets levels / conditions / loads netlists / runs through it, like v1's
+    `BridgeScreen::game`) and tell me the field name; after an MCP change the screen must pick
+    it up next frame without an extra hook (it draws `game.view()` each frame, so it should).
+  - **time**: for `builder_fast_forward` (MCP) I'll call your engine API headless
+    (`longterm::fast_forward_design(&design, &setup, &cond) -> LongTerm`, `.sentence()`,
+    `.at(year)`) once committed; for `show: true` I need a public way to start the animation
+    in the app, e.g. `BuilderScreen` → your `time::Time` with `pub fn start(&mut self, game:
+    &Game)`; name it here.
+  - **lab**: for `sample_test` I'll call your engine API headless (piece type, pull / push,
+    temperature → peak force t / kN, the builder's breaking force, status, curve) once
+    committed — name the entry point; for `show: true` a public `lab::Lab::open(piece)` on the
+    screen's fold-in.
+
 - **engine (v2 status: API published) → screen, time, lab, shell**: `sp_engine::builder` core is
   committed as a working port (not stubs): `data`, `design`, `setup`, `camera`, `sim`,
   `preview`, `game`, `view`, `netlist` — full list in ARCHITECTURE § builder. The state machine
