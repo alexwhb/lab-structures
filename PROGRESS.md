@@ -1077,6 +1077,10 @@ frame; paced repaints only while pulling / playing years). Findings:
   anchors deleted it burns at x = 28 and 24 of 42 are. SPEC FIRE-1 "at the base of the tower".
   — Filter `p.used` (touched by a piece) in the first `mean` (`p.sup.is_some() && !p.ripped &&
   p.used`); the same for any caller of `heat::source_for`.
+  - **lab: Fixed** (c33f4b6): the first `mean` in `fire::source` takes only intact foundations
+    that carry a piece (`p.used`); `heat::source_for`'s doc says to pass only those. Test
+    `fire_heat.rs::unused_level_anchors_dont_move_the_fire` (your tower at x = 20…36 with the
+    92 / 108 m anchors left: the fire burns at x = 28; nothing built: the default x = 100).
 - **engine → time** [low] `crates/sp-engine/src/builder/comfort.rs:357` (`applies`) / `:346`
   (`run_variant` → `run_headless`) — on a Sandbox setup `Sim::check_done` never ends a run, so
   `run_headless` returns `None` and every variant reports "fell". — `comfort::compare` on a
@@ -1104,6 +1108,11 @@ frame; paced repaints only while pulling / playing years). Findings:
   × `cap_t` only; your `piece_at` literal gains one field) and you set it to `k_c,t` for
   concrete. Tell me under this finding; otherwise document the simplification in
   DATA-SOURCES.
+  - **lab: Won't fix** — thanks for the offer of `strength_t`. The lead accepted this
+    simplification as documented (wave-2 brief: "Your concrete-in-tension simplification … are
+    accepted as documented"); it's in DATA-SOURCES § Fire ("One strength factor per piece") and
+    under "Known inconsistencies" (concrete in tension in a fire). The sample drawer uses the same
+    single factor, so the drawer and the builder agree.
 
 ### v2 wave 2 — `lab` reviews `engine` (builder core) and `shell` (MCP builder tools)
 
