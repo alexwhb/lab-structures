@@ -6,12 +6,16 @@
 
 use crate::proto::{ConditionsChange, MAX_RUN_FRAMES, SANDBOX_RUN_SECONDS};
 use crate::report::{
-    BuilderState, ConditionsInfo, FoundationFailure, PieceFailure, RunReport, TowerOutcome, short,
+    BuilderState, ConditionsInfo, FoundationFailure, PieceFailure, RunReport, SampleReport,
+    TowerOutcome, YearsOutcome, short,
 };
-use sp_engine::builder::data::{FIRES, LevelKey, QUAKES, SNOWS, Scene, Soil, TrafficSet, WINDS};
+use sp_engine::builder::data::{
+    FIRES, LevelKey, PieceType, QUAKES, SNOWS, Scene, Soil, TrafficSet, WINDS,
+};
 use sp_engine::builder::design::Design;
 use sp_engine::builder::game::{Game, Outcome, Phase, Tool};
-use sp_engine::builder::netlist;
+use sp_engine::builder::sample::{Sample, Test};
+use sp_engine::builder::{comfort, longterm, netlist};
 
 /// The level ids, in the aside's order.
 pub fn level_ids() -> Vec<&'static str> {
@@ -208,7 +212,9 @@ pub fn run_report(game: &Game) -> Option<RunReport> {
                 comfort_mg: *mg,
                 comfort_limit_mg: setup.comfort,
                 comfy: *comfy,
-                comfort: sp_engine::tower::Comfort::of(*mg).sentence().to_string(),
+                comfort: comfort::Meter::new(*mg, setup.comfort)
+                    .sentence()
+                    .to_string(),
             }),
         ),
     };
@@ -296,7 +302,7 @@ fn sandbox_report(game: &Game) -> RunReport {
                     comfort_mg: mg,
                     comfort_limit_mg: None,
                     comfy: true,
-                    comfort: sp_engine::tower::Comfort::of(mg).sentence().to_string(),
+                    comfort: comfort::Meter::new(mg, None).sentence().to_string(),
                 }),
             )
         }
@@ -407,6 +413,148 @@ pub fn place_design(game: &mut Game, design: &Design) -> Vec<String> {
     refused
 }
 
+/// Checks a number of years (0–30).
+pub fn years(y: Option<f64>) -> Result<f64, String> {
+    let y = y.unwrap_or(longterm::YEARS);
+    if y.is_finite() && (0.0..=longterm::YEARS).contains(&y) {
+        Ok(y)
+    } else {
+        Err(format!(
+            "`years` must be 0 to {}, not {y}",
+            short(longterm::YEARS)
+        ))
+    }
+}
+
+/// Fast-forwards the game's structure `years` (TIME-1) headless and reports it: on the Leaning
+/// tower the level's own result (pass under 0.5°, stars); elsewhere the settlement, passing
+/// when it stood. The game itself is not changed.
+pub fn fast_forward_report(game: &Game, years: f64) -> RunReport {
+    let setup = game.setup();
+    let lt = longterm::fast_forward_design(game.design(), &setup, game.cond());
+    let snap = lt.at(years);
+    let budget = setup.budget.filter(|b| *b != 0.0);
+    let practice = game.practice();
+    let cost = game.cost();
+    let line = lt.result_line();
+    let sentence = lt.sentence();
+    let (pass, stars, title, explain) = if game.level() == LevelKey::Pisa {
+        let r = longterm::pisa::result(&lt, cost, practice, budget.unwrap_or(0.0));
+        (r.pass, r.stars, r.title, r.explain)
+    } else {
+        let stood = !snap.fallen && !matches!(lt.ending, longterm::Ending::Nothing);
+        (stood, 0, line.clone(), format!("{line} {sentence}"))
+    };
+    RunReport {
+        pass,
+        title,
+        explain,
+        stars,
+        practice,
+        cost_k: cost,
+        budget_k: budget,
+        first_failure: None,
+        first_foundation: None,
+        crossed: None,
+        vehicles: None,
+        tower: None,
+        years: Some(YearsOutcome {
+            years: snap.year,
+            tilt_deg: snap.tilt,
+            settled_mm: snap.max_settle * 1000.0,
+            differential_mm: snap.differential * 1000.0,
+            failed: snap.fallen,
+            sentence: format!("{line} {sentence}"),
+        }),
+        t_s: 0.0,
+    }
+}
+
+/// A piece type id (`road`, `floor`, `wood`, `steel`, `concrete`, `rope`, `cable`; any case).
+pub fn piece_type(s: &str) -> Result<PieceType, String> {
+    let k = s.trim().to_ascii_lowercase();
+    PieceType::from_key(&k).ok_or_else(|| {
+        format!(
+            "unknown piece type `{s}`; piece types are {}",
+            PieceType::ALL.map(|p| p.key()).join(", ")
+        )
+    })
+}
+
+/// Checks `sample_test`'s arguments: the piece type, `pull` / `push` (Rope and Cable only
+/// pull), the temperature (−40…900 °C).
+pub fn sample_args(
+    piece: &str,
+    mode: Option<&str>,
+    temperature_c: Option<f64>,
+) -> Result<(PieceType, Test, f64), String> {
+    let kind = piece_type(piece)?;
+    let test = match mode.map(|m| m.trim().to_ascii_lowercase()).as_deref() {
+        None | Some("pull") => Test::Pull,
+        Some("push") => Test::Push,
+        Some(other) => return Err(format!("`mode` must be pull or push, not `{other}`")),
+    };
+    if test == Test::Push && kind.spec().t_only {
+        return Err(format!(
+            "{} only pulls (it goes slack when pushed): test it with mode pull",
+            kind.name()
+        ));
+    }
+    let t = temperature_c.unwrap_or(20.0);
+    if !(t.is_finite() && (-40.0..=900.0).contains(&t)) {
+        return Err(format!("`temperature_c` must be -40 to 900, not {t}"));
+    }
+    Ok((kind, test, t))
+}
+
+/// Runs a sample test to its end on `sample` (the drawer's bench: fresh, at `temp`, `test`)
+/// and reports it.
+pub fn run_sample(sample: &mut Sample, kind: PieceType, test: Test, temp: f64) -> SampleReport {
+    sample.open(kind);
+    sample.set_temp(temp);
+    sample.fresh_sample();
+    match test {
+        Test::Pull => sample.pull(),
+        Test::Push => sample.push(),
+    }
+    let broken = sample.run_to_end();
+    sample_report(sample, broken)
+}
+
+/// The report for a sample bench as it stands.
+pub fn sample_report(sample: &Sample, broken: bool) -> SampleReport {
+    let kind = sample.kind();
+    let test = sample.test();
+    let curve = sample.curve();
+    let points: Vec<[f64; 2]> = curve.map(|c| c.points.clone()).unwrap_or_default();
+    let peak_n = curve.map_or(0.0, |c| c.peak_mpa() * 1e6 * c.area);
+    let status = sample.status().label(kind);
+    let capacity = sample.capacity_n();
+    let t = |n: f64| n / (sp_engine::truss::G * 1000.0);
+    let summary = format!(
+        "{} {} at {} °C: {} — peak {} t ({} kN); a piece this size breaks at {} t in the builder",
+        kind.name(),
+        test.name().to_lowercase(),
+        short(sample.temp()),
+        status,
+        sp_engine::jsnum::to_fixed(t(peak_n), 1),
+        sp_engine::jsnum::to_fixed(peak_n / 1000.0, 0),
+        sp_engine::jsnum::to_fixed(t(capacity), 1),
+    );
+    SampleReport {
+        piece: kind.key().into(),
+        mode: test.name().to_lowercase(),
+        temperature_c: sample.temp(),
+        broken,
+        status,
+        peak_t: t(peak_n),
+        peak_kn: peak_n / 1000.0,
+        piece_breaks_at_t: t(capacity),
+        curve: points,
+        summary,
+    }
+}
+
 /// What [`test_structure`] ran and found.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct StructureTest {
@@ -427,7 +575,9 @@ pub fn test_structure(
     scene_id: Option<&str>,
     netlist_text: Option<&str>,
     change: &ConditionsChange,
+    years_after: Option<f64>,
 ) -> Result<StructureTest, String> {
+    let years_after = years_after.map(|y| years(Some(y))).transpose()?;
     let imported = netlist_text
         .map(|t| {
             netlist::read(t).map_err(|e| {
@@ -499,7 +649,21 @@ pub fn test_structure(
         game.set_traffic(c.traffic);
     }
     apply_conditions(&mut game, change)?;
-    let result = run_to_end(&mut game)?;
+    // the Leaning tower's run is the fast-forward
+    let years_after = match (years_after, game.level()) {
+        (None, LevelKey::Pisa) => Some(longterm::YEARS),
+        (y, _) => y,
+    };
+    let result = if game.level() == LevelKey::Pisa {
+        fast_forward_report(&game, years_after.unwrap_or(longterm::YEARS))
+    } else {
+        let mut r = run_to_end(&mut game)?;
+        if let Some(y) = years_after {
+            // TIME-1: after a run that stood, the years
+            r.years = fast_forward_report(&game, y).years;
+        }
+        r
+    };
     Ok(StructureTest {
         result,
         state: builder_state(&game),
@@ -510,7 +674,7 @@ pub fn test_structure(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sp_engine::builder::data::{Foundation, PieceType};
+    use sp_engine::builder::data::Foundation;
     use sp_engine::builder::game::PresetBuild;
 
     fn none() -> ConditionsChange {
@@ -564,7 +728,7 @@ mod tests {
 
     #[test]
     fn an_empty_level_fails_and_says_so() {
-        let t = test_structure(Some("river"), None, None, &none()).unwrap();
+        let t = test_structure(Some("river"), None, None, &none(), None).unwrap();
         assert!(!t.result.pass);
         assert_eq!(t.result.vehicles, Some(3));
         assert_eq!(t.result.crossed, Some(0));
@@ -602,7 +766,7 @@ mod tests {
             let design = g.design().clone();
             g.run_test(MAX_RUN_FRAMES);
             let direct = run_report(&g).expect("a result");
-            let t = test_structure(Some(level.key()), None, Some(&text), &none()).unwrap();
+            let t = test_structure(Some(level.key()), None, Some(&text), &none(), None).unwrap();
             assert!(t.refused.is_empty(), "{level:?}: {:?}", t.refused);
             assert_eq!(t.state.joints, design.nodes.len(), "{level:?}");
             assert_eq!(t.state.pieces, design.members.len(), "{level:?}");
@@ -613,6 +777,68 @@ mod tests {
         }
     }
 
+    /// The sample lab breaks a steel sample at the builder's own capacity scale and refuses
+    /// pushing a rope.
+    #[test]
+    fn samples_break_and_bad_samples_are_refused() {
+        let (k, t, temp) = sample_args("Steel", None, None).unwrap();
+        let mut s = Sample::new(k);
+        let r = run_sample(&mut s, k, t, temp);
+        assert!(r.broken, "{r:?}");
+        assert_eq!((r.piece.as_str(), r.mode.as_str()), ("steel", "pull"));
+        assert!(r.peak_t >= r.piece_breaks_at_t * 0.99, "{r:?}");
+        assert!(r.curve.len() > 3);
+        assert!(
+            sample_args("rope", Some("push"), None)
+                .unwrap_err()
+                .contains("only pulls")
+        );
+        assert!(sample_args("gold", None, None).is_err());
+        assert!(sample_args("wood", None, Some(1000.0)).is_err());
+        let (k, t, temp) = sample_args("concrete", Some("push"), Some(700.0)).unwrap();
+        let hot = run_sample(&mut s, k, t, temp);
+        let (k, t, temp) = sample_args("concrete", Some("push"), None).unwrap();
+        let cold = run_sample(&mut s, k, t, temp);
+        assert!(
+            hot.piece_breaks_at_t < cold.piece_breaks_at_t,
+            "{hot:?} {cold:?}"
+        );
+    }
+
+    /// TIME-1 / TIME-3: the Leaning tower left alone leans past its goal over 30 years; a
+    /// tower on soft clay reports its settlement after a run; years are checked.
+    #[test]
+    fn years_of_settlement() {
+        let t = test_structure(Some("pisa"), None, None, &none(), None).unwrap();
+        let y = t.result.years.as_ref().expect("the years");
+        assert_eq!(y.years, 30.0);
+        assert!(!t.result.title.is_empty() && !t.result.explain.is_empty());
+        // (until the engine lists the Leaning tower, `pisa` is a placeholder level)
+        if sp_engine::builder::data::pisa_available() {
+            assert!(!t.result.pass, "untouched it keeps leaning: {:?}", t.result);
+            assert!(y.tilt_deg.abs() > 0.5, "{y:?}");
+        }
+        let mut g = Game::new();
+        g.pick_level(LevelKey::T1);
+        g.build_preset(PresetBuild::Tower {
+            h: 40.0,
+            bays: 2,
+            col: PieceType::Steel,
+            brace: PieceType::Wood,
+            found: Foundation::Footing,
+        });
+        let soft = ConditionsChange {
+            soil: Some("soft".into()),
+            ..none()
+        };
+        let t = test_structure(Some("t1"), None, Some(&g.share_text()), &soft, Some(12.0)).unwrap();
+        let y = t.result.years.expect("the years after the run");
+        assert_eq!(y.years, 12.0);
+        assert!(y.settled_mm > 0.0, "{y:?}");
+        assert!(years(Some(31.0)).is_err() && years(Some(f64::NAN)).is_err());
+        assert_eq!(years(None).unwrap(), 30.0);
+    }
+
     #[test]
     fn the_sandbox_takes_a_netlist_and_runs_for_a_while() {
         let mut g = Game::new();
@@ -620,15 +846,16 @@ mod tests {
             chord: PieceType::Steel,
         });
         let text = g.share_text().replace("* level river", "* level sandbox");
-        let t = test_structure(Some("sandbox"), None, Some(&text), &none()).unwrap();
+        let t = test_structure(Some("sandbox"), None, Some(&text), &none(), None).unwrap();
         assert_eq!(t.state.level, "sandbox");
         assert_eq!(t.result.stars, 0);
         assert!(t.result.t_s > SANDBOX_RUN_SECONDS - 1.0, "{}", t.result.t_s);
-        let err = test_structure(Some("sandbox"), Some("flat"), Some(&text), &none()).unwrap_err();
+        let err =
+            test_structure(Some("sandbox"), Some("flat"), Some(&text), &none(), None).unwrap_err();
         assert!(err.contains("river scene"), "{err}");
-        let err = test_structure(Some("river"), Some("flat"), None, &none()).unwrap_err();
+        let err = test_structure(Some("river"), Some("flat"), None, &none(), None).unwrap_err();
         assert!(err.contains("Sandbox only"), "{err}");
-        let err = test_structure(None, None, Some(".node A 1.5 0"), &none()).unwrap_err();
+        let err = test_structure(None, None, Some(".node A 1.5 0"), &none(), None).unwrap_err();
         assert!(err.contains("grid"), "{err}");
     }
 }

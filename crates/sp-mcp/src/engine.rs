@@ -111,6 +111,8 @@ struct BuilderTestArgs {
     scene: Option<String>,
     #[serde(default)]
     netlist: Option<String>,
+    #[serde(default)]
+    years: Option<f64>,
     #[serde(flatten)]
     change: sp_shared::proto::ConditionsChange,
 }
@@ -234,8 +236,9 @@ pub fn register(tools: &mut ToolRegistry) -> Result<(), RegistryError> {
                  first piece that broke (snapped / cracked / buckled / crushed / softened / \
                  burned through) or foundation that gave way (sank / ripped out / \
                  liquefied), vehicles across, height, sway and comfort in milli-g; plus the \
-                 builder's state. Without a netlist it runs the level as it starts (its \
-                 anchors only). {}",
+                 builder's state; with `years`, the settlement over that many years after the \
+                 run (TIME-1). Without a netlist it runs the level as it starts (its anchors \
+                 only). {}",
                 crate::screens::LEVELS_DESC
             ),
         )
@@ -256,6 +259,11 @@ pub fn register(tools: &mut ToolRegistry) -> Result<(), RegistryError> {
                                "description": "Sandbox only, without a netlist: river (River crossing) or flat (Open ground). A netlist's joints pick its scene."}),
                     );
                     m.insert("netlist".into(), netlist_schema());
+                    m.insert(
+                        "years".into(),
+                        json!({"type": "number", "minimum": 0, "maximum": 30,
+                               "description": "TIME-1: after the run, fast-forward the structure this many years of settlement (the Leaning tower's run is always the 30-year fast-forward) and report tilt, settlement and whether it toppled."}),
+                    );
                 }
                 p
             },
@@ -268,6 +276,7 @@ pub fn register(tools: &mut ToolRegistry) -> Result<(), RegistryError> {
                 a.scene.as_deref(),
                 a.netlist.as_deref(),
                 &a.change,
+                a.years,
             )
             .map_err(ToolError::new)?;
             let mut summary = t.result.summary();
