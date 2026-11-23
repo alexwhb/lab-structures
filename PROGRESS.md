@@ -824,6 +824,11 @@ Shared-file etiquette:
   for `Point` deltas (trackpad / momentum) zoom continuously, e.g. `1.15^(−Δy / 50)` per event
   (≈ one step per 50 points of scroll), and test that ten 4-point trackpad events stay under
   ×1.15 while one `Line` notch is exactly ×1.15.
+  - **Fixed** (f748481): `stage::wheel_steps` — a `Line` (or `Page`) event is one ×1.15 notch, a
+    `Point` delta (trackpad, momentum) counts `WHEEL_POINTS_PER_STEP` = 50 points to the step;
+    the frame's steps become one `zoom_by(1.15^steps)` about the pointer. Tests
+    `trackpad_scrolls_zoom_gently` (ten 4-point events → ×1.15^0.8) and `zoom_pan_and_fit` (a
+    `Line` notch stays exactly ×1.15).
 - **time → screen** [low] `crates/structures-playground/src/screens/builder/stage.rs:193`
   + `:198` (keyboard building) — Enter / Space on the focused grid always builds at the stage
   centre (560, 300), but the hover dot only moves there while the pointer is *off* the stage;
@@ -833,6 +838,8 @@ Shared-file etiquette:
   the grid has keyboard focus, show the dot at the centre whenever a key arrives (or build at
   `v.hover` when it is set and the last input was the pointer), so the dot is always where
   Enter builds.
+  - **Fixed** (f748481): Enter / Space on the focused grid builds at the hover dot (`v.hover`),
+    the stage centre while the pointer is away. Test `keyboard_builds_at_the_hover_dot`.
 - **time → screen** [low] `crates/structures-playground/src/screens/builder.rs:237`
   (`refresh_view`) + `:538` (`describe`) — the cached view the header reads (`clock()`,
   `drive_button()`'s `hdr_run`) and the MCP summary are `game.view()` without the fold-ins'
@@ -843,6 +850,9 @@ Shared-file etiquette:
   the fold-in's ("Still leaning", "It toppled"). — Apply the fold-ins' `adjust_view` in
   `refresh_view` (and use the cached view in `describe`); I'll then set `view.clock` ("year
   12.0") from `time`.
+  - **Fixed** (f748481): `BuilderScreen::adjusted_view()` (the engine's view + every fold-in's
+    `adjust_view`) feeds the stage, the cached view the header reads (`clock`, `hdr_run`) and
+    `describe`. Go ahead with `view.clock`. Test `the_summary_reads_the_adjusted_view`.
 - **time → screen / lead** [low] `crates/structures-playground/src/screens/builder/stage.rs:454`
   (`overlays`: result banner) + `:407` (`hud`) — the result banner (top centre, up to 92 % wide)
   covers the HUD chips (top right, up to 60 % wide) exactly when the run's numbers matter: after
@@ -850,6 +860,11 @@ Shared-file etiquette:
   and "Wind". The mockup's CSS (`top: 14px` vs `top: 12px; right: 12px`) does the same, so this
   is a mockup bug candidate (MB) for the lead. — While the banner shows, start the HUD below it
   (`y = banner.bottom() + 8`), or narrow the banner's line so it wraps left of the chips.
+  - **Fixed** (f748481, SPEC MB-12 per the lead): the HUD reports the area its chips cover; the
+    result banner and the run overlay move 8 px below it when they would cover it (staying on
+    the stage). Test `the_result_banner_keeps_the_hud_readable` (TowerStorm run to its banner:
+    the title, "Replay in slow motion" and "Back to building" clear of Height / Sway / Comfort /
+    Wind).
 - **time → screen** (no defect found, checked with probes): pointer → world and snapping at 35 /
   100 / 260 / 400 % on 390 / 800 / 1440 px (clicked grid points land exactly; the wheel keeps
   the world point under the pointer); clicks pass through the HUD chips to the grid; a joint drag
