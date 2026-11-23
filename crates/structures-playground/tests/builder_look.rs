@@ -158,7 +158,8 @@ fn renders_at_1440_and_390_without_overlap() {
     }
 }
 
-/// Review images of the other boards (`SP_BUILDER_SHOTS=1`).
+/// Review images of the other boards (`SP_BUILDER_SHOTS=1`): at rest, and the boards that run
+/// on their own 16 s into their run (the `-1440-16s` references; the run starts 0.7 s in).
 #[test]
 fn board_gallery() {
     if !shots() {
@@ -172,5 +173,23 @@ fn board_gallery() {
         "TowerQuake",
     ] {
         render_board(name);
+    }
+    for name in ["BridgeStorm", "BridgeCollapse", "TowerStorm", "TowerQuake"] {
+        let mock = load(&repo().join(format!("docs/design/v2/screenshots/{name}-1440-16s.png")));
+        let mut app = board(name, 1440.0, mock.height() as f32);
+        {
+            let g = &mut app.state_mut().screens_mut().builder.game;
+            g.start_run(false);
+            // 16 s of page time, the run started 0.7 s in: 15.3 s of 1/30 s frames
+            for _ in 0..459 {
+                g.tick();
+            }
+        }
+        settle(&mut app);
+        let img = render(&mut app);
+        save(
+            &side_by_side(&img, &mock),
+            &repo().join(format!("target/compare/{name}-1440-16s.png")),
+        );
     }
 }

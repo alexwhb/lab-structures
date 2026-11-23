@@ -156,8 +156,13 @@ pub fn show(ui: &mut Ui, zoom_text: &str, actions: &mut Vec<Action>) {
         legend_rect,
         "Pulled, Pushed, Slack / idle, Will break. Brighter means closer to breaking.",
     );
-    // the zoom group (`role="group" aria-label="Zoom"`), right-aligned
-    let zx = top.x + w - zoom_w;
+    // the zoom group (`role="group" aria-label="Zoom"`): right of the legend, or at the start
+    // of its own line when the row wraps (`justify-content: space-between`)
+    let zx = if side_by_side {
+        top.x + w - zoom_w
+    } else {
+        top.x
+    };
     let zy = if side_by_side {
         top.y + (row_h - zoom_h) / 2.0
     } else {

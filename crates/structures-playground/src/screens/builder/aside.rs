@@ -8,7 +8,7 @@
 use super::Action;
 use super::bits::{
     ChipSpec, bar, chip_group, chip_rows, eyebrow, framed, info_pill, info_pill_width, label_node,
-    level_row, para, pill_height, section, status_pill,
+    lbl_wrapped, level_row, para, pill_height, section, status_pill,
 };
 use super::host::FoldIns;
 use super::scene;
@@ -201,14 +201,14 @@ fn conditions(
         let shake_w = c
             .can_shake
             .then(|| ghost("Shake now").height(30.0).desired_size(ui).x);
+        // the heading wraps beside "Shake now" (`justify-content: space-between; gap: 8px`)
+        let title_w = shake_w.map_or(w, |sw| w - sw - 8.0);
+        let lg = lbl_wrapped(ui, title, title_w);
         let head_h = if shake_w.is_some() {
-            30.0
+            lg.size().y.max(30.0)
         } else {
-            crate::widgets::text::lbl_galley(ui, title, t::TEXT_MUTED)
-                .size()
-                .y
+            lg.size().y
         };
-        let lg = crate::widgets::text::lbl_galley(ui, title, t::TEXT_MUTED);
         let ly = top.y + (head_h - lg.size().y) / 2.0;
         ui.painter()
             .galley(pos2(top.x, ly), lg.clone(), t::TEXT_MUTED);
@@ -219,7 +219,10 @@ fn conditions(
             title,
         );
         if let Some(sw) = shake_w {
-            let r = Rect::from_min_size(pos2(top.x + w - sw, top.y), vec2(sw, 30.0));
+            let r = Rect::from_min_size(
+                pos2(top.x + w - sw, top.y + (head_h - 30.0) / 2.0),
+                vec2(sw, 30.0),
+            );
             if ghost("Shake now").height(30.0).show_at(ui, r).clicked() {
                 actions.push(Action::ShakeNow);
             }

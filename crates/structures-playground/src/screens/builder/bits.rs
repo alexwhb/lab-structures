@@ -623,6 +623,24 @@ pub fn para(ui: &mut Ui, text: &str, size: f32, lh: f32, color: Color32) {
     ui.advance_cursor_after_rect(rect);
 }
 
+/// A `.lbl` eyebrow's galley wrapped at `width` (uppercase, 11 px semibold, `.08em`).
+pub fn lbl_wrapped(ui: &Ui, text: &str, width: f32) -> std::sync::Arc<eframe::egui::Galley> {
+    let g = lbl_galley(ui, text, t::TEXT_MUTED);
+    if g.size().x <= width {
+        return g;
+    }
+    crate::widgets::text::wrapped_job(
+        ui,
+        &text.to_uppercase(),
+        lab_theme::font::semibold(11.0),
+        t::TEXT_MUTED,
+        width,
+        None,
+        crate::widgets::text::LBL_SPACING,
+        false,
+    )
+}
+
 /// A `.lbl` eyebrow at the cursor (`<h2 class="lbl">`), wrapped when long.
 pub fn eyebrow(ui: &mut Ui, text: &str) {
     let w = ui.available_width();
@@ -630,16 +648,7 @@ pub fn eyebrow(ui: &mut Ui, text: &str) {
     if g.size().x <= w {
         crate::widgets::lbl(ui, text);
     } else {
-        let g = crate::widgets::text::wrapped_job(
-            ui,
-            &text.to_uppercase(),
-            lab_theme::font::semibold(11.0),
-            t::TEXT_MUTED,
-            w,
-            None,
-            crate::widgets::text::LBL_SPACING,
-            false,
-        );
+        let g = lbl_wrapped(ui, text, w);
         let rect = Rect::from_min_size(ui.cursor().min, vec2(w, g.size().y));
         ui.painter().galley(rect.min, g, t::TEXT_MUTED);
         label_node(ui, ("builder-lbl", text), rect, text);
