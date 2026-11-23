@@ -47,8 +47,10 @@ code to copy. `scripts/render-mockup.mjs` re-renders the references.
   diagonal: m + r − 2j = −1). Cross-brace the middle panel so the starter truss holds.
 - **MB-6** Tower: "Challenge · 100 floors" can never complete — no 100-floor tower in the model
   reaches H/500 at 30 m/s (best: braced tapered tube ≈ H/367). The drift goal reads "Drift
-  better than H/350 at 30 m/s" (the drift tile keeps "aim H/500"), provided a design meets all
-  four goals at once; otherwise the lowest round threshold that does.
+  better than H/350 at 30 m/s" (the drift tile keeps "aim H/500"). Verified: H/350 is enough —
+  `sp_engine::tower::CHALLENGE_DESIGN` (100 floors, braced tapered tube, tuned mass damper,
+  30 m/s: H/367, 4.4 milli-g, $144M) meets all four goals at once
+  (`tower_goldens.rs::the_100_floor_challenge_is_completable`).
 - **MB-7** Ground: the stage's soil label `#E5E0D0` is ~2:1 on the light soils; LOOK-4 wins
   (keep the look, reach 4.5:1, e.g. a chip behind it).
 - **MB-8** Materials: toughness uses the heat-scaled curve (the drawn one), concrete gets

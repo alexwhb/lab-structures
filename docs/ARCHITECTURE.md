@@ -235,8 +235,8 @@ clamped (`sanitized()`); nothing panics. Colour roles are `tower::Tone` (`Plain`
 `Marginal`, `Caution`, `Alert`, `Danger`; `css()` names the mockup colour) — screens map them
 to `sp_theme`.
 
-- `tower::fmt::{fixed, js_round, round_str, num}` — JavaScript's `toFixed` / `Math.round` /
-  number printing exactly (ties up, unlike Rust's `{:.N}`); used by both worlds.
+- Number text goes through the shared `sp_engine::jsnum` (`fixed`, `js_round`, `round_str`,
+  `num`: JavaScript's `toFixed` / `Math.round` / `String(n)` exactly).
 - **`tower`**: `System` (`Core`, `Tube`, `Outriggers`, `Braced`) / `Shape` (`Straight`,
   `Tapered`, `Twisted`, `Hollow`) with `def()` → `SystemDef { key, name, k, cost, icon }` /
   `ShapeDef { key, name, cd, cross, mass, cost, icon }` (icons: the mockup's SVG paths, 40 ×
@@ -247,13 +247,15 @@ to `sp_theme`.
   `tiles(&r) -> [Tile { key, value, note, tone }; 6]`, `Comfort::of(mg)` (`sentence()`,
   `tone()`), `comfort_pos`, `Status::of(&r)` (`label()`, `tone()`), `explain`, `compare(&input)
   -> [ShapeBar { shape, mg, lock, width }; 4]` (`label()`, `tone()`), `goals(&input, &r) ->
-  [Goal { text, done }; 4]`, labels `accel_label`, `sway_chip`, `v_top_label`, `v10_label`,
+  [Goal { text, done }; 4]` (the drift goal is `DRIFT_GOAL` = H/350, SPEC MB-6; the tile and
+  the status keep `DRIFT_AIM` = H/500; `CHALLENGE_DESIGN` — 100 floors, braced tapered tube,
+  damper, 30 m/s — meets all four goals), labels `accel_label`, `sway_chip`, `v_top_label`, `v10_label`,
   `clock`, `floors_note`, `stage_label`, `share_line` (NAV-6 `.story … .wind …` line).
   Stage helpers: `mode_shape(z/H)`, `floor_plan(shape, i, n)` (taper / twist factors),
   `is_sky_slot`, `is_outrigger_floor`, `arrow_heights(H)`, `arrow_len(v10, z)`. Play gusts:
   `sway_params(&input, &r, seed) -> dynamics::SwayParams` (modal mass `μH·33/140`, 2 % Den
-  Hartog damper, mean lean `0.85·δ`, turbulence 8 %, vortex force locked onto f1 inside the
-  lock-in band). Constants (`FLOOR_H`, `EI_CORE`, `ZETA`, `COMFORT_BANDS`, `BUDGET`,
+  Hartog damper, mean lean `0.85·δ`, turbulence 2 % and vortex force 1.5 % (locked onto f1
+  inside the lock-in band), calibrated so the default tower's rms swing is ≈ `dyn`/3). Constants (`FLOOR_H`, `EI_CORE`, `ZETA`, `COMFORT_BANDS`, `BUDGET`,
   `CHALLENGE_RUNG`, …) are public and listed in `docs/DATA-SOURCES.md`.
 - **`dynamics`**: `rk4_step` / `rk4_step2` (fixed-step RK4, const-generic `[f64; N]`, no
   allocation); `Linear<N> { m, c, k }` (`sdof(m, f, ζ)`, `with_absorber(m, f, ζ, μ, fd, ζd)`,
@@ -286,10 +288,12 @@ to `sp_theme`.
 Screens (`src/screens/{tower,ground}.rs` + `stage.rs` each): `TowerScreen { input, ex,
 playing, sim, flow }` / `GroundScreen { input, playing, from_tower, anim }`, both with
 `result()` and `set_input()` (what MCP `set_tower` / `set_ground` should call). Tower Play
-gusts: `tick` advances the `SwaySim` by `dt × playback_speed(f1)` and calls `ctx.animate()`;
+gusts: `tick` advances the `SwaySim` by `dt × playback_speed(f1)` and asks for ~30 fps
+(`ctx.wake_in(ANIM_FRAME)`, PLAT-3);
 Pause freezes the sway; changing the tower while playing retunes it, while paused drops it
 (the tower rests at its lean). Ground Play years: 0.25 yr per 60 ms (`Ticker`, `wake_in`;
-`animate` only while shaking or the water table flows). Hand-offs: Tower → `Carry::Building`;
+~30 fps while shaking or the water table flows). The stage's soil name and "bedrock" sit on
+`sp_theme::ground::LABEL_CHIP` (4.5:1 on every soil, SPEC MB-7). Hand-offs: Tower → `Carry::Building`;
 Ground shows `FromTower::note()` until its floors change and sends `Carry::Tower` back with
 the tower's own floors while the building is unchanged. Widgets only these worlds need are in
 `src/widgets/world.rs` (picture tiles with SVG icons or soil swatches, the floors stepper,

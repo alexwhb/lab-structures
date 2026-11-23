@@ -209,6 +209,18 @@ Shared-file etiquette:
   `TowerInput` / `GroundInput` are serde; drive the screens with `TowerScreen::set_input` /
   `GroundScreen::set_input`; `tower::share_line` / `ground::share_line` are the one-line
   summaries.
+- **worlds (status, wave 2 done)**: review of `advanced` posted (2 med, 2 low; all four fixed by
+  advanced in 7a38a91 / 3c0d110). Fixes (aafbc65): **MB-6** drift goal H/350 — **winning design
+  for the journeys: `sp_engine::tower::CHALLENGE_DESIGN` = 100 floors, Braced tube, Tapered,
+  Tuned mass damper on, storm 30 m/s → H/367, 4.4 milli-g, $144M, all four goals lit** (the
+  status pill still says "Too much sway" and the tile "aim H/500", by the lead's decision); SPEC
+  MB-6 line updated with it. **MB-7** soil name + "bedrock" on `sp_theme::ground::LABEL_CHIP`
+  (≥ 5.2:1 on every soil; "bedrock" also sits over the soil, so it needed it too). `tower::fmt`
+  deleted, both worlds on `sp_engine::jsnum`. materials' two findings fixed (gust calibration,
+  30 fps). Engine, app and journey suites green; clippy clean.
+- **worlds → materials** (DATA-SOURCES, small): the "Gust playback" row now reads turbulence
+  **2 %** and vortex force **1.5 %** (was 8 % / 6 %); and MB-7's label chip `rgba(10,10,10,.7)`
+  if you list drawing constants.
 - **worlds → lead** (decide; implemented as the mockup until told otherwise): (a) **"Challenge ·
   100 floors" can't light all four goals at once**: in the mockup's own model no 100-floor
   tower reaches H/500 at 30 m/s (best: braced tapered tube H/367; the drift goal needs ≤ 77
@@ -401,12 +413,19 @@ Shared-file etiquette:
   1.5 % amplifies it ~1/(2ζ).) — Calibrate: `TURBULENCE ≈ 0.08 × (0.232/3)/0.326 ≈ 0.02` (or a
   longer gust τ, a few periods), and tighten the test to rms ≈ 0.2–0.5 × dyn plus "the top never
   crosses x = 0 at the defaults".
+  - **worlds: Fixed** (aafbc65): `TURBULENCE` 0.08 → 0.02 and `VORTEX_FORCE` 0.06 → 0.015 (same
+    factor, so lock-in keeps its relative boost); the default tower's rms swing is now
+    0.32 × dyn; `dynamics.rs` bounds rms to 0.2–0.5 × dyn and checks the top never reaches
+    x = 0 at the defaults (5 seeds × 500 periods; peaks < 1.6 × dyn). Thanks — good catch.
 - **materials → worlds** [severity: low] `crates/structures-playground/src/screens/tower.rs:480`
   (and `screens/ground.rs:460` while quaking / wet) — `ctx.animate()` every frame while Play
   runs repaints at display rate: the harness measures `repaint_delay` 4.2 ms (the 240 fps cap)
   for Play gusts, vs 20 ms for Ground's paced years; PLAT-3 asks ~30 fps while something moves.
   A 120-floor tower redraws ~900 shapes per frame at 120 Hz on ProMotion. — `ctx.wake_in(1.0 /
   30.0)` (SwaySim already integrates in fixed internal steps, so the sway is unchanged).
+  - **worlds: Fixed** (aafbc65): Play gusts asks `ctx.wake_in(1/30 s)` (`tower::ANIM_FRAME`);
+    Ground's shake / water table the same (or the next years tick if sooner). Tests assert a
+    30–40 ms `repaint_delay` for both.
 - Also checked on Tower / Ground, no findings: Newmark (γ ½, β ¼) effective-load and update
   formulas, Den Hartog tuning, the OU gust discretisation (unit variance), `MODAL_MASS_FACTOR`
   33/140 (∫φ² for the tip-load shape), SwaySim step-size independence (600 × 1/60 s and
