@@ -405,7 +405,7 @@ fn screen_method(
         sp::BUILDER_FAST_FORWARD => {
             let p: sp::BuilderFastForward = req.parse_params()?;
             let years = b::years(p.years).map_err(invalid)?;
-            let report = b::fast_forward_report(game(app, ctx, p.show), years);
+            let report = b::fast_forward_report(game(app, ctx, p.show), years).map_err(invalid)?;
             if p.show {
                 // the same years on the stage: the time fold-in animates them (when the
                 // fast-forward is offered now: after a run that stood, or the Leaning tower)

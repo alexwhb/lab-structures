@@ -380,11 +380,18 @@ pub fn place_design(game: &mut Game, design: &Design) -> Vec<String> {
             ids.insert(j.id.clone(), id);
         }
     }
-    // pieces
+    // pieces (one already there, as the level's own, of the same type, is left as it is)
     for m in &design.members {
         let (Some(a), Some(b)) = (ids.get(&m.a), ids.get(&m.b)) else {
             continue;
         };
+        let there =
+            game.design().members.iter().any(|p| {
+                p.kind == m.kind && ((p.a == *a && p.b == *b) || (p.a == *b && p.b == *a))
+            });
+        if there {
+            continue;
+        }
         game.pick_tool(Tool::Build);
         game.pick_type(m.kind);
         game.finish_line();
@@ -402,11 +409,14 @@ pub fn place_design(game: &mut Game, design: &Design) -> Vec<String> {
             note(game, &mut refused);
         }
     }
-    // crates
+    // crates: set to the design's (a level's own crate is already there; add the difference)
     for (jid, t) in &design.loads {
         if let Some(id) = ids.get(jid) {
-            game.add_crate(id, *t);
-            note(game, &mut refused);
+            let more = *t - game.design().load(id);
+            if more.abs() > 1e-9 {
+                game.add_crate(id, more);
+                note(game, &mut refused);
+            }
         }
     }
     game.pick_tool(Tool::Select);
@@ -427,25 +437,61 @@ pub fn years(y: Option<f64>) -> Result<f64, String> {
 }
 
 /// Fast-forwards the game's structure `years` (TIME-1) headless and reports it: on the Leaning
-/// tower the level's own result (pass under 0.5°, stars); elsewhere the settlement, passing
-/// when it stood. The game itself is not changed.
-pub fn fast_forward_report(game: &Game, years: f64) -> RunReport {
+/// tower the level's own result (pass under 0.5°, stars), which is judged after 30 years only
+/// (fewer years are refused); elsewhere the settlement at `years`, passing when it still
+/// stands then. The game itself is not changed.
+pub fn fast_forward_report(game: &Game, years: f64) -> Result<RunReport, String> {
     let setup = game.setup();
     let lt = longterm::fast_forward_design(game.design(), &setup, game.cond());
     let snap = lt.at(years);
     let budget = setup.budget.filter(|b| *b != 0.0);
     let practice = game.practice();
     let cost = game.cost();
-    let line = lt.result_line();
-    let sentence = lt.sentence();
-    let (pass, stars, title, explain) = if game.level() == LevelKey::Pisa {
+    let full = years >= longterm::YEARS - 1e-9;
+    let (pass, stars, title, explain, sentence) = if game.level() == LevelKey::Pisa {
+        if !full {
+            return Err(format!(
+                "the Leaning tower is judged after {} years: leave out `years` (or give {})",
+                short(longterm::YEARS),
+                short(longterm::YEARS)
+            ));
+        }
         let r = longterm::pisa::result(&lt, cost, practice, budget.unwrap_or(0.0));
-        (r.pass, r.stars, r.title, r.explain)
+        let sentence = format!("{} {}", lt.result_line(), lt.sentence());
+        (r.pass, r.stars, r.title, r.explain, sentence)
     } else {
-        let stood = !snap.fallen && !matches!(lt.ending, longterm::Ending::Nothing);
-        (stood, 0, line.clone(), format!("{line} {sentence}"))
+        let ended = matches!(lt.ending, longterm::Ending::Nothing);
+        let stood = !snap.fallen && !ended;
+        if full || snap.fallen || ended {
+            // the 30-year line (or how it came down, or that nothing settles): the app's text
+            let line = lt.result_line();
+            let sentence = format!("{line} {}", lt.sentence());
+            (stood, 0, line, sentence.clone(), sentence)
+        } else {
+            // part of the way: the numbers at that year, in the result line's words
+            let numbers = if lt.is_tower() {
+                format!(
+                    "tilt {}°, settled {}",
+                    sp_engine::jsnum::to_fixed(snap.tilt.abs(), 1),
+                    longterm::mm(snap.max_settle)
+                )
+            } else {
+                format!(
+                    "differential settlement {}, settled {}",
+                    longterm::mm(snap.differential),
+                    longterm::mm(snap.max_settle)
+                )
+            };
+            let line = format!("After {} years: {numbers}.", short(snap.year));
+            let explain = format!(
+                "{line} By year {}: {}",
+                short(longterm::YEARS),
+                lt.result_line()
+            );
+            (stood, 0, line.clone(), explain, line)
+        }
     };
-    RunReport {
+    Ok(RunReport {
         pass,
         title,
         explain,
@@ -464,10 +510,10 @@ pub fn fast_forward_report(game: &Game, years: f64) -> RunReport {
             settled_mm: snap.max_settle * 1000.0,
             differential_mm: snap.differential * 1000.0,
             failed: snap.fallen,
-            sentence: format!("{line} {sentence}"),
+            sentence,
         }),
         t_s: 0.0,
-    }
+    })
 }
 
 /// A piece type id (`road`, `floor`, `wood`, `steel`, `concrete`, `rope`, `cable`; any case).
@@ -656,12 +702,12 @@ pub fn test_structure(
         (y, _) => y,
     };
     let result = if game.level() == LevelKey::Pisa {
-        fast_forward_report(&game, years_after.unwrap_or(longterm::YEARS))
+        fast_forward_report(&game, years_after.unwrap_or(longterm::YEARS))?
     } else {
         let mut r = run_to_end(&mut game)?;
         if let Some(y) = years_after {
             // TIME-1: after a run that stood, the years
-            r.years = fast_forward_report(&game, y).years;
+            r.years = fast_forward_report(&game, y)?.years;
         }
         r
     };
@@ -838,6 +884,86 @@ mod tests {
         assert!(y.settled_mm > 0.0, "{y:?}");
         assert!(years(Some(31.0)).is_err() && years(Some(f64::NAN)).is_err());
         assert_eq!(years(None).unwrap(), 30.0);
+    }
+
+    /// Every level's own Share, built back on that level through the editing tools, is the
+    /// same structure — joints, pieces, crates (a level's own crates are set, not doubled) —
+    /// with nothing refused and the same result (review finding: the Leaning tower's bells).
+    #[test]
+    fn every_levels_share_round_trips() {
+        for k in LevelKey::ALL {
+            if k == LevelKey::Sandbox {
+                continue;
+            }
+            let mut g = Game::new();
+            g.pick_level(k);
+            let text = g.share_text();
+            let crates: f64 = g.design().loads.iter().map(|(_, t)| t).sum();
+            let t = test_structure(None, None, Some(&text), &none(), None).unwrap();
+            assert!(t.refused.is_empty(), "{k:?}: {:?}", t.refused);
+            assert_eq!(t.state.level, k.key(), "{k:?}");
+            assert_eq!(t.state.joints, g.design().nodes.len(), "{k:?}");
+            assert_eq!(t.state.pieces, g.design().members.len(), "{k:?}");
+            assert!(
+                (t.state.crates_t - crates).abs() < 1e-9,
+                "{k:?}: {} vs {crates}",
+                t.state.crates_t
+            );
+            let direct = if k == LevelKey::Pisa {
+                fast_forward_report(&g, longterm::YEARS).unwrap()
+            } else {
+                run_to_end(&mut g).unwrap()
+            };
+            assert_eq!(t.result.title, direct.title, "{k:?}");
+            assert_eq!(t.result.pass, direct.pass, "{k:?}");
+            assert_eq!(t.result.stars, direct.stars, "{k:?}");
+        }
+    }
+
+    /// Part of the way through the years, the line is the snapshot's (review finding), and the
+    /// Leaning tower is judged after 30 years only.
+    #[test]
+    fn partial_years_say_what_they_show() {
+        let mut g = Game::new();
+        g.pick_level(LevelKey::Sandbox);
+        g.pick_scene(Scene::Flat);
+        g.build_preset(PresetBuild::Tower {
+            h: 32.0,
+            bays: 2,
+            col: PieceType::Steel,
+            brace: PieceType::Wood,
+            found: Foundation::Footing,
+        });
+        g.set_soil(Soil::Soft);
+        let five = fast_forward_report(&g, 5.0).unwrap();
+        let thirty = fast_forward_report(&g, 30.0).unwrap();
+        let y5 = five.years.as_ref().unwrap();
+        assert_eq!(y5.years, 5.0);
+        assert!(
+            five.title.starts_with("After 5 years: tilt "),
+            "{}",
+            five.title
+        );
+        assert!(
+            five.title.contains(&longterm::mm(y5.settled_mm / 1000.0)),
+            "{} vs {y5:?}",
+            five.title
+        );
+        assert!(
+            thirty.title.starts_with("After 30 years"),
+            "{}",
+            thirty.title
+        );
+        assert_ne!(five.title, thirty.title);
+        assert!(y5.settled_mm < thirty.years.as_ref().unwrap().settled_mm);
+        let mut p = Game::new();
+        p.pick_level(LevelKey::Pisa);
+        assert!(
+            fast_forward_report(&p, 12.0)
+                .unwrap_err()
+                .contains("after 30 years")
+        );
+        assert!(fast_forward_report(&p, 30.0).is_ok());
     }
 
     #[test]
