@@ -241,11 +241,12 @@ pub fn register(tools: &mut ToolRegistry, link: AppLink) -> Result<(), RegistryE
     tools.register(
         Tool::new(
             "screenshot",
-            "A PNG of the running Structures Playground window as the user sees it (physical \
-             pixels: 2× the window size on a Retina display). Give `screen` to navigate there \
-             first. For reading labels and numbers, `describe_screen` or the set_* / bridge_* \
-             tools (which return the screen's numbers) are \
-             cheaper.",
+            "A PNG of the running Structures Playground's screen as it stands, drawn offscreen \
+             from the app's state at the window's size (physical pixels: 2× on a Retina \
+             display), so it works while the window is covered by other windows or minimised \
+             (no hover highlights; the page shown from the top). Give `screen` to navigate \
+             there first. For reading labels and numbers, `describe_screen` or the set_* / \
+             bridge_* tools (which return the screen's numbers) are cheaper.",
         )
         .title("Screenshot")
         .idempotent()

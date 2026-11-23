@@ -121,8 +121,8 @@ damper; the Ground soft clay, mat, 6 floors, 34 m piles, no quake, year 10; the 
 | `app_status` | — | running / reachable, current screen, window, version, pid (not running is a normal result) |
 | `list_screens` | — | the six screens (id, label, mode, shortcut, document, what's on it, board), the modes, the current one (works without the app) |
 | `navigate` | `screen` | `bridge`, `tower`, `ground`, `materials`, `advanced`, `series` |
-| `screenshot` | `screen?` | a PNG of the window as the user sees it |
-| `describe_screen` | `screen?` | the accessibility outline (role, name, value, state per element) and the screen's one-line summary |
+| `screenshot` | `screen?` | a PNG of the screen, drawn offscreen from the app's state at the window's size (works while the window is covered or minimised) |
+| `describe_screen` | `screen?` | the accessibility outline (role, name, value, state per element) and the screen's one-line summary (also drawn offscreen) |
 | `bridge_load_netlist` | `netlist`, `show?` | a netlist on the Bridge's 2 m grid into its Sandbox → the Bridge (status, cost, joints, members) |
 | `bridge_test` | `level?`, `show?` | the Test run to the end → held / collapsed / refused, the banner, stars, the first failure (member, load %, mode), every broken member |
 | `set_tower` | the `tower_wind` settings, `show?` | change the Tower (none: read it) → its numbers |

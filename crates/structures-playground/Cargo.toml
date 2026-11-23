@@ -21,6 +21,9 @@ sp-engine = { workspace = true }
 sp-shared = { workspace = true }
 lab-theme = { workspace = true }
 lab-mcp = { workspace = true, features = ["png"] }
+# offscreen rendering for the MCP screenshot / describe (control.rs): egui_kittest's wgpu
+# renderer on its own device, so a covered window still answers
+egui_kittest = { version = "0.37.0", features = ["wgpu"] }
 lab-ui = { workspace = true }
 eframe = { workspace = true }
 serde = { workspace = true }

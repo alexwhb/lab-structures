@@ -110,6 +110,12 @@ fn kn(n: f64) -> f64 {
     n / 1000.0
 }
 
+/// A number for a summary: at most two decimals, printed as JavaScript prints it (`22.08`,
+/// `24`, `0.25`), so float noise like `22.07999999999988` never shows.
+pub fn short(v: f64) -> String {
+    sp_engine::jsnum::to_string((v * 100.0).round() / 100.0)
+}
+
 // ---- truss --------------------------------------------------------------------------------------
 
 /// One member's result.
@@ -369,7 +375,7 @@ impl InfluenceReport {
             self.member,
             self.nodes,
             self.peak_kn,
-            self.peak_at_m,
+            short(self.peak_at_m),
             limit,
             if self.over_limit { " — over it" } else { "" },
             self.points.len()
@@ -506,7 +512,7 @@ impl TowerReport {
             self.settings.system,
             self.settings.shape,
             if self.settings.damper { ", damper" } else { "" },
-            self.settings.wind_ms,
+            short(self.settings.wind_ms),
             self.top_sway_mm,
             self.drift_ratio,
             self.period_s,
@@ -631,9 +637,9 @@ impl GroundReport {
             self.settings.foundation,
             self.settings.soil,
             if self.settings.quake { ", shaking" } else { "" },
-            self.settings.years,
+            short(self.settings.years),
             self.safety_factor,
-            self.target_safety_factor,
+            short(self.target_safety_factor),
             self.tilt_deg,
             self.settlement_mm,
             self.status
@@ -712,17 +718,18 @@ pub struct TensileReport {
 }
 
 impl TensileReport {
-    /// "Steel at 20 °C, 12.00 %: 410 MPa (20.5 kN) — Plastic: permanently stretched; breaks at 22 %".
+    /// "Steel at 20 °C, 12.00 %: 421 MPa (21.1 kN) — Plastic: permanently stretched; breaks at 22 %"
+    /// (the stretch with two decimals, like the Materials clock).
     pub fn summary(&self) -> String {
         format!(
             "{} at {} °C, {} %: {:.0} MPa ({:.1} kN) — {}; breaks at {} %",
             self.name,
-            self.temperature_c,
-            self.strain_pct,
+            short(self.temperature_c),
+            sp_engine::jsnum::to_fixed(self.strain_pct, 2),
             self.stress_mpa,
             self.force_kn,
             self.status,
-            self.break_strain_pct
+            short(self.break_strain_pct)
         )
     }
 }
@@ -959,5 +966,35 @@ pub fn run_bridge_test(game: &mut Game, max_ticks: usize) -> BridgeTestResult {
         broken: log.iter().filter_map(|f| f.member.clone()).collect(),
         log,
         state: bridge_state(game),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Summaries print clean numbers: no float noise, no Debug floats.
+    #[test]
+    fn summaries_have_no_float_noise() {
+        assert_eq!(short(22.07999999999988), "22.08");
+        assert_eq!(short(24.000000000001), "24");
+        assert_eq!(short(0.25), "0.25");
+        let mut bench = Bench::default();
+        bench.pick(Kind::Steel);
+        bench.set_strain(22.07999999999988);
+        let t = tensile_from_bench(&bench, None);
+        let s = t.summary();
+        assert!(s.contains("20 °C, 22.08 %"), "{s}");
+        assert!(!s.contains("999"), "{s}");
+        let g = ground_report(&GroundInput {
+            years: 10.000000000002,
+            ..GroundInput::default()
+        });
+        assert!(g.summary().contains("year 10:"), "{}", g.summary());
+        let tw = tower_report(&TowerInput {
+            v10: 30.000000000004,
+            ..TowerInput::default()
+        });
+        assert!(tw.summary().contains("wind 30 m/s"), "{}", tw.summary());
     }
 }

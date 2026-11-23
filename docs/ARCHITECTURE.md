@@ -591,9 +591,17 @@ MCP client ──stdio──▶ structures-mcp (sp-mcp) ──Unix socket──�
   the screens' public state — `BridgeScreen::game` (`open_in_sandbox`, `pick_level`,
   `back_to_build`, `run_test`), `TowerScreen::set_input`, `GroundScreen::set_input`,
   `MaterialsScreen::bench_mut` — after entering a never-shown screen once
-  (`StructuresApp::enter_screen`); `show` (default) switches to it. Screenshots come from
-  `ViewportCommand::Screenshot` (PNG-encoded off the UI thread), descriptions from the AccessKit
-  tree caught by a small egui plugin; both wait `SETTLE_FRAMES` after a navigation.
+  (`StructuresApp::enter_screen`); `show` (default) switches to it. **Screenshots and
+  descriptions are drawn offscreen** (`StructuresApp::render_offscreen`): the same `frame()` runs
+  in a second egui context (fonts + style installed) at the window's logical size, pixels per
+  point and time, `OFFSCREEN_PASSES` (3) times so measured layouts settle, with no input and the
+  per-frame work skipped (enter, hand-offs, keys, `tick`, navigation, event log): nothing moves,
+  clicks or takes focus. egui_kittest's `WgpuTestRenderer` (its own wgpu device, made on the
+  first call) renders the last pass; its AccessKit tree is the description. No painted frame is
+  needed, so a window covered by another app's (macOS gives it no frames) still answers; if no
+  frame has polled the bridge for `control::STALL` (300 ms), `control::logic` (from
+  `App::logic`) answers the queued requests itself. The PNG is encoded off the UI thread. (In
+  the offscreen frame the page shows from the top and nothing is hovered.)
 - **Tests**: `crates/sp-mcp/tests/e2e.rs` (the real binary for every tool, the real app in
   egui_kittest on a temp socket), `crates/structures-playground/tests/mcp_bridge.rs` (the bridge
   without the binary: errors change nothing, hidden window, a client that leaves, a second

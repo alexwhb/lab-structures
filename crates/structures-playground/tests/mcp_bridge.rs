@@ -465,3 +465,105 @@ fn defaults_and_shared_identity() {
         );
     }
 }
+
+/// Calls the app from another thread while **no frame is ever drawn** — only `App::logic`
+/// runs, as eframe does for a window covered by another app's (macOS gives it no frames).
+fn call_without_frames(h: &mut App, socket: &Path, method: &str, params: Value) -> Value {
+    let (socket, method) = (socket.to_path_buf(), method.to_owned());
+    let client = thread::spawn(move || {
+        BridgeClient::connect(&socket)?.call(&method, params, Duration::from_secs(15))
+    });
+    let ctx = h.ctx.clone();
+    let t0 = Instant::now();
+    while !client.is_finished() {
+        assert!(
+            t0.elapsed() < Duration::from_secs(10),
+            "no reply without frames"
+        );
+        structures_playground::control::logic(h.state_mut(), &ctx);
+        thread::sleep(Duration::from_millis(5));
+    }
+    client.join().unwrap().unwrap()
+}
+
+/// A covered window still answers `screenshot` and `describe` (rendered offscreen from the
+/// app's state), and `navigate` too.
+#[test]
+fn a_covered_window_still_answers_screenshots() {
+    let sock = TempSocket::new();
+    let mut h = harness(&sock.path());
+    let r = call_without_frames(
+        &mut h,
+        &sock.path(),
+        "screenshot",
+        json!({"screen": "tower"}),
+    );
+    let img: ImagePayload = serde_json::from_value(r).unwrap();
+    assert_eq!(img.screen.id, "tower");
+    assert_eq!((img.width, img.height), (1440, 900));
+    let png = lab_mcp::base64_decode(&img.data).unwrap();
+    let png = image::load_from_memory(&png).unwrap().to_rgba8();
+    let colours: std::collections::HashSet<[u8; 4]> = png.pixels().map(|p| p.0).collect();
+    assert!(
+        colours.len() > 50,
+        "a blank frame ({} colours)",
+        colours.len()
+    );
+    assert_eq!(h.state().route(), Route::Tower);
+    let r = call_without_frames(
+        &mut h,
+        &sock.path(),
+        "describe",
+        json!({"screen": "ground"}),
+    );
+    let d: Description = serde_json::from_value(r).unwrap();
+    assert_eq!(d.screen.id, "ground");
+    for label in [
+        "\"Structures Playground\"",
+        "\"Play years\"",
+        "\"Playground worlds\"",
+    ] {
+        assert!(d.outline.contains(label), "{label} in\n{}", d.outline);
+    }
+    let r = call_without_frames(
+        &mut h,
+        &sock.path(),
+        "navigate",
+        json!({"screen": "series"}),
+    );
+    assert_eq!(r["screen"]["id"], "series");
+}
+
+/// An offscreen screenshot doesn't advance a running simulation, fire events or move the
+/// keyboard focus.
+#[test]
+fn an_offscreen_screenshot_changes_nothing() {
+    let sock = TempSocket::new();
+    let mut h = harness(&sock.path());
+    h.state_mut().navigate(Route::Materials);
+    h.run_steps(3);
+    // Pull is running; focus sits on a slider
+    let ctx = h.ctx.clone();
+    assert!(h.state_mut().press_drive(&ctx));
+    h.step();
+    h.get_by_role_and_label(egui::accesskit::Role::Slider, "Temperature")
+        .focus();
+    h.step();
+    assert!(
+        h.state().screens().materials.bench().playing(),
+        "Pull is running"
+    );
+    let strain = h.state().screens().materials.bench().strain();
+    let events = h.state().events().len();
+    let focused = h.ctx.memory(|m| m.focused());
+    // the screenshot is answered from `logic` alone, so no real frame runs in between
+    let r = call_without_frames(&mut h, &sock.path(), "screenshot", Value::Null);
+    assert_eq!(r["screen"]["id"], "materials");
+    assert_eq!(
+        h.state().screens().materials.bench().strain(),
+        strain,
+        "no tick"
+    );
+    assert_eq!(h.state().events().len(), events, "no clicks or keys");
+    assert_eq!(h.ctx.memory(|m| m.focused()), focused, "focus stays");
+}

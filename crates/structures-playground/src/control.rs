@@ -2,15 +2,15 @@
 //!
 //! The app listens on a user-only Unix socket ([`lab_mcp::bridge::BridgeServer`]) at
 //! [`AppOptions::mcp_socket`](crate::AppOptions::mcp_socket); `structures-mcp` connects to it
-//! to act on the running app. [`poll`] runs at the start of every frame on the UI thread: it takes
-//! the requests that arrived, applies them and sends the replies.
+//! to act on the running app. [`poll`] runs at the start of every frame on the UI thread: it
+//! takes the requests that arrived, applies them and sends the replies.
 //!
 //! | method | params | reply |
 //! |---|---|---|
 //! | `status` | none | screen, window size, pid, version |
 //! | `navigate` | `{"screen": id}` | status after navigating |
-//! | `screenshot` | `{"screen"?: id}` | PNG of the next rendered frame (base64) |
-//! | `describe` | `{"screen"?: id}` | outline of the AccessKit tree of the next frame + the screen's one-line `summary` |
+//! | `screenshot` | `{"screen"?: id}` | PNG of the screen as it stands (base64) |
+//! | `describe` | `{"screen"?: id}` | outline of its AccessKit tree + the screen's one-line `summary` |
 //! | `bridge.get`, `bridge.load_netlist`, `bridge.test`, `tower.set`, `ground.set`, `materials.set` | see [`sp_shared::proto`] | the screen's state after the call |
 //!
 //! The screen methods drive the screens' public state (`BridgeScreen::game`,
@@ -20,21 +20,24 @@
 //! that has never been shown is entered first ([`StructuresApp::enter_screen`]), so its
 //! first-visit set-up happens before the change, not after it.
 //!
-//! Screenshots and descriptions are answered a frame or more later. After navigating, the app
-//! lets [`SETTLE_FRAMES`] frames pass first so the new screen's layout has settled. A screenshot
-//! comes from `ViewportCommand::Screenshot` (eframe reads back the rendered frame; egui_kittest
-//! renders it with wgpu) and is PNG-encoded on a worker thread. The description comes from the
-//! AccessKit tree egui builds at the end of a frame, caught by a small egui plugin; the first
-//! `describe` turns AccessKit on for the rest of the session (a screen reader would do the same).
+//! **Screenshots and descriptions are rendered offscreen**, at once, from the app's real state
+//! ([`StructuresApp::render_offscreen`]): the same UI code draws into a second egui context at
+//! the window's logical size and pixels per point (a few passes so measured layouts settle),
+//! egui_kittest's wgpu renderer turns it into pixels on its own device, and the AccessKit tree
+//! of that pass is the description. Nothing waits for the window to paint, so a window that is
+//! covered by another app's (macOS gives it no frames) or minimised still answers. The offscreen
+//! pass has no input and skips the per-frame work (enter, hand-offs, keys, `tick`, navigation),
+//! so it can't advance a simulation, click anything or move the focus. The PNG is encoded on a
+//! worker thread.
 //!
 //! Backgrounded windows: every arriving request wakes the app (`ctx.request_repaint()` from the
-//! bridge thread). While its window is minimized or covered, eframe skips `App::ui` (so [`poll`]
-//! doesn't run) and calls only `App::logic`. That calls [`logic`], which queues the requests and
-//! sends `ViewportCommand::RequestPaintWhileHidden` plus a repaint while anything is pending, so
-//! the next frame runs the UI and paints, and a hidden window still answers.
+//! bridge thread). While its window is covered or minimised, eframe may skip `App::ui` (so
+//! [`poll`] doesn't run) and call only `App::logic`. That calls [`logic`], which asks for a frame
+//! (`ViewportCommand::RequestPaintWhileHidden` plus a repaint); if no frame has polled the
+//! bridge for [`STALL`], it answers the queued requests itself.
 //!
 //! Forked from Automata Playground's `control.rs` (which mirrors Chem Playground's); the
-//! AccessKit capture and outline are candidates for `lab-mcp`.
+//! AccessKit outline is a candidate for `lab-mcp`.
 
 use crate::app::StructuresApp;
 use crate::router::Route;
@@ -49,14 +52,11 @@ use sp_engine::materials::curves::Kind as Sample;
 use sp_shared::proto::{self as sp, MaterialsState};
 use sp_shared::{input, report};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::time::{Duration, Instant};
 
-/// Frames to let pass after navigating before a screenshot or description is taken.
-pub const SETTLE_FRAMES: u8 = 2;
-
-/// How often a screenshot / describe of a named screen goes back to it after other calls
-/// (made in parallel) moved the app elsewhere, before it gives up with an error.
-pub const MAX_RETURNS: u8 = 3;
+/// How long requests may wait for a frame before [`logic`] answers them itself (a covered or
+/// minimised window gets no frames).
+pub const STALL: Duration = Duration::from_millis(300);
 
 /// Bridge state owned by the app.
 #[derive(Default)]
@@ -65,30 +65,12 @@ pub struct Control {
     waker_installed: bool,
     /// Requests taken from the bridge by [`logic`], for the next [`poll`].
     inbox: Vec<PendingRequest>,
-    /// Screenshots and descriptions waiting for their frame.
-    waiting: Vec<Waiting>,
     /// Screens already entered for the bridge.
     prepared: Vec<Route>,
-}
-
-struct Waiting {
-    req: PendingRequest,
-    kind: Kind,
-    /// Frames still to let pass before acting.
-    settle: u8,
-    /// The screen the request named (`screen` param), which it must answer for.
-    want: Option<Route>,
-    /// Times it went back to `want` after another call navigated away.
-    returns: u8,
-    /// The screen when it last looked: a change (any call's navigation) settles it again.
-    seen: Route,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Kind {
-    Screenshot,
-    /// Waiting to be captured by the AccessKit plugin.
-    Describe,
+    /// When a frame last polled the bridge.
+    last_poll: Option<Instant>,
+    /// The offscreen renderer (made on the first screenshot or description).
+    offscreen: Option<crate::app::Offscreen>,
 }
 
 impl Control {
@@ -122,7 +104,6 @@ impl std::fmt::Debug for Control {
         f.debug_struct("Control")
             .field("socket", &self.socket())
             .field("inbox", &self.inbox.len())
-            .field("waiting", &self.waiting.len())
             .finish_non_exhaustive()
     }
 }
@@ -134,8 +115,8 @@ pub fn default_socket_path() -> Option<PathBuf> {
 }
 
 /// Called from `App::logic`: every frame before `App::ui`, and also while the window is hidden
-/// (minimized or covered), when eframe runs no UI pass. Pending requests ask for a painted frame
-/// so that [`poll`] runs and a screenshot has pixels.
+/// (covered or minimised), when eframe may run no UI pass. Pending requests ask for a frame; if
+/// none has polled the bridge for [`STALL`], they are answered here.
 pub fn logic(app: &mut StructuresApp, ctx: &Context) {
     let control = &mut app.control;
     let Some(server) = control.server.as_ref() else {
@@ -143,9 +124,16 @@ pub fn logic(app: &mut StructuresApp, ctx: &Context) {
     };
     install_waker(server, &mut control.waker_installed, ctx);
     control.inbox.extend(server.poll());
-    if !control.inbox.is_empty() || !control.waiting.is_empty() {
-        ctx.send_viewport_cmd(egui::ViewportCommand::RequestPaintWhileHidden);
-        ctx.request_repaint();
+    if control.inbox.is_empty() {
+        return;
+    }
+    ctx.send_viewport_cmd(egui::ViewportCommand::RequestPaintWhileHidden);
+    ctx.request_repaint();
+    let stalled = control.last_poll.is_none_or(|t| t.elapsed() > STALL);
+    if stalled {
+        for req in std::mem::take(&mut app.control.inbox) {
+            handle(app, ctx, req);
+        }
     }
 }
 
@@ -158,21 +146,21 @@ pub fn poll(app: &mut StructuresApp, ui: &mut Ui) {
         return;
     };
     install_waker(server, &mut control.waker_installed, &ctx);
+    control.last_poll = Some(Instant::now());
     let mut requests = std::mem::take(&mut control.inbox);
     requests.extend(server.poll());
     let any = !requests.is_empty();
     for req in requests {
         handle(app, &ctx, req);
     }
-    advance_waiting(app, &ctx);
-    if any || !app.control.waiting.is_empty() {
+    if any {
         ctx.request_repaint();
     }
 }
 
-/// Requests received but not yet answered (queued, or waiting for their frame).
+/// Requests received but not yet answered.
 pub fn pending(app: &StructuresApp) -> usize {
-    app.control.inbox.len() + app.control.waiting.len()
+    app.control.inbox.len()
 }
 
 fn install_waker(server: &BridgeServer, installed: &mut bool, ctx: &Context) {
@@ -208,31 +196,44 @@ fn handle(app: &mut StructuresApp, ctx: &Context, req: PendingRequest) {
             Err(e) => req.reply(Err(e)),
         },
         method @ (proto::SCREENSHOT | proto::DESCRIBE) => {
-            let kind = if method == proto::SCREENSHOT {
-                Kind::Screenshot
-            } else {
-                Kind::Describe
-            };
-            let (settle, want) = match screen_param(&req) {
-                Ok(Some(route)) if route != app.route() => {
-                    app.navigate(route);
-                    (SETTLE_FRAMES, Some(route))
-                }
-                Ok(want) => (0, want),
+            let describe = method == proto::DESCRIBE;
+            match screen_param(&req) {
+                Ok(Some(route)) if route != app.route() => app.navigate(route),
+                Ok(_) => {}
                 Err(e) => return req.reply(Err(e)),
-            };
-            if kind == Kind::Describe {
-                ctx.enable_accesskit();
-                ctx.add_plugin(AccessCapture::default()); // ignored if already added
             }
-            app.control.waiting.push(Waiting {
-                req,
-                kind,
-                settle,
-                want,
-                returns: 0,
-                seen: app.route(),
-            });
+            // a screen shown for the first time is set up before it is drawn
+            app.enter_current(ctx);
+            let route = app.route();
+            let mut offscreen = app.control.offscreen.take();
+            let shot = app.render_offscreen(ctx, &mut offscreen, describe);
+            app.control.offscreen = offscreen;
+            match shot {
+                Err(e) => req.reply(Err(RemoteError::new(
+                    code::INTERNAL_ERROR,
+                    format!(
+                        "couldn't draw the window offscreen ({e}); bring Structures Playground \
+                         to the front and try again"
+                    ),
+                ))),
+                Ok(shot) if describe => {
+                    let nodes = shot.tree.as_ref().map(outline_nodes).unwrap_or_default();
+                    let d = Description {
+                        screen: screen_ref(route),
+                        outline: AccessNode::outline(&nodes),
+                        nodes,
+                    };
+                    let summary = app.screens().get_ref(route).describe();
+                    let reply = to_value(&d).map(|mut v| {
+                        if let Value::Object(m) = &mut v {
+                            m.insert("summary".into(), Value::String(summary));
+                        }
+                        v
+                    });
+                    req.reply(reply);
+                }
+                Ok(shot) => encode_screenshot(req, shot, screen_ref(route)),
+            }
         }
         method if sp::METHODS.contains(&method) => {
             let reply = screen_method(app, ctx, &req);
@@ -245,120 +246,21 @@ fn handle(app: &mut StructuresApp, ctx: &Context, req: PendingRequest) {
     }
 }
 
-/// Answers the screenshots and descriptions whose frame has come, oldest first.
-///
-/// A request that named a screen answers for that screen: if another call (made in parallel)
-/// navigated away meanwhile, it goes back and settles again (at most [`MAX_RETURNS`] times,
-/// then an error). Only the oldest such request navigates; later ones that name another screen
-/// wait their turn. Any change of screen under a waiting request lets [`SETTLE_FRAMES`] pass
-/// again, and a description uses AccessKit nodes captured on the screen it reports.
-fn advance_waiting(app: &mut StructuresApp, ctx: &Context) {
-    let captured = ctx
-        .with_plugin::<AccessCapture, _>(|p| p.captured.take())
-        .flatten();
-    let mut still_waiting = Vec::new();
-    let mut want_capture = false;
-    // the screen the oldest request that named one is answering for
-    let mut claimed: Option<Route> = None;
-    for mut w in std::mem::take(&mut app.control.waiting) {
-        if w.req.is_abandoned() {
-            continue; // the client left; nobody wants the answer
-        }
-        if let Some(want) = w.want {
-            if claimed.is_some_and(|c| c != want) {
-                still_waiting.push(w); // after the request before it
-                continue;
-            }
-            claimed = Some(want);
-            if app.route() != want {
-                if w.returns >= MAX_RETURNS {
-                    w.req.reply(Err(RemoteError::new(
-                        code::INTERNAL_ERROR,
-                        format!(
-                            "other calls kept switching the app away from `{}`; try again",
-                            want.id()
-                        ),
-                    )));
-                    continue;
-                }
-                w.returns += 1;
-                app.navigate(want);
-            }
-        }
-        // the screen changed since this request last looked (its own return, or another
-        // call's navigation): the new screen's first frames aren't laid out yet
-        if app.route() != w.seen {
-            w.seen = app.route();
-            w.settle = SETTLE_FRAMES;
-        }
-        if w.settle > 0 {
-            w.settle -= 1;
-            want_capture |= w.kind == Kind::Describe;
-            still_waiting.push(w);
-            continue;
-        }
-        let route = app.route();
-        match w.kind {
-            Kind::Screenshot => request_screenshot(ctx, w.req, screen_ref(route)),
-            Kind::Describe => match &captured {
-                // nodes captured on another screen (a navigation came in between) don't count
-                Some((at, nodes)) if *at == route => {
-                    let d = Description {
-                        screen: screen_ref(route),
-                        outline: AccessNode::outline(nodes),
-                        nodes: nodes.clone(),
-                    };
-                    let summary = app.screens().get_ref(route).describe();
-                    let reply = to_value(&d).map(|mut v| {
-                        if let Value::Object(m) = &mut v {
-                            m.insert("summary".into(), Value::String(summary));
-                        }
-                        v
-                    });
-                    w.req.reply(reply);
-                }
-                _ => {
-                    want_capture = true;
-                    still_waiting.push(w);
-                }
-            },
-        }
-    }
-    app.control.waiting = still_waiting;
-    if want_capture {
-        // Capture at the end of this frame (or the next, if AccessKit just came on), noting
-        // the screen it shows.
-        let route = app.route();
-        ctx.with_plugin::<AccessCapture, _>(|p| p.armed = Some(route));
-    }
-}
-
-/// Asks the integration for this frame's pixels; the PNG is encoded off the UI thread.
-fn request_screenshot(ctx: &Context, req: PendingRequest, screen: ScreenRef) {
-    ctx.request_screenshot(move |image: Arc<egui::ColorImage>| {
-        let job = move || {
-            let [w, h] = image.size;
-            let rgba: Vec<u8> = image
-                .pixels
-                .iter()
-                .flat_map(|c| c.to_srgba_unmultiplied())
-                .collect();
-            let reply = u32::try_from(w)
-                .and_then(|w| u32::try_from(h).map(|h| (w, h)))
-                .map_err(|_| RemoteError::new(code::INTERNAL_ERROR, "screenshot is too large"))
-                .and_then(|(w, h)| {
-                    ImagePayload::png_from_rgba(w, h, &rgba, screen).map_err(|e| {
-                        RemoteError::new(code::INTERNAL_ERROR, format!("PNG encoding failed: {e}"))
-                    })
-                })
-                .and_then(|img| to_value(&img));
-            req.reply(reply);
-        };
-        // If no thread can be spawned the request drops, which answers it with an error.
-        let _ = std::thread::Builder::new()
-            .name("structures-screenshot-png".into())
-            .spawn(job);
-    });
+/// PNG-encodes an offscreen frame off the UI thread and replies.
+fn encode_screenshot(req: PendingRequest, shot: crate::app::OffscreenShot, screen: ScreenRef) {
+    let job = move || {
+        let (w, h) = (shot.width, shot.height);
+        let reply = ImagePayload::png_from_rgba(w, h, &shot.rgba, screen)
+            .map_err(|e| {
+                RemoteError::new(code::INTERNAL_ERROR, format!("PNG encoding failed: {e}"))
+            })
+            .and_then(|img| to_value(&img));
+        req.reply(reply);
+    };
+    // If no thread can be spawned the request drops, which answers it with an error.
+    let _ = std::thread::Builder::new()
+        .name("structures-screenshot-png".into())
+        .spawn(job);
 }
 
 fn status(app: &StructuresApp, ctx: &Context) -> AppStatus {
@@ -580,30 +482,6 @@ fn screen_method(
 }
 
 // ---- AccessKit ------------------------------------------------------------------------------
-
-/// Catches the AccessKit tree egui produces at the end of a frame, when armed, with the
-/// screen it was armed on (the frame's).
-#[derive(Default)]
-struct AccessCapture {
-    armed: Option<Route>,
-    captured: Option<(Route, Vec<AccessNode>)>,
-}
-
-impl egui::Plugin for AccessCapture {
-    fn debug_name(&self) -> &'static str {
-        "structures-playground-access-capture"
-    }
-
-    fn output_hook(&mut self, _ctx: &Context, output: &mut egui::FullOutput) {
-        let Some(route) = self.armed else {
-            return;
-        };
-        if let Some(update) = &output.platform_output.accesskit_update {
-            self.captured = Some((route, outline_nodes(update)));
-            self.armed = None;
-        }
-    }
-}
 
 /// Flattens an AccessKit tree into outline nodes: depth-first from the root, skipping hidden
 /// subtrees and unnamed generic containers (their children move up a level).

@@ -136,6 +136,9 @@ pub struct StructuresApp {
     pub options: AppOptions,
     /// The live MCP bridge (owned by `control.rs`).
     pub(crate) control: crate::control::Control,
+    /// Drawing an offscreen frame ([`StructuresApp::render_offscreen`]): no input, no
+    /// per-frame work.
+    offscreen: bool,
 }
 
 impl StructuresApp {
@@ -181,6 +184,7 @@ impl StructuresApp {
             chrome_height: 0.0,
             events: Vec::new(),
             control: crate::control::Control::start(opts.mcp_socket.as_deref()),
+            offscreen: false,
             options: opts,
         }
     }
@@ -367,20 +371,95 @@ impl StructuresApp {
         self.control.socket()
     }
 
+    /// Enters the current route now if it hasn't been yet (the bridge before drawing a screen
+    /// offscreen): the next frame won't enter it again.
+    pub(crate) fn enter_current(&mut self, egui_ctx: &egui::Context) {
+        if self.entered != Some(self.route) {
+            self.enter_screen(self.route, egui_ctx);
+            self.entered = Some(self.route);
+        }
+    }
+
+    /// Draws the current screen offscreen as the window would show it now (the MCP
+    /// `screenshot` and `describe`, which must answer when the window gets no frames: covered
+    /// by another app's window, or minimised). The same UI code runs in a second egui context
+    /// at `main`'s logical size, pixels per point and time, [`OFFSCREEN_PASSES`] times so
+    /// measured layouts settle; that frame skips enter, hand-offs, keys, `tick` and
+    /// navigation and gets no input, so nothing moves, clicks or takes focus. Rendered by
+    /// egui_kittest's wgpu renderer on its own device (made once, kept in `offscreen`), with the
+    /// AccessKit tree when `accesskit`.
+    pub fn render_offscreen(
+        &mut self,
+        main: &egui::Context,
+        offscreen: &mut Option<Offscreen>,
+        accesskit: bool,
+    ) -> Result<OffscreenShot, String> {
+        if offscreen.is_none() {
+            *offscreen = Some(Offscreen::new()?);
+        }
+        let Some(off) = offscreen.as_mut() else {
+            return Err("no offscreen renderer".into());
+        };
+        if accesskit {
+            off.ctx.enable_accesskit();
+        }
+        let size = main.content_rect().size();
+        let ppp = main.pixels_per_point();
+        let time = main.input(|i| i.time);
+        let mut last = None;
+        self.offscreen = true;
+        for _ in 0..OFFSCREEN_PASSES {
+            let mut raw = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
+                time: Some(time),
+                ..Default::default()
+            };
+            raw.viewports
+                .entry(egui::ViewportId::ROOT)
+                .or_default()
+                .native_pixels_per_point = Some(ppp);
+            let mut out = off.ctx.run_ui(raw, |ui| self.frame(ui));
+            use egui_kittest::TestRenderer as _;
+            off.renderer.handle_delta(&mut out.textures_delta);
+            last = Some(out);
+        }
+        self.offscreen = false;
+        let Some(out) = last else {
+            return Err("no frame drawn".into());
+        };
+        use egui_kittest::TestRenderer as _;
+        let renderer = &mut off.renderer;
+        let ctx = &off.ctx;
+        let image =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| renderer.render(ctx, &out)))
+                .map_err(|_| "the renderer panicked".to_string())??;
+        Ok(OffscreenShot {
+            width: image.width(),
+            height: image.height(),
+            rgba: image.into_raw(),
+            tree: out.platform_output.accesskit_update,
+        })
+    }
+
     /// One frame of the whole app (also called directly by tests).
     pub fn frame(&mut self, ui: &mut Ui) {
-        crate::control::poll(self, ui);
+        let offscreen = self.offscreen;
+        if !offscreen {
+            crate::control::poll(self, ui);
+        }
         let egui_ctx = ui.ctx().clone();
         // netlists opened from Finder / the command line go to Advanced
-        crate::platform::deliver(self, &egui_ctx);
+        if !offscreen {
+            crate::platform::deliver(self, &egui_ctx);
+        }
         let full = ui.max_rect();
         let body_h = (full.height() - self.chrome_height).max(0.0);
         let route = self.route;
 
-        // ---- enter + hand-off, shortcuts, Space, tick
+        // ---- enter + hand-off, shortcuts, Space, tick (not in an offscreen frame)
         let mut nav: Option<NavRequest> = None;
         let mut events = Vec::new();
-        {
+        if !offscreen {
             let entered = self.entered;
             let carries = std::mem::take(&mut self.pending_carry);
             let (mut ctx, screens) = self.ctx(&egui_ctx, body_h);
@@ -424,8 +503,8 @@ impl StructuresApp {
                 screen.tick(&mut ctx);
             }
             nav = nav.or(ctx.nav.take());
+            self.entered = Some(route);
         }
-        self.entered = Some(route);
 
         // ---- the page: ground, header, tab row, body (scrolls as a whole when columns stack)
         lab_ui::paint::paint_grid(ui.painter(), full, full.min, &sp_theme::PAPER);
@@ -469,15 +548,51 @@ impl StructuresApp {
             // columns size themselves from the chrome height: redo the pass with the new one
             egui_ctx.request_discard("chrome height changed");
         }
+        self.toasts.show(&egui_ctx);
+        if offscreen {
+            return;
+        }
         self.chrome_height = chrome_h;
         self.content_height = content_h;
         self.events.extend(events);
-        self.toasts.show(&egui_ctx);
         if let Some(req) = nav {
             self.apply(req);
             egui_ctx.request_repaint();
         }
     }
+}
+
+/// Offscreen frames drawn per screenshot / description (the last is the one taken): enough
+/// for layouts measured the pass before (remembered sizes, stacked columns) to settle.
+pub const OFFSCREEN_PASSES: usize = 3;
+
+/// The offscreen context and its wgpu renderer ([`StructuresApp::render_offscreen`]).
+pub struct Offscreen {
+    ctx: egui::Context,
+    renderer: egui_kittest::wgpu::WgpuTestRenderer,
+}
+
+impl Offscreen {
+    /// A context with the app's fonts and style, and a renderer on its own wgpu device.
+    pub fn new() -> Result<Self, String> {
+        let renderer = std::panic::catch_unwind(egui_kittest::wgpu::WgpuTestRenderer::new)
+            .map_err(|_| "no wgpu device for offscreen rendering".to_string())?;
+        let ctx = egui::Context::default();
+        sp_theme::install(&ctx);
+        Ok(Self { ctx, renderer })
+    }
+}
+
+/// An offscreen frame: physical pixels (RGBA, unpremultiplied) and the AccessKit tree.
+pub struct OffscreenShot {
+    /// Width, px.
+    pub width: u32,
+    /// Height, px.
+    pub height: u32,
+    /// `width × height × 4` bytes.
+    pub rgba: Vec<u8>,
+    /// The frame's AccessKit tree, when asked for.
+    pub tree: Option<egui::accesskit::TreeUpdate>,
 }
 
 /// Acts on the header's clicks: brand → Series (NAV-3), modes, drive, Reset, Share (NAV-6).

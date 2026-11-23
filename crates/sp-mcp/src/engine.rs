@@ -294,10 +294,10 @@ pub fn register(tools: &mut ToolRegistry) -> Result<(), RegistryError> {
                     "{} at {} °C: peak {:.0} MPa, breaks at {} %, E = {} GPa, toughness {:.1} MJ/m³ \
                      ({} curve points)",
                     r.name,
-                    r.temperature_c,
+                    report::short(r.temperature_c),
                     r.peak_mpa,
-                    r.break_strain_pct,
-                    r.e_gpa,
+                    report::short(r.break_strain_pct),
+                    report::short(r.e_gpa),
                     r.toughness_mj_m3,
                     r.curve.as_ref().map_or(0, Vec::len)
                 )
