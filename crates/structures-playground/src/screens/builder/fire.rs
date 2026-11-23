@@ -11,13 +11,17 @@ use crate::ctx::Ctx;
 use crate::widgets::ghost;
 use eframe::egui::{Color32, Painter, Pos2, Ui};
 use sp_engine::builder::fire::{self, FireLevel, heat};
-use sp_engine::builder::{Game, Phase, PieceType, Scene, View};
+use sp_engine::builder::{Game, Phase, PieceType, RunKind, Scene, View};
 use sp_theme as t;
 use sp_theme::fire as tf;
 
 /// The accessible names of the Fire chips (the visible labels are the level names; "Off" alone
 /// would clash with the Earthquake row's).
 pub const CHIP_NAMES: [&str; 4] = ["Fire off", "Small fire", "Big fire", "Inferno"];
+
+/// The note on a level whose run is the 30-year fast-forward (no simulation, so no fire).
+pub const YEARS_NOTE: &str =
+    "This level\u{2019}s run is thirty years of settling, not a test: there is no fire in it.";
 
 /// The fold-in (stateless: the fire lives in the engine's simulation).
 #[derive(Debug, Default)]
@@ -96,13 +100,12 @@ impl FoldIn for Fire {
         {
             fire::light_now(sim);
         }
-        para(
-            ui,
-            &fire::note_at(c, game.scene() == Scene::River),
-            12.0,
-            1.5,
-            t::TEXT_MUTED,
-        );
+        let note = if game.setup().run == RunKind::Years {
+            YEARS_NOTE.to_string()
+        } else {
+            fire::note_at(c, game.scene() == Scene::River)
+        };
+        para(ui, &note, 12.0, 1.5, t::TEXT_MUTED);
     }
 
     fn describe(&self, game: &Game) -> Option<String> {

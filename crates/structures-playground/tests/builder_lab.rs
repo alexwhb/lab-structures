@@ -293,3 +293,17 @@ fn a_fire_between_the_chips_lights_none_of_them() {
         .expect("fire is set");
     assert_eq!(d, "Fire: 650 \u{b0}C");
 }
+
+#[test]
+fn no_fire_promise_on_the_years_level() {
+    let mut h = tall();
+    h.state_mut()
+        .screens_mut()
+        .builder
+        .game
+        .pick_level(sp_engine::builder::LevelKey::Pisa);
+    settle(&mut h);
+    if h.state().screens().builder.game.setup().run == sp_engine::builder::RunKind::Years {
+        assert!(has_label(&h, fire_ui::YEARS_NOTE));
+    }
+}
