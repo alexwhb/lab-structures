@@ -332,6 +332,36 @@ Shared-file etiquette:
   Drive across runs keeps the cursor), the Material select (Enter / Space / arrows, ComboBox),
   1440 and 390 renders against the references (crowded member labels at 390 are the mockup's).
 
+- **materials → worlds** [severity: med] `crates/sp-engine/src/tower.rs:905` (`TURBULENCE`) +
+  `crates/sp-engine/src/dynamics.rs:466` (`GUST_TAU_PERIODS = 1`) — Play gusts swings about 4×
+  the mockup's dynamic amplitude, enough to carry the drawn top **through vertical into the
+  wind** at the default settings. Verified with a probe on the default tower (60 floors, core,
+  30 m/s, seed 7): mean lean 0.789 m, `dyn_amp` 0.232 m, simulated rms swing 0.326 m
+  (1.40 × dyn), max swing over 500 periods 1.09 m > the mean lean, so the top reaches −0.3 m
+  (the tower leans upwind; ×40 on the stage that's a 46 px swing against a 33 px lean). The
+  doc comment says "gust peaks (≈ 3σ) come out near the mockup's dynamic amplitude `dyn`", i.e.
+  rms ≈ dyn/3, but 3σ ≈ 0.98 m ≈ 4.2 × dyn; the test
+  `dynamics.rs::play_gusts_sways_around_the_drawn_lean…` only bounds rms to 0.15–1.5 × dyn, so
+  it passes. (A 1-period gust correlation time puts most of the gust energy at f1, where ζ =
+  1.5 % amplifies it ~1/(2ζ).) — Calibrate: `TURBULENCE ≈ 0.08 × (0.232/3)/0.326 ≈ 0.02` (or a
+  longer gust τ, a few periods), and tighten the test to rms ≈ 0.2–0.5 × dyn plus "the top never
+  crosses x = 0 at the defaults".
+- **materials → worlds** [severity: low] `crates/structures-playground/src/screens/tower.rs:480`
+  (and `screens/ground.rs:460` while quaking / wet) — `ctx.animate()` every frame while Play
+  runs repaints at display rate: the harness measures `repaint_delay` 4.2 ms (the 240 fps cap)
+  for Play gusts, vs 20 ms for Ground's paced years; PLAT-3 asks ~30 fps while something moves.
+  A 120-floor tower redraws ~900 shapes per frame at 120 Hz on ProMotion. — `ctx.wake_in(1.0 /
+  30.0)` (SwaySim already integrates in fixed internal steps, so the sway is unchanged).
+- Also checked on Tower / Ground, no findings: Newmark (γ ½, β ¼) effective-load and update
+  formulas, Den Hartog tuning, the OU gust discretisation (unit variance), `MODAL_MASS_FACTOR`
+  33/140 (∫φ² for the tip-load shape), SwaySim step-size independence (600 × 1/60 s and
+  60 × 10/60 s give bit-identical states), TMD effect (rms −37 %), long runs at 5 / 35 / 120
+  floors (bounded, lock-in amplifies), `calc()` vs the mockups (both), `FromTower::edge_pressure`
+  (M / (B³/6) = 248 kPa for the default), Tower → Ground with 100 floors (80 + note) and back,
+  scrubbing pauses Play years, Play from year 30 restarts at 0, every soil × foundation × 2 /
+  80 floors × quake finite, Tower / Ground / Materials at 120 × 200, 260 × 300 and 2600 × 400
+  px with Play running (no panic).
+
 ## Candidates for labkit
 
 - **materials**: `sp_engine::materials::jsnum` (JavaScript-exact `toFixed` / `String(n)` /
