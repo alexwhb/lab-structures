@@ -49,8 +49,8 @@ pub fn lag_s(m: FireMaterial) -> f64 {
 }
 
 /// Where the fire burns: under the middle of the span on the river; on open ground at the base
-/// of the tower — the mean x of the joints on foundations (`supports`), or of `joints` at ground
-/// level when nothing is founded, else [`FLAT_DEFAULT_X`].
+/// of the tower — the mean x of the joints on foundations (`supports`: pass only those a piece
+/// stands on), or of `joints` at ground level when nothing is founded, else [`FLAT_DEFAULT_X`].
 pub fn source_for(scene: Scene, supports: &[[f64; 2]], joints: &[[f64; 2]]) -> [f64; 2] {
     match scene {
         Scene::River => RIVER_SOURCE,

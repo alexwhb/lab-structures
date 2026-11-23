@@ -196,16 +196,54 @@ fn the_fire_lights_on_time_and_light_it_now() {
 fn open_ground_fire_burns_at_the_tower_base() {
     let f = Some(Foundation::Footing);
     let d = Design {
-        nodes: vec![joint("J1", 92.0, 0.0, f), joint("J2", 112.0, 0.0, f)],
-        members: vec![],
+        nodes: vec![
+            joint("J1", 92.0, 0.0, f),
+            joint("J2", 112.0, 0.0, f),
+            joint("J3", 102.0, 8.0, None),
+        ],
+        members: vec![
+            piece("M1", "J1", "J3", PieceType::Steel),
+            piece("M2", "J2", "J3", PieceType::Steel),
+        ],
         loads: vec![],
-        n_n: 2,
-        n_m: 0,
+        n_n: 3,
+        n_m: 2,
     };
     let sim = sim_for(&d, Scene::Flat, 700.0);
     assert_eq!(fire::source(&sim), [102.0, 0.0]);
     let river = sim_for(&d, Scene::River, 700.0);
     assert_eq!(fire::source(&river), [28.0, -8.0]);
+}
+
+#[test]
+fn unused_level_anchors_dont_move_the_fire() {
+    // engine's review: a tower on its own footings at x = 20…36 with the open-ground anchors
+    // (footings at 92 and 108 m) left unused — the fire burns at the tower, not in between.
+    let f = Some(Foundation::Footing);
+    let mut d = Design {
+        nodes: vec![
+            joint("J1", 92.0, 0.0, f),
+            joint("J2", 108.0, 0.0, f),
+            joint("J3", 20.0, 0.0, f),
+            joint("J4", 36.0, 0.0, f),
+            joint("J5", 20.0, 8.0, None),
+            joint("J6", 36.0, 8.0, None),
+        ],
+        members: vec![
+            piece("M1", "J3", "J5", PieceType::Steel),
+            piece("M2", "J4", "J6", PieceType::Steel),
+            piece("M3", "J5", "J6", PieceType::Floor),
+        ],
+        loads: vec![],
+        n_n: 6,
+        n_m: 3,
+    };
+    let sim = sim_for(&d, Scene::Flat, FireLevel::Big.setting());
+    assert_eq!(fire::source(&sim), [28.0, 0.0]);
+    // Nothing built: nothing carries a piece, so it burns at the default tower's centre line.
+    d.members.clear();
+    let bare = sim_for(&d, Scene::Flat, FireLevel::Big.setting());
+    assert_eq!(fire::source(&bare), [heat::FLAT_DEFAULT_X, 0.0]);
 }
 
 /// Open-ground Sandbox: a steel A-frame on the two footings with a 40 t crate at its apex,

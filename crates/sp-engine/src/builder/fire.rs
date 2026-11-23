@@ -163,8 +163,9 @@ pub fn apply(c: &mut Constraint) {
 }
 
 /// Where the fire burns in this simulation (see [`heat::source_for`]): under mid-span on the
-/// river; on open ground the mean x of the joints on intact foundations, else of the used joints
-/// at ground level, else the default tower's centre line.
+/// river; on open ground the mean x of the intact foundations that carry a piece (a level's
+/// unused anchors don't count), else of the used joints at ground level, else the default
+/// tower's centre line.
 pub fn source(sim: &Sim) -> [f64; 2] {
     if sim.setup.scene == Scene::River {
         return heat::RIVER_SOURCE;
@@ -177,7 +178,8 @@ pub fn source(sim: &Sim) -> [f64; 2] {
             .fold((0.0, 0usize), |(s, n), p| (s + p.x0, n + 1));
         (n > 0).then(|| sum / n as f64)
     };
-    let x = mean(&|p| p.sup.is_some() && !p.ripped)
+    // only foundations that carry something: a level's unused anchors don't count
+    let x = mean(&|p| p.sup.is_some() && !p.ripped && p.used)
         .or_else(|| mean(&|p| p.used && p.y0.abs() < 0.5))
         .unwrap_or(heat::FLAT_DEFAULT_X);
     [x, 0.0]
