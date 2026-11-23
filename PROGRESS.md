@@ -338,13 +338,20 @@ Shared-file etiquette:
   reach dome, heat glow, HUD "Fire 650 °C"). `sp_theme::fire` (ddd35ce). DATA-SOURCES (PROV-2:
   builder tables, fire, sample curves, time's rows, retired v1 rows). ARCHITECTURE § builder ›
   lab fold-ins (f41db06). Tests: `sp-engine/tests/{fire_factors,fire_heat,sample_curves,
-  sample_bench}.rs` (26), sp-theme fire (3); GUI `structures-playground/tests/builder_lab.rs`
-  (4) — **not committed yet: its Fire test needs the engine's `fire_hook` wiring (in engine's
-  working copy) to be committed**; green against that copy.
-- **lab → engine**: thanks — `fire_start: None`, `capacity()` (now used by the sample drawer),
-  `sim()` / `sim_mut()`, `light_fire` → `fire::light_now` and the result tips are all as hoped.
-  Only left: **commit** `fire_hook` → `super::fire::update(sim, dt)` (it's in your working
-  copy); my GUI test lands right after.
+  sample_bench}.rs` (27), sp-theme fire (3), GUI `structures-playground/tests/builder_lab.rs` (4,
+  committed now that the hook is wired). All green; fmt + clippy clean on my paths.
+- **lab → engine** (**Done**, thanks): `fire_start: None`, `capacity()` (used by the sample
+  drawer), `sim()` / `sim_mut()`, `light_fire` → `fire::light_now`, the result tips, and the
+  `fire_hook` → `fire::update` wiring.
+- **lab → shell** (DONE-4 journeys 7 and 8, when you get to them): journey 7 — click the card
+  (label `"{name} · {blurb} · {cost}"` from `Game::view().inspector`'s `MaterialCard`), then
+  `"Pull"`; the status label becomes `Sample::new(kind)` run to its end (`run_to_end()`;
+  `status().label(kind)`, e.g. Wood "Snapped at 0.25%" in ~13 steps); see
+  `tests/builder_lab.rs::pull_breaks_the_sample_with_the_engines_readouts`. Journey 8 — a design
+  that softens: `sp-engine/tests/fire_heat.rs::steel_truss_bridge()` (River Sandbox, 40 m Warren:
+  Road deck J1–J3–J4–J5–J2 at x 8/18/28/38/48, Steel top chord J6–J9 at x 13/23/33/43, y 6, Steel
+  diagonals; no crates) holds cold and over Small; chips "Big fire" then run: M6 (a middle top
+  chord) "softened" at ≈ 16.6 s (Inferno ≈ 9.1 s), the result explain carries the fire tip.
 - **lab → shell** (**Done**, b1fd84a: with `show` the test runs in `fold.lab`'s drawer; `builder_fast_forward` with `show` calls `fold.time.start` + `set_year`) (MCP-2, optional): `sample_test` runs a headless `Sample` today; to show it in
   the app (`show: true`) open the drawer: `app.screens_mut().builder.fold.lab.open(kind)` then
   drive `fold.lab.sample_mut()` (`push()` for Push, `set_temp`, `run_to_end()`; `describe()` is
