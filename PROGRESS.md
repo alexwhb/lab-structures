@@ -814,6 +814,44 @@ Shared-file etiquette:
 
 ## Review findings
 
+- **screen → shell** [high] `crates/sp-shared/src/builder.rs:408` (`place_design`, the crates
+  loop `game.add_crate(id, *t)`) — a level's own crates are added on top of the design's: the
+  Leaning tower's 8 t bells on J27 become 16 t when a structure from that level's Share is built
+  on the level. — `let mut g = Game::new(); g.pick_level(LevelKey::Pisa); let text =
+  g.share_text(); test_structure(None, None, Some(&text), &ConditionsChange::default(), None)`:
+  `state.crates_t` 16 (the app: 8), result "It toppled", tilt 5.29° — the app's untouched tower
+  (and `fast_forward_report(&g, 30.0)`) says "Still leaning", 4.35°. MCP `builder_test` on the
+  Leaning tower therefore answers for a different structure than the one Share copied (the
+  "Share round-trips exactly" claim only holds on levels without crates). — Set the crate, not
+  add to it: `game.add_crate(id, *t - game.design().load(id))` (refusals still toast for a
+  crate below the level's floor), and a test that every level's own Share round-trips through
+  `test_structure` with equal crates and the same result.
+- **screen → shell** [med] `crates/sp-shared/src/builder.rs:439` / `:446`
+  (`fast_forward_report`) — for `years` < 30 the title / explain / `YearsOutcome::sentence` are
+  the 30-year line while the numbers are the snapshot at `years`; on the Leaning tower `pass` /
+  `stars` are also the 30-year result. — Sandbox, open ground, the 32 m 2-bay steel / wood tower
+  preset on footings, soil Soft, `fast_forward_report(&g, 5.0)`: `years` reads year 5.0, tilt
+  0.04°, settled 88 mm, but the title says "After 30 years: tilt 0.0°, settled 196 mm." (the
+  same text the app shows after the full 30 years). MCP `builder_fast_forward {years: 5}` /
+  `builder_test {years: 5}` report contradictory numbers. — Build the line from the snapshot (a
+  `LongTerm::result_line_at(year)` from `time`, or format "After 5 years: …" here from `snap`),
+  and on the Leaning tower either refuse `years` < 30 or say the verdict is the 30-year one.
+- **screen → shell** [low] `crates/structures-playground/src/widgets/world.rs:243…` +
+  `widgets/icons.rs:107,109` — v1 leftovers with no caller outside `world.rs` / the gallery:
+  `picture_tiles`, `stepper`, `value_row`, `readout_grid`, `goal_row`, `challenge`,
+  `wrap_button`, `stage_box`, `title_block` (only `band_bar` and `compare_row` are used, by
+  `comfort.rs`), and `Icon::Joint` / `Icon::Support` (the v1 Bridge's rail; the builder draws
+  its own Found icon and uses Member / Weight). They keep `sp_theme::{tower, ground}` alive for
+  nothing; `sp_theme::bridge` has no user at all (that module is the lead's / ex-bridge's to
+  drop). — `rg 'picture_tiles\(|stepper\(|Icon::Joint'` outside `world.rs`, `icons.rs`,
+  `gallery.rs`: no hits. — Delete them (and their gallery entries), or mark them as kept for a
+  named wave-2 user.
+- **screen → shell** [low] `scripts/check-bundle.sh:256-262` — "open -a … truss.str opens it in
+  Advanced" passes on the log line `opened netlist …truss.str`, which `platform::open_netlist`
+  writes as soon as the file is read, before any navigation or parse; a regression that drops
+  the hand-off (or opens it in the Playground) still prints ok. — Log the delivery too (e.g.
+  `AppEvent::Carried` → `log::info!("netlist {name} → advanced")`) and grep for that.
+
 - **advanced → bridge** [severity: med] `crates/structures-playground/src/app.rs:92` (`Persisted`)
   + `crates/sp-engine/src/bridge/game.rs:471` (`Game::set_best`) — best stars per level are
   lost on restart: `set_best` ("restoring saved progress") has no caller and `Persisted` holds
@@ -959,6 +997,59 @@ Shared-file etiquette:
   scrubbing pauses Play years, Play from year 30 restarts at 0, every soil × foundation × 2 /
   80 floors × quake finite, Tower / Ground / Materials at 120 × 200, 260 × 300 and 2600 × 400
   px with Play running (no panic).
+
+### v2 wave 2 — `lab` reviews `engine` (builder core) and `shell` (MCP builder tools)
+
+- **lab → engine** [med] `crates/sp-engine/src/builder/netlist.rs:229` (`read`: the notes loop
+  only takes `level`, `cond`, `found`) — the `* level … · scene flat` note that `write` emits is
+  never read; the scene is guessed from the joints, so an open-ground design whose joints sit
+  inside the river's frame (x −20…76, y ≥ 0) comes back as a **river** design: its Floors turn
+  into Road (`allowed_in`), its footings hang in mid-air over the river. Repro (a test): Sandbox
+  open ground, footings at (20, 0) and (28, 0), Steel columns, a Floor at y = 4, a Wood diagonal →
+  `share_text()` → `paste_netlist()` → scene `River`, kinds `[Steel, Steel, Road, Wood]`. Share →
+  ⌘V, "Open in Advanced" → "Open in Playground" and MCP `builder_test` (`scene: "open"` is then
+  refused: "fit the river scene, not open") all hit it; `netlists_round_trip_and_refuse_garbage`
+  misses it because every board's tower stands at x ≈ 92–108. — Fix: parse `scene <key>` from the
+  level note and use it when the joints fit that scene (fall back to the guess otherwise); add a
+  near-origin open-ground design to the round-trip test.
+- **lab → engine** [med] `crates/sp-engine/src/builder/game.rs:1736` (`tick`: `let practice =
+  self.practice();`, only the last frame's value reaches `result_of`) — practice is judged on the
+  conditions at the moment the run ends, while wind, snow, quake and fire may change during it.
+  Repro (a test): level 6 Shaky ground, `PresetBuild::Tower { h: 32, bays: 2, col: Steel, brace:
+  Wood, found: Footing }`: an honest run fails (J2 liquefied); the same run with the quake set to
+  0 at the start and back to 0.3 at t = 17.3 s (the envelope only restarts 0.5 s later, the test
+  ends at 18 s) → **pass, 2 stars, `practice: false`, best stars saved**. Level 5's wind and level
+  3's snow can be dodged the same way. Mockup-faithful (its `tick()` reads `practice(s)` at the
+  end) but against BLD-10 ("none for a practice run: any condition easier than the level's"). —
+  Fix: latch `practiced |= self.practice()` on every running frame (reset in `start_run`) and
+  pass the latch to `result_of` (a golden that eases a condition mid-run would need an override;
+  I didn't find one).
+- **lab → shell** [low] `crates/sp-mcp/src/screens.rs:79-80`, `crates/sp-shared/src/proto.rs:104`
+  (also engine docs `game.rs` `set_quake` "Earthquake, g", `setup.rs` `Conditions::quake`) — the
+  quake setting is described as "peak ground motion, g (Moderate 0.15, Strong 0.3, Huge 0.5)",
+  but per the lead's BLD-12 decision (158ea12) it is a ground-motion **amplitude in metres**
+  (supports move by setting × envelope × sin 2π·1.1 t): 0.15 / 0.3 / 0.5 are ≈ 0.7 / 1.5 / 2.4 g
+  peak. A client asking for "0.3 g" gets ≈ 1.5 g. — Fix: reword the schema and docs
+  ("ground-motion amplitude, m: Moderate 0.15 ≈ 0.7 g peak, Strong 0.3 ≈ 1.5 g, Huge 0.5 ≈
+  2.4 g"); keep `quake_g` as the field name (or add an alias) so clients don't break.
+- **lab → shell** [low] `crates/sp-shared/src/builder.rs:615` (`test_structure` on a named level →
+  `place_design`) — a netlist whose joints fit the other scene is built on the level anyway.
+  Repro (a test): level 4's 40 m tower preset, Share text, `test_structure(Some("river"), None,
+  Some(text), …)` → 35 joints and 70 pieces (Floors included: `add_member` doesn't check
+  `allowed_in`) placed on the river level's right bank at x ≈ 92–108, outside its frame
+  (x ≤ 76), `refused: []`, result "0 of 3 made it … a vehicle ran out of road". — Fix: refuse
+  when the imported scene isn't the level's scene ("this netlist is an open-ground structure;
+  level `river` is a river crossing"), or list it in `refused`.
+- Checked, no findings: `jsmath` (20 000 random + special arguments against libm: no panics, ≤
+  1e-12 relative, JS's own `pow(±1, ±∞ / NaN) = NaN`; the `fma` switch is compile-time on
+  `target_arch`, x86_64 gets plain `a·b + c` like an x86 V8 build); editing guards (every edit
+  and undo refuse outside building; undo history survives runs; soil / traffic refused while
+  running); `fit` / `zoom_by` / `pan_by` / `set_view` with empty designs and NaN; view indexing
+  (positions from the sim's particles, one per design joint); best stars (`set_best` clamps, a
+  practice / over-budget run never lowers them); a 400-joint netlist (the cap): preview 24 ms,
+  view 4 ms, running frame 1.3 ms, paste 19 ms in release; MCP `apply_conditions` refuses
+  before changing anything; `run_to_end` on the Sandbox / Leaning tower; `sample_test` (both
+  paths).
 
 ## Candidates for labkit
 
