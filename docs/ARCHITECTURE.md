@@ -69,11 +69,13 @@ The Playground › Bridge game: `Playground.dc.html`'s `class Component` without
   `pointer_move(x, y)` / `pointer_up()` (drag), `clear_hover()`, `finish_line()`,
   `set_support(id, Option<Support>)`, `add_load(id, ±t)`, `set_member_size(id, size)`,
   `delete_member`, `delete_joint`, `delete_selected` (Delete), `nudge(dx, dy)` (arrow keys,
-  2 m steps, drag rules), `starter()` / `can_starter()`, `undo()` (40 steps),
-  `open_in_sandbox(design, material)`, `set_best`. Test: `start_or_stop()` (refuses with
+  2 m steps, drag rules), `starter()` / `can_starter()`, `undo()` (40 steps; only edits that change the design leave
+  a step: a refused edit or a drag that didn't move leaves none),
+  `open_in_sandbox(design, material)`, `set_best` (the screen restores saved best stars). Test: `start_or_stop()` (refuses with
   "Connect the loaded joint…"), `back_to_build()`, `replay()` (slow motion), `tick()` (one 33 ms
   tick: λ += 1/55, ≤ 30 breaks, loose-load / mechanism collapse, hold at λ = 1 with stars and
-  best; or 3 collapse steps), `advance(dt)` (toasts fade after 2.6 s), `run_test(max_ticks)`
+  best — at λ = 1 only once the cascade has settled within the 30-break cap; or 3 collapse
+  steps), `advance(dt)` (toasts fade after 2.6 s), `run_test(max_ticks)`
   (headless Test, for MCP `bridge_test`). Constants in `game`: `UNDO_DEPTH`, `LAMBDA_STEP`,
   `MAX_BREAKS_PER_TICK`, `TICK_SECONDS`, `TOAST_SECONDS`.
 - **`bridge::view::View`** (`Game::view()`) — everything the screen shows: joint `positions`
@@ -102,8 +104,8 @@ The Playground › Bridge game: `Playground.dc.html`'s `class Component` without
   `underground`), `WEIGHT_STEPS`, `MAX_LOAD_T`, `N_PER_TONNE` (9810), `JOINT_COST_K`.
 - **`bridge::design`** — `Design { nodes: Vec<Joint { id "J3", x, y (i32 grid m), sup,
   locked }>, members: Vec<Bar { id "M7", a, b (joint ids), size }>, loads: Vec<(id, t)>
-  (first-hung order), n_n, n_m }`; `Design::for_level`, `starter` (a mechanism until its
-  middle panel gets a diagonal, as in the mockup), lookups, `set_load`, `to_truss(mat, λ)`,
+  (first-hung order), n_n, n_m }`; `Design::for_level`, `starter` (18 members: the mockup's 16
+  plus both diagonals of the middle panel, SPEC MB-5, so it holds), lookups, `set_load`, `to_truss(mat, λ)`,
   `analyse(mat, λ, broken) -> Analysis { ok, bad, displacement, members:
   Vec<Option<MemberResult>>, worst, mass, cost, n_act, used, reactions }` (self-weight half per
   end at λ, then weights × 9 810 N × λ, on `truss::Truss::solve`), `from_truss(&Truss, loads)
@@ -117,7 +119,7 @@ The Playground › Bridge game: `Playground.dc.html`'s `class Component` without
   weights … Fy=-20t`, `.load self +self`), `read(text) -> Result<(Design, MaterialKey),
   ReadError>` (on `netlist::parse`; static loads and the truck where it stands become
   weights). Advanced's solve of `write`'s output matches the Bridge to the newton (ADV-9).
-- **`bridge::fmt`** — JavaScript-exact `to_fixed` (ties up), `js_round`, `num`, `stars`.
+- Numbers print with the shared `sp_engine::jsnum`; `view::stars(n)` is the star row.
 - `truss::hypot` (added for the Bridge, used for every member length): V8's `Math.hypot`, so
   symmetric members tie-break like the mockup.
 - **Screen** (`structures-playground/src/screens/bridge.rs` + `bridge/{stage,rail,aside,bits}.rs`,
@@ -125,10 +127,13 @@ The Playground › Bridge game: `Playground.dc.html`'s `class Component` without
   drags as `Action`s and applies them after drawing; `BridgeScreen { pub game: Game }` (MCP:
   `bridge_test` = `game.run_test(n)`, `bridge_load_netlist` = `bridge::netlist::read` +
   `game.open_in_sandbox`, `describe()` = `game.summary()`); `stage::Xf` maps grid metres to
-  points. Header: drive "Test" / "Pause" → `start_or_stop`, Reset → `clear`, clock, document =
+  points. Best stars per level live in egui's persisted memory under
+  `screens::bridge::BEST_STARS_KEY` (`[u8; 4]`, saved by eframe with the window, restored on
+  `enter`); level rows report them as their AccessKit description ("Best: 1 of 3 stars").
+  The Test paces frames at its 30 ticks/s (`wake_in`). Header: drive "Test" / "Pause" → `start_or_stop`, Reset → `clear`, clock, document =
   level slug, Share = `bridge::netlist::write`. `Command::{Undo, Delete, Paste}`; arrow keys
   nudge; `Carry::Netlist` in (Sandbox) and out ("Open in Advanced").
-- Tests: `tests/bridge_goldens.rs` replays `tests/bridge_goldens.json` (10 scenarios, 69
+- Tests: `tests/bridge_goldens.rs` replays `tests/bridge_goldens.json` (10 scenarios, 71
   snapshots written by `node crates/sp-engine/tests/bridge_goldens.mjs`, which runs the
   mockup's `Component` verbatim) and matches state, forces, displacements, cost, the collapse
   simulation, every string and the drawn geometry to within 2 ulps; `tests/bridge_props.rs`
