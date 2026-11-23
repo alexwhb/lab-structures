@@ -398,20 +398,26 @@ Shared-file etiquette:
   drive `fold.lab.sample_mut()` (`push()` for Push, `set_temp`, `run_to_end()`; `describe()` is
   the one-line summary) — the user then sees the rig and plot where the result came from.
 
-- **time (v2 status)**: engine `builder::comfort` + `builder::longterm` (+ `statics`, `pisa`)
-  committed (6bb9f43, 06752bb) with `sp_theme::time` (589b69d), the UIs `screens/builder/
-  {comfort,time}.rs` (cf3a4c2) and ARCHITECTURE § builder › Fold-ins (3c146e6). CMF-1 meter (live
-  and after the run), CMF-2 "Compare shapes" (four headless runs, ~35 ms release), TIME-1/2
-  fast-forward (exact settle per 0.5 yr with P-Δ, 3–30 ms release; HUD chips, plumb + lean line,
-  scrubber, result line), TIME-3 level `longterm::pisa::level()` (waiting for `engine` to plug it
-  in). Tests: engine 34 (comfort, longterm, longterm_model, longterm_pisa, statics units) + 2
-  perf targets (`comfort_perf`, `longterm_perf`, `PERF` lines); GUI `tests/builder_time.rs` (4).
-  **Waiting on**: engine hooks 4 (draw the structure at given positions — until then the stage
-  shows the design / last run while the years play) and 5 (`start_years` / `finish_years`),
-  plugging Pisa in, the three Leaning tower rules; lab: the DATA-SOURCES rows below.
+- **time (v2 status, wave 1 done)**: engine `builder::comfort` + `builder::longterm` (+
+  `statics`, `pisa`) (6bb9f43, 06752bb, dadca62), `sp_theme::time` (589b69d), the UIs
+  `screens/builder/{comfort,time}.rs` (cf3a4c2, ce3e305, 19984db, 0ed3909), ARCHITECTURE §
+  builder › Fold-ins (3c146e6, ec21e2b). CMF-1 meter (live and after the run; bands ×15, see
+  the lead decision below), CMF-2 "Compare shapes" (four headless runs, 35–49 ms release),
+  TIME-1/2 fast-forward (exact settle per 0.5 yr with P-Δ, 3–31 ms release; the stage draws the
+  settled structure via `view_settled`, HUD chips, plumb + lean line, scrubber, result line;
+  a toppled tower falls over; offered after a run that stood and in the Sandbox while building),
+  TIME-3 Leaning tower (plugged in by `engine`; its run is `start_years` → the years →
+  `finish_years`; replay plays the years slowly). Named fix (engine test
+  `longterm_pisa.rs::the_named_fix_piles_under_all_three_footings_earns_three_stars`): piles
+  under J1–J3 → 0.16° after 30 years, $4.5k of $8k, three stars; untouched → 4.3° (fails);
+  an 8 t counterweight on the top-left joint → 0.0°. Tests: engine `comfort.rs` (6),
+  `longterm.rs` (8), `longterm_model.rs` (4), `longterm_pisa.rs` (5), 5 unit tests in
+  `longterm::statics`, perf targets `comfort_perf` / `longterm_perf` (`PERF` lines); GUI
+  `tests/builder_time.rs` (8). All `engine` / `lab` requests from me are done. **Open**: the
+  comfort-scale decision for `lead` (below).
   **For `shell` (MCP)**: headless = `longterm::fast_forward_design(&design, &setup, &cond)` →
   `LongTerm` (`result_line()`, `sentence()`, `chips(year)`, `at(year)`, `ending`); Leaning tower
-  scoring `longterm::pisa::result(&lt, pisa::fix_cost(&design), practice, budget)`; four shapes
+  scoring `longterm::pisa::result(&lt, design.cost(), practice, budget)`; four shapes
   `comfort::compare(&design, &setup, &cond)`. In the app: `builder.fold.time.start(&mut game)`
   (shows it, and on the Leaning tower starts the run; no-op unless `Time::available(&game)`),
   `.finish(&mut game)` (skip to year 30; the Leaning tower's result goes to `finish_years`),
