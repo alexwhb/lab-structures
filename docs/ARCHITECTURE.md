@@ -237,8 +237,10 @@ owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample
   (interpolated), `chips(year)` ("Year " "12.0", "Tilt " "1.8°" / "Differential " "12 mm",
   "Settled " "214 mm"), `lean_line(year)` (foundations' and top floor's centroids),
   `result_line()` ("After 30 years: tilt 0.3°, settled 41 mm."), `sentence()`, `end_year()`,
-  `piece_index` / `joint_index`; `has_foundations(&Design)`, `anim_year(elapsed, end)` (30
-  years over `ANIM_SECONDS` = 6), `TOPPLE_DEG` 5, `LEAN_OK_DEG` 0.5. Tilt is measured from the
+  `piece_index` / `joint_index`, `fall(k)` (a toppled tower drawn falling: the last frame turned
+  about the outermost foundation on the lean side, `FALL_DEG` 80 over `FALL_SECONDS` 1.2);
+  `has_foundations(&Design)`, `anim_year(elapsed, end)` (30 years over `ANIM_SECONDS` = 6),
+  `TOPPLE_DEG` 5, `LEAN_OK_DEG` 0.5. Tilt is measured from the
   line as built; "Settled" / differential count consolidation since year 0.
 - **`builder::longterm::pisa`** (TIME-3) — `level() -> Level` ("7 · Leaning tower", soft clay,
   budget `BUDGET` $8k, `run: RunKind::Years`, `prebuilt`: `prebuilt()` — 2 bays × 8 storeys,
@@ -252,10 +254,14 @@ owns nothing but pixels. Fold-ins: `comfort`, `longterm` (agent `time`); `sample
   (`results`: the meter while running / after an open-ground run, "Compare shapes" → the bars
   and verdict; `comparison(&game)`, `compare(&game)` for MCP), `Time` (`results`: "Fast-forward
   30 years", progress + "Skip to the end", the "Years" scrubber, result line + sentence, "Play
-  again"; `hud`, `paint_stage` plumb + lean line, `tick` / `busy` while playing, the Leaning
-  tower's `drive` / `drive_button` / `adjust_view`; `Time::available(&game)`, `start(&game)`,
-  `finish(&mut game)`, `set_year`, `long_term()`, `year()`, `playing()`, `pisa_result()`).
-  Colours `sp_theme::time`.
+  again"; `adjust_view` swaps in `Game::view_settled` at the year shown (and the fall); `hud`,
+  `paint_stage` plumb + lean line, `tick` / `busy` while the years or the fall move; the Leaning
+  tower: `drive` / `drive_button` start it with `Game::start_years`, the end goes to
+  `Game::finish_years(RunResult::of_years(…))`, run overlay "Year 12.0 / 30", banner title +
+  explain from `pisa::result`). Offered after a run that stood, on the Leaning tower, and in the
+  Sandbox while building (its runs never end) once the preview stands. API:
+  `Time::available(&game)`, `start(&mut game)`, `finish(&mut game)`, `set_year`, `long_term()`,
+  `year()`, `playing()`, `moving()`, `pisa_result()`. Colours `sp_theme::time`.
 - Tests: `tests/comfort.rs`, `comfort_perf.rs` (`PERF compare shapes …`, < 400 ms),
   `longterm.rs` (determinism, monotonic settlement, rock 0 / soft clay most, symmetric vs
   eccentric, topple, bridges, random structures), `longterm_model.rs` (hand-built structures),
