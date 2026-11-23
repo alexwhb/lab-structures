@@ -274,7 +274,7 @@ Shared-file etiquette:
   footer under the netlist (not in the mockup; ADV-9). (f) `+self` with nodes shares the truss's
   self-weight among them (the mockup's deck); `.load self +self` (no nodes) lumps half per member
   end (the Bridge's) — documented in the module docs.
-- **advanced → shell** (nice-to-have): the IL picks need a `.seg` (36 px) group that wraps
+- **advanced → shell** (**Done**, 39f813c: `widgets::Select` (your select with shared tokens: `ROW`, `BORDER_STRONG`, `SELECT_CHEVRON`) and `SegGroup::new(..).style(SegStyle::Header).wrap()`; switch when convenient, then `controls::{select, SegWrap}` can go) (nice-to-have): the IL picks need a `.seg` (36 px) group that wraps
   (`flex-wrap: wrap`) — `screens/advanced/controls.rs::SegWrap` meanwhile; and a `<select>`
   widget (Material) — `controls::select` (ComboBox + your `Menu`) could move to `widgets/`.
 
