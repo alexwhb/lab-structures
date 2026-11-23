@@ -76,7 +76,7 @@ fn in_range(name: &str, v: Option<f64>, lo: f64, hi: f64) -> Result<Option<f64>,
 pub fn apply_conditions(game: &mut Game, c: &ConditionsChange) -> Result<(), String> {
     let wind = in_range("wind_ms", c.wind_ms, 0.0, 50.0)?;
     let snow = in_range("snow_kg_m", c.snow_kg_m, 0.0, 800.0)?;
-    let quake = in_range("quake_g", c.quake_g, 0.0, 0.5)?;
+    let quake = in_range("quake_m", c.quake_m, 0.0, 0.5)?;
     let fire = in_range("fire_c", c.fire_c, 0.0, 900.0)?;
     let dir = match c
         .wind_from
@@ -138,7 +138,7 @@ fn conditions(game: &Game) -> ConditionsInfo {
         wind_from: if c.dir < 0.0 { "right" } else { "left" }.into(),
         snow_kg_m: c.snow,
         snow: chip(&SNOWS, c.snow),
-        quake_g: c.quake,
+        quake_m: c.quake,
         quake: chip(&QUAKES, c.quake),
         soil: c.soil.key().into(),
         soil_name: c.soil.name().into(),
@@ -682,6 +682,20 @@ pub fn test_structure(
     } else {
         game.pick_level(level);
         if let Some(imp) = &imported {
+            let here = game.scene();
+            if imp.scene != here {
+                let what = |s: Scene| match s {
+                    Scene::River => "a river crossing",
+                    Scene::Flat => "open ground",
+                };
+                return Err(format!(
+                    "this netlist is a structure for {} (its joints fit that scene), but level \
+                     `{}` is {}: pick a level of that kind, or the Sandbox",
+                    what(imp.scene),
+                    level.key(),
+                    what(here)
+                ));
+            }
             refused = place_design(&mut game, &imp.design);
         }
     }
@@ -741,7 +755,7 @@ mod tests {
                 ..none()
             },
             ConditionsChange {
-                quake_g: Some(f64::NAN),
+                quake_m: Some(f64::NAN),
                 ..none()
             },
             ConditionsChange {
@@ -982,6 +996,15 @@ mod tests {
         assert!(err.contains("river scene"), "{err}");
         let err = test_structure(Some("river"), Some("flat"), None, &none(), None).unwrap_err();
         assert!(err.contains("Sandbox only"), "{err}");
+        // an open-ground tower isn't built on a river level (review finding)
+        let mut t = Game::new();
+        t.pick_level(LevelKey::T1);
+        let tower = t.share_text();
+        let err = test_structure(Some("river"), None, Some(&tower), &none(), None).unwrap_err();
+        assert!(
+            err.contains("open ground") && err.contains("river crossing"),
+            "{err}"
+        );
         let err = test_structure(None, None, Some(".node A 1.5 0"), &none(), None).unwrap_err();
         assert!(err.contains("grid"), "{err}");
     }

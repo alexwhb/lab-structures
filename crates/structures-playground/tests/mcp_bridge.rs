@@ -547,8 +547,8 @@ fn bad_builder_requests_change_nothing() {
         ),
         (
             proto::BUILDER_CONDITIONS,
-            json!({"quake_g": 2}),
-            "`quake_g` must be 0 to 0.5",
+            json!({"quake_m": 2}),
+            "`quake_m` must be 0 to 0.5",
         ),
         (
             proto::SAMPLE_TEST,

@@ -101,9 +101,12 @@ pub struct ConditionsChange {
     /// Snow on exposed decks, kg/m (0–800; None 0, Light 150, Heavy 400, Blizzard 800).
     #[serde(default)]
     pub snow_kg_m: Option<f64>,
-    /// Earthquake peak ground motion, g (0–0.5; Off, Moderate 0.15, Strong 0.3, Huge 0.5).
-    #[serde(default)]
-    pub quake_g: Option<f64>,
+    /// Earthquake ground-motion amplitude, m (0–0.5; the chips Off 0, Moderate 0.15 ≈ 0.7 g
+    /// peak, Strong 0.3 ≈ 1.5 g, Huge 0.5 ≈ 2.4 g: the supports move by amplitude × envelope ×
+    /// sin 2π·1.1 t, SPEC BLD-12). `quake_g` is read as the same field (its first, misleading
+    /// name).
+    #[serde(default, alias = "quake_g")]
+    pub quake_m: Option<f64>,
     /// `rock`, `dense`, `stiff`, `soft` or `loose` (loose wet sand). Building only.
     #[serde(default)]
     pub soil: Option<String>,

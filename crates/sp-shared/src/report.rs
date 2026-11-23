@@ -803,8 +803,8 @@ pub struct ConditionsInfo {
     pub snow_kg_m: f64,
     /// The snow chip ("Heavy").
     pub snow: String,
-    /// Earthquake peak ground motion, g (0: off).
-    pub quake_g: f64,
+    /// Earthquake ground-motion amplitude, m (0: off; Moderate 0.15 ≈ 0.7 g peak).
+    pub quake_m: f64,
     /// The earthquake chip ("Strong").
     pub quake: String,
     /// `rock`, `dense`, `stiff`, `soft`, `loose`.
